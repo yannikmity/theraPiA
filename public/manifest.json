@@ -1,0 +1,10 @@
+{
+  "name": "TheraPIA – Ausbildungs-Tracker",
+  "short_name": "TheraPIA",
+  "description": "Stundenerfassung und Supervisions-Tracking für PiA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9fb",
+  "theme_color": "#2471a3",
+  "icons": []
+}

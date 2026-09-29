@@ -1,0 +1,80 @@
+{
+  "therapie": [
+    "BehandlungsstundenBehandlungsstunden412,3 / 600(69%)Noch 187,7 Behandlungsstunden bis 60020,0Probatorik380,3Behandlung12,0Bezugsperson",
+    "BehandlungsstundenBehandlungsstunden612,0 / 600(100%)Noch 0,0 Behandlungsstunden bis 6000,0Probatorik612,0Behandlung0,0Bezugsperson"
+  ],
+  "supervision": [
+    "SupervisionSV-Einheiten5,0 / 150(3%)Noch 145,0 SV-Einheiten bis 150Verhältnis: 1 : 8,0Supervision fehlt5,0 SV-Einheiten / 40,0 Behandlungsstunden (Soll: 1:4)Für 1:4 fehlen jetzt 5,0 SV-Einheiten.Offene Supervision: 7 Sitzungen noch nicht besprochenSupervision erfassen",
+    "SupervisionSV-Einheiten10,0 / 150(7%)Noch 140,0 SV-Einheiten bis 150Verhältnis: 1 : 4,0Passt10,0 SV-Einheiten / 40,0 Behandlungsstunden (Soll: 1:4)Verhältnis passt – im Soll von 1:4.Offene Supervision: 1 Sitzung noch nicht besprochenSupervision erfassen",
+    "SupervisionSV-Einheiten0,0 / 150(0%)Noch 150,0 SV-Einheiten bis 150Verhältnis: 1 : ?Supervision fehlt0,0 SV-Einheiten / 0,0 Behandlungsstunden (Soll: 1:4)Noch keine Behandlungsstunden erfasst.Offene Supervision: 0 Sitzungen noch nicht besprochenSupervision erfassen",
+    "SupervisionSV-Einheiten2,5 / 150(2%)Noch 147,5 SV-Einheiten bis 150Verhältnis: 1 : 4,1Knapp2,5 SV-Einheiten / 10,0 Behandlungsstunden (Soll: 1:4)Für 1:4 fehlen jetzt 0,1 SV-Einheiten.Offene Supervision: 0 Sitzungen noch nicht besprochenSupervision erfassen",
+    "SupervisionSV-Einheiten40,0 / 150(27%)Noch 110,0 SV-Einheiten bis 150Verhältnis: 1 : 4,0Passt40,0 SV-Einheiten / 160,0 Behandlungsstunden (Soll: 1:4)Verhältnis passt – im Soll von 1:4.Offene Supervision: 3 Sitzungen noch nicht besprochenSupervision erfassen"
+  ],
+  "verhaeltnis": [
+    "Verhältnis: 1 : 4,0Passt10,0 SV-Einheiten / 40,0 Behandlungsstunden (Soll: 1:4)",
+    "1:4,0",
+    "Verhältnis: 1 : 4,5Knapp10,0 SV-Einheiten / 45,0 Behandlungsstunden (Soll: 1:4)",
+    "1:4,5",
+    "Verhältnis: 1 : 6,0Supervision fehlt10,0 SV-Einheiten / 60,0 Behandlungsstunden (Soll: 1:4)",
+    "1:6,0",
+    "Verhältnis: 1 : ?Supervision fehlt0,0 SV-Einheiten / 10,0 Behandlungsstunden (Soll: 1:4)",
+    "1:?"
+  ],
+  "nachweis": [
+    "AusbildungsnachweisName der PiAPiA AE-Maila@example.comZeitraum01.01.2026 – 31.03.2026Erstellt am26.09.2026Therapiesitzungen (3)DatumChiffreKategorieDauerSupervision am10.01.2026A-01Probatorik50 Min20.02.2026 (Supervision Eins)14.02.2026A-02Behandlung60 Min20.02.2026 (Supervision Eins)31.03.2026A-01Bezugsperson50 Min15.03.2026 (Supervision Zwei)Supervisionen (2)DatumSupervisor:inArtDauerBesprochene Sitzungen20.02.2026Supervision EinsEinzel60 MinA-01 (10.01.2026), A-02 (14.02.2026)15.03.2026Supervision ZweiEinzel90 MinA-01 (31.03.2026)Doppelstunden (1)DatumGruppeTeilnehmendeAmbulanzzeitDauerSupervision am12.01.2026Gruppe Montag6ja100 Min05.04.2026 (Supervision Eins)SummenTherapiesitzungen3 Sitzungen, 3,20 Behandlungsstundendavon Probatorik 1,00, Behandlung 1,20, Bezugsperson 1,00Supervisionen2 Supervisionen, 3,00 SV-EinheitenDoppelstunden (Gruppe)1 Doppelstunde, 2,00 Einheiten à 50 MinVerhältnis Supervision : Therapie1 : 1,1Soll: 1 : 4Behandlungsstunden und SV-Einheiten zählen zu je 50 Minuten. Doppelstunden (Gruppe) werden gesondert gezählt und nicht auf die 600 Behandlungsstunden angerechnet. Die Listen nennen die Dauer in Minuten.Ort, DatumUnterschrift PiAPiA AUnterschrift Institut/Ambulanz",
+    "AusbildungsnachweisName der PiAPiA Vorher-NachherE-Mailvn@example.comZeitraum01.04.2026 – 30.09.2026Erstellt am16.08.2026Therapiesitzungen (14)DatumChiffreKategorieDauerSupervision am07.04.2026V-1Probatorik50 Min28.04.2026 (Supervision Eins)14.04.2026V-1Behandlung50 Min28.04.2026 (Supervision Eins)21.04.2026V-1Behandlung60 Min28.04.2026 (Supervision Eins)05.05.2026V-1Behandlung50 Min–12.05.2026V-2Bezugsperson25 Min–02.06.2026V-2Behandlung100 Min10.06.2026 (Supervision Zwei)30.06.2026V-2Behandlung50 Min–01.07.2026V-3Probatorik50 Min13.08.2026 (Supervision Eins)08.07.2026V-3Behandlung50 Min–22.07.2026V-3Behandlung50 Min–04.08.2026V-1Behandlung50 Min–11.08.2026V-2Behandlung50 Min–12.08.2026V-3Behandlung50 Min–20.08.2026V-1Behandlung50 Min–Supervisionen (4)DatumSupervisor:inArtDauerBesprochene Sitzungen28.04.2026Supervision EinsEinzel60 MinV-1 (07.04.2026), V-1 (14.04.2026), V-1 (21.04.2026)10.06.2026Supervision ZweiEinzel70 MinV-2 (02.06.2026)15.07.2026Supervision EinsGruppe90 MinGruppe Beispiel (16.04.2026), Gruppe Beispiel (18.06.2026)13.08.2026Supervision EinsEinzel45 MinV-3 (01.07.2026)Doppelstunden (6)DatumGruppeTeilnehmendeAmbulanzzeitDauerSupervision am09.04.2026Gruppe Beispiel2ja100 Min–16.04.2026Gruppe Beispiel3ja100 Min15.07.2026 (Supervision Eins)07.05.2026Gruppe Beispiel5nein100 Min–18.06.2026Gruppe Beispiel9ja100 Min15.07.2026 (Supervision Eins)02.07.2026Gruppe Beispiel12ja100 Min–06.08.2026Gruppe Beispiel7ja100 Min–SummenTherapiesitzungen14 Sitzungen, 14,70 Behandlungsstundendavon Probatorik 2,00, Behandlung 12,20, Bezugsperson 0,50Supervisionen4 Supervisionen, 5,30 SV-EinheitenDoppelstunden (Gruppe)6 Doppelstunden, 12,00 Einheiten à 50 MinVerhältnis Supervision : Therapie1 : 2,8Soll: 1 : 4Behandlungsstunden und SV-Einheiten zählen zu je 50 Minuten. Doppelstunden (Gruppe) werden gesondert gezählt und nicht auf die 600 Behandlungsstunden angerechnet. Die Listen nennen die Dauer in Minuten.Ort, DatumUnterschrift PiAPiA Vorher-NachherUnterschrift Institut/Ambulanz",
+    "AusbildungsnachweisName der PiAPiA Vorher-NachherE-Mailvn@example.comZeitraum01.04.2026 – 30.09.2026Supervisor:inSupervision EinsErstellt am16.08.2026Enthält die Supervisionen dieser Supervisor:in im Zeitraum und alle darin besprochenen Sitzungen und Doppelstunden – auch wenn deren eigenes Datum außerhalb des Zeitraums liegt.Therapiesitzungen (4)DatumChiffreKategorieDauerSupervision am07.04.2026V-1Probatorik50 Min28.04.2026 (Supervision Eins)14.04.2026V-1Behandlung50 Min28.04.2026 (Supervision Eins)21.04.2026V-1Behandlung60 Min28.04.2026 (Supervision Eins)01.07.2026V-3Probatorik50 Min13.08.2026 (Supervision Eins)Supervisionen (3)DatumSupervisor:inArtDauerBesprochene Sitzungen28.04.2026Supervision EinsEinzel60 MinV-1 (07.04.2026), V-1 (14.04.2026), V-1 (21.04.2026)15.07.2026Supervision EinsGruppe90 MinGruppe Beispiel (16.04.2026), Gruppe Beispiel (18.06.2026)13.08.2026Supervision EinsEinzel45 MinV-3 (01.07.2026)Doppelstunden (2)DatumGruppeTeilnehmendeAmbulanzzeitDauerSupervision am16.04.2026Gruppe Beispiel3ja100 Min15.07.2026 (Supervision Eins)18.06.2026Gruppe Beispiel9ja100 Min15.07.2026 (Supervision Eins)SummenTherapiesitzungen4 Sitzungen, 4,20 Behandlungsstundendavon Probatorik 2,00, Behandlung 2,20, Bezugsperson 0,00Supervisionen3 Supervisionen, 3,90 SV-EinheitenDoppelstunden (Gruppe)2 Doppelstunden, 4,00 Einheiten à 50 MinVerhältnis Supervision : Therapie1 : 1,1Soll: 1 : 4Behandlungsstunden und SV-Einheiten zählen zu je 50 Minuten. Doppelstunden (Gruppe) werden gesondert gezählt und nicht auf die 600 Behandlungsstunden angerechnet. Die Listen nennen die Dauer in Minuten.Ort, DatumUnterschrift PiAPiA Vorher-NachherUnterschrift Supervisor:inSupervision Eins"
+  ],
+  "gruppe": {
+    "seite": "Gruppe BeispielDoppelstunden gesamt6,0 / 60(10%)davon Ambulanzzeit5,0 / 40(13%)Noch 35 Doppelstunden Ambulanzzeit übrig635,5Einnahmen (EUR)1,8SV-Einheiten1AusgefallenDoppelstunden (9) Neu03. Sep. 20269 KinderGeplantDurchgeführtAusgefallenUrlaub06. Aug. 20267 KinderGeplantDurchgeführtAusgefallenUrlaub16. Juli 2026GeplantDurchgeführtAusgefallenUrlaub09. Juli 2026GeplantDurchgeführtAusgefallenUrlaub02. Juli 202612 KinderGeplantDurchgeführtAusgefallenUrlaub18. Juni 20269 KinderGeplantDurchgeführtAusgefallenUrlaub07. Mai 20265 KinderGeplantDurchgeführtAusgefallenUrlaub16. Apr. 20263 KinderGeplantDurchgeführtAusgefallenUrlaub09. Apr. 20262 KinderGeplantDurchgeführtAusgefallenUrlaubGruppen-Supervision (1) Neu15. Juli 2026Supervision Eins90 Min",
+    "mitFormular": "Gruppe BeispielDoppelstunden gesamt6,0 / 60(10%)davon Ambulanzzeit5,0 / 40(13%)Noch 35 Doppelstunden Ambulanzzeit übrig635,5Einnahmen (EUR)1,8SV-Einheiten1AusgefallenDoppelstunden (9) NeuDatumStatusGeplantDurchgeführtAusgefallenUrlaubAnwesende KinderHonorar-Anteil: 121,5 EURZählt zur Ambulanzzeit (40h)Speichern03. Sep. 20269 KinderGeplantDurchgeführtAusgefallenUrlaub06. Aug. 20267 KinderGeplantDurchgeführtAusgefallenUrlaub16. Juli 2026GeplantDurchgeführtAusgefallenUrlaub09. Juli 2026GeplantDurchgeführtAusgefallenUrlaub02. Juli 202612 KinderGeplantDurchgeführtAusgefallenUrlaub18. Juni 20269 KinderGeplantDurchgeführtAusgefallenUrlaub07. Mai 20265 KinderGeplantDurchgeführtAusgefallenUrlaub16. Apr. 20263 KinderGeplantDurchgeführtAusgefallenUrlaub09. Apr. 20262 KinderGeplantDurchgeführtAusgefallenUrlaubGruppen-Supervision (1) Neu15. Juli 2026Supervision Eins90 Min",
+    "honorarVorschau": [
+      {
+        "kinder": 0,
+        "vorschau": null
+      },
+      {
+        "kinder": 2,
+        "vorschau": null
+      },
+      {
+        "kinder": 3,
+        "vorschau": "Honorar-Anteil: 88,5 EUR"
+      },
+      {
+        "kinder": 4,
+        "vorschau": "Honorar-Anteil: 100 EUR"
+      },
+      {
+        "kinder": 5,
+        "vorschau": "Honorar-Anteil: 112,5 EUR"
+      },
+      {
+        "kinder": 6,
+        "vorschau": "Honorar-Anteil: 121,5 EUR"
+      },
+      {
+        "kinder": 7,
+        "vorschau": "Honorar-Anteil: 133 EUR"
+      },
+      {
+        "kinder": 8,
+        "vorschau": "Honorar-Anteil: 144 EUR"
+      },
+      {
+        "kinder": 9,
+        "vorschau": "Honorar-Anteil: 150,75 EUR"
+      },
+      {
+        "kinder": 10,
+        "vorschau": "Honorar-Anteil: 150,75 EUR"
+      },
+      {
+        "kinder": 12,
+        "vorschau": "Honorar-Anteil: 150,75 EUR"
+      }
+    ]
+  },
+  "prognose": "Honorar 2026 Q3Prognose zum Quartalsende (30.09.2026)1.029 EURBisher 636 EUR aus 7 SitzungenEinnahmen 879 EUR − Supervision 243 EURSo kommt die Prognose zustandeSchnitt der letzten 8 Wochen: 0,9 Sitzungen pro Woche × 6,4 verbleibende Wochen ≈ 5,6 Sitzungen, abzüglich 1 bereits eingetragener = 4,6 Sitzungen × 85,00 EUR je Sitzung ≈ 393 EUR.Ergebnis bisher 636 EUR + 393 EUR = 1.029 EUR.„≈“ bedeutet: Die Faktoren sind zur Anzeige gerundet, gerechnet wird mit den ungerundeten Werten.Honorar je Sitzung ist der Durchschnitt der letzten 8 Wochen (7 Sitzungen). Einnahmen bisher: Behandlungsstunden (à 50 Min) × Honorarsatz plus Gruppen-Honorar durchgeführter Doppelstunden – wie die Quartalsübersicht in Finanzen. Künftige Supervisionskosten und Doppelstunden sind nicht eingerechnet.Geplante Sitzungen pro Woche in Finanzen anpassen",
+  "finanzen": "Finanzen1.885Einnahmen463Ausgaben1.422ErgebnisQuartalsübersicht2026 Q2+786,25 EUR+1.006-2202026 Q3+635,75 EUR+879-243EinstellungenEinnahme je Behandlungsstunde (50 Min, EUR)Geplante Sitzungen pro Woche (optional)Das Dashboard rechnet die Quartalsprognose mit dieser Zahl; ohne Angabe mit dem Schnitt der letzten 8 Wochen.Kosten je SV-Einheit – Supervision Eins (EUR)Kosten je SV-Einheit – Supervision Zwei (EUR)Einstellungen speichern"
+}

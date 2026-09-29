@@ -1,0 +1,62 @@
+# Lokales Entwicklungs-Setup. Nicht für den Produktivbetrieb gedacht (siehe SECURITY.md).
+# Werte kommen aus .env (Vorlage: .env.example).
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: therapia_frontend
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-therapia_user}:${POSTGRES_PASSWORD:-therapia_dev_password}@therapia_postgres:5432/${POSTGRES_DB:-therapia}"
+      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:3010}"
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?NEXTAUTH_SECRET fehlt - .env aus .env.example anlegen}"
+      AUTH_TRUST_HOST: "true"
+      REGISTRATION_MODE: "${REGISTRATION_MODE:-invite}"
+      FEEDBACK_DIR: /data/feedback
+    ports:
+      - "127.0.0.1:3010:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      - feedback_data:/data/feedback
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: therapia_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-therapia}
+      POSTGRES_USER: ${POSTGRES_USER:-therapia_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-therapia_dev_password}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-therapia_user} -d ${POSTGRES_DB:-therapia}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: docker compose --profile tools up -d
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: therapia_pgadmin
+    profiles: ["tools"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@therapia.dev
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "127.0.0.1:5050:80"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  feedback_data:

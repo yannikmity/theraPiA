@@ -1,0 +1,831 @@
+{
+  "ziele": {
+    "behandlungsstunden": 600,
+    "svEinheiten": 150,
+    "gruppeDoppelstunden": 60,
+    "gruppeAmbulanzzeit": 40
+  },
+  "dashboard": {
+    "behandlungsstunden": 14.7,
+    "svEinheiten": 5.3,
+    "restBehandlungsstunden": 585.3,
+    "restSvEinheiten": 144.7,
+    "verhaeltnis": {
+      "therapyHours": 14.7,
+      "supervisionHours": 5.3,
+      "ratio": 2.8,
+      "isOk": true,
+      "status": "ok"
+    },
+    "fehlendeSupervision": 0,
+    "jePatientin": [
+      {
+        "chiffre": "V-1",
+        "therapyHours": 6.2,
+        "supervisionHours": 1.2,
+        "ratio": 5.2,
+        "isOk": false,
+        "status": "critical"
+      },
+      {
+        "chiffre": "V-2",
+        "therapyHours": 4.5,
+        "supervisionHours": 1.4,
+        "ratio": 3.2,
+        "isOk": true,
+        "status": "ok"
+      },
+      {
+        "chiffre": "V-3",
+        "therapyHours": 4,
+        "supervisionHours": 0.9,
+        "ratio": 4.4,
+        "isOk": false,
+        "status": "warning"
+      }
+    ],
+    "kategorien": {
+      "sprechstunde": 0,
+      "probatorik": 2,
+      "behandlung": 12.2,
+      "bezugsperson": 0.5,
+      "gespraechsziffer": 0
+    },
+    "gruppe": {
+      "durchgefuehrt": 6,
+      "ausgefallen": 1,
+      "urlaub": 1,
+      "geplant": 1,
+      "ambulanzzeitCount": 5
+    },
+    "ambulanzzeitRest": 35
+  },
+  "grenzfaelle": [
+    {
+      "therapie": 0,
+      "supervision": 0,
+      "therapyHours": 0,
+      "supervisionHours": 0,
+      "ratio": null,
+      "isOk": false,
+      "status": "critical",
+      "fehlt": 0
+    },
+    {
+      "therapie": 4,
+      "supervision": 1,
+      "therapyHours": 4,
+      "supervisionHours": 1,
+      "ratio": 4,
+      "isOk": true,
+      "status": "ok",
+      "fehlt": 0
+    },
+    {
+      "therapie": 4.5,
+      "supervision": 1,
+      "therapyHours": 4.5,
+      "supervisionHours": 1,
+      "ratio": 4.5,
+      "isOk": false,
+      "status": "warning",
+      "fehlt": 0.2
+    },
+    {
+      "therapie": 4.04,
+      "supervision": 1,
+      "therapyHours": 4,
+      "supervisionHours": 1,
+      "ratio": 4,
+      "isOk": false,
+      "status": "warning",
+      "fehlt": 0.1
+    },
+    {
+      "therapie": 5,
+      "supervision": 1,
+      "therapyHours": 5,
+      "supervisionHours": 1,
+      "ratio": 5,
+      "isOk": false,
+      "status": "warning",
+      "fehlt": 0.3
+    },
+    {
+      "therapie": 5.04,
+      "supervision": 1,
+      "therapyHours": 5,
+      "supervisionHours": 1,
+      "ratio": 5,
+      "isOk": false,
+      "status": "critical",
+      "fehlt": 0.3
+    },
+    {
+      "therapie": 5.1,
+      "supervision": 1,
+      "therapyHours": 5.1,
+      "supervisionHours": 1,
+      "ratio": 5.1,
+      "isOk": false,
+      "status": "critical",
+      "fehlt": 0.3
+    },
+    {
+      "therapie": 6,
+      "supervision": 1,
+      "therapyHours": 6,
+      "supervisionHours": 1,
+      "ratio": 6,
+      "isOk": false,
+      "status": "critical",
+      "fehlt": 0.5
+    },
+    {
+      "therapie": 10,
+      "supervision": 2.46,
+      "therapyHours": 10,
+      "supervisionHours": 2.5,
+      "ratio": 4.1,
+      "isOk": false,
+      "status": "warning",
+      "fehlt": 0.1
+    },
+    {
+      "therapie": 3.333,
+      "supervision": 1.111,
+      "therapyHours": 3.3,
+      "supervisionHours": 1.1,
+      "ratio": 3,
+      "isOk": true,
+      "status": "ok",
+      "fehlt": 0
+    },
+    {
+      "therapie": 10,
+      "supervision": 0,
+      "therapyHours": 10,
+      "supervisionHours": 0,
+      "ratio": null,
+      "isOk": false,
+      "status": "critical",
+      "fehlt": 2.5
+    }
+  ],
+  "ebm": [
+    {
+      "kinder": 0,
+      "honorar": null
+    },
+    {
+      "kinder": 1,
+      "honorar": null
+    },
+    {
+      "kinder": 2,
+      "honorar": null
+    },
+    {
+      "kinder": 3,
+      "honorar": {
+        "total": 177,
+        "share": 88.5
+      }
+    },
+    {
+      "kinder": 4,
+      "honorar": {
+        "total": 200,
+        "share": 100
+      }
+    },
+    {
+      "kinder": 5,
+      "honorar": {
+        "total": 225,
+        "share": 112.5
+      }
+    },
+    {
+      "kinder": 6,
+      "honorar": {
+        "total": 243,
+        "share": 121.5
+      }
+    },
+    {
+      "kinder": 7,
+      "honorar": {
+        "total": 266,
+        "share": 133
+      }
+    },
+    {
+      "kinder": 8,
+      "honorar": {
+        "total": 288,
+        "share": 144
+      }
+    },
+    {
+      "kinder": 9,
+      "honorar": {
+        "total": 301.5,
+        "share": 150.75
+      }
+    },
+    {
+      "kinder": 10,
+      "honorar": {
+        "total": 301.5,
+        "share": 150.75
+      }
+    },
+    {
+      "kinder": 12,
+      "honorar": {
+        "total": 301.5,
+        "share": 150.75
+      }
+    },
+    {
+      "kinder": 30,
+      "honorar": {
+        "total": 301.5,
+        "share": 150.75
+      }
+    }
+  ],
+  "finanzen": {
+    "quartale": [
+      {
+        "quarter": "2026 Q2",
+        "income": 1006.25,
+        "costs": 220,
+        "profit": 786.25
+      },
+      {
+        "quarter": "2026 Q3",
+        "income": 878.75,
+        "costs": 243,
+        "profit": 635.75
+      }
+    ],
+    "gruppenHonorar": 635.5
+  },
+  "prognose": {
+    "forecast": {
+      "quarter": "2026 Q3",
+      "period": {
+        "from": "2026-07-01",
+        "to": "2026-09-30"
+      },
+      "today": "2026-08-16",
+      "soFar": {
+        "income": 878.75,
+        "costs": 243,
+        "profit": 635.75,
+        "sessions": 7
+      },
+      "lookback": {
+        "weeks": 8,
+        "sessions": 7,
+        "sessionsPerWeek": 0.875,
+        "incomePerSession": 85
+      },
+      "planned": {
+        "sessionsPerWeek": 0.875,
+        "source": "schnitt"
+      },
+      "remaining": {
+        "days": 45,
+        "weeks": 6.428571428571429,
+        "plannedSessions": 5.625,
+        "sessions": 4.625,
+        "alreadyEntered": 1,
+        "income": 393.13
+      },
+      "forecastProfit": 1028.88
+    },
+    "anzeige": {
+      "perWeek": 0.9,
+      "weeks": 6.4,
+      "plannedSessions": 5.6,
+      "sessions": 4.6,
+      "incomePerSession": 85,
+      "income": 393,
+      "soFarProfit": 636,
+      "forecastProfit": 1029,
+      "sessionsSign": "≈",
+      "incomeSign": "≈",
+      "totalSign": "="
+    }
+  },
+  "nachweis": [
+    {
+      "period": {
+        "from": "2026-04-01",
+        "to": "2026-09-30"
+      },
+      "pia": {
+        "name": "PiA Vorher-Nachher",
+        "email": "vn@example.com"
+      },
+      "supervisor": null,
+      "generatedAt": "2026-08-16T10:00:00.000Z",
+      "therapySessions": [
+        {
+          "id": "t-01",
+          "date": "2026-04-07",
+          "chiffre": "V-1",
+          "category": "probatorik",
+          "durationMinutes": 50,
+          "supervisions": [
+            {
+              "id": "sv-1",
+              "date": "2026-04-28",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        },
+        {
+          "id": "t-02",
+          "date": "2026-04-14",
+          "chiffre": "V-1",
+          "category": "behandlung",
+          "durationMinutes": 50,
+          "supervisions": [
+            {
+              "id": "sv-1",
+              "date": "2026-04-28",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        },
+        {
+          "id": "t-03",
+          "date": "2026-04-21",
+          "chiffre": "V-1",
+          "category": "behandlung",
+          "durationMinutes": 60,
+          "supervisions": [
+            {
+              "id": "sv-1",
+              "date": "2026-04-28",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        },
+        {
+          "id": "t-04",
+          "date": "2026-05-05",
+          "chiffre": "V-1",
+          "category": "behandlung",
+          "durationMinutes": 50,
+          "supervisions": []
+        },
+        {
+          "id": "t-05",
+          "date": "2026-05-12",
+          "chiffre": "V-2",
+          "category": "bezugsperson",
+          "durationMinutes": 25,
+          "supervisions": []
+        },
+        {
+          "id": "t-06",
+          "date": "2026-06-02",
+          "chiffre": "V-2",
+          "category": "behandlung",
+          "durationMinutes": 100,
+          "supervisions": [
+            {
+              "id": "sv-2",
+              "date": "2026-06-10",
+              "supervisorName": "Supervision Zwei"
+            }
+          ]
+        },
+        {
+          "id": "t-07",
+          "date": "2026-06-30",
+          "chiffre": "V-2",
+          "category": "behandlung",
+          "durationMinutes": 50,
+          "supervisions": []
+        },
+        {
+          "id": "t-08",
+          "date": "2026-07-01",
+          "chiffre": "V-3",
+          "category": "probatorik",
+          "durationMinutes": 50,
+          "supervisions": [
+            {
+              "id": "sv-4",
+              "date": "2026-08-13",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        },
+        {
+          "id": "t-09",
+          "date": "2026-07-08",
+          "chiffre": "V-3",
+          "category": "behandlung",
+          "durationMinutes": 50,
+          "supervisions": []
+        },
+        {
+          "id": "t-10",
+          "date": "2026-07-22",
+          "chiffre": "V-3",
+          "category": "behandlung",
+          "durationMinutes": 50,
+          "supervisions": []
+        },
+        {
+          "id": "t-11",
+          "date": "2026-08-04",
+          "chiffre": "V-1",
+          "category": "behandlung",
+          "durationMinutes": 50,
+          "supervisions": []
+        },
+        {
+          "id": "t-12",
+          "date": "2026-08-11",
+          "chiffre": "V-2",
+          "category": "behandlung",
+          "durationMinutes": 50,
+          "supervisions": []
+        },
+        {
+          "id": "t-13",
+          "date": "2026-08-12",
+          "chiffre": "V-3",
+          "category": "behandlung",
+          "durationMinutes": 50,
+          "supervisions": []
+        },
+        {
+          "id": "t-14",
+          "date": "2026-08-20",
+          "chiffre": "V-1",
+          "category": "behandlung",
+          "durationMinutes": 50,
+          "supervisions": []
+        }
+      ],
+      "supervisionSessions": [
+        {
+          "id": "sv-1",
+          "date": "2026-04-28",
+          "supervisorName": "Supervision Eins",
+          "kind": "individual",
+          "durationMinutes": 60,
+          "linkedTherapySessions": [
+            {
+              "date": "2026-04-07",
+              "chiffre": "V-1"
+            },
+            {
+              "date": "2026-04-14",
+              "chiffre": "V-1"
+            },
+            {
+              "date": "2026-04-21",
+              "chiffre": "V-1"
+            }
+          ],
+          "linkedGroupSessions": []
+        },
+        {
+          "id": "sv-2",
+          "date": "2026-06-10",
+          "supervisorName": "Supervision Zwei",
+          "kind": "individual",
+          "durationMinutes": 70,
+          "linkedTherapySessions": [
+            {
+              "date": "2026-06-02",
+              "chiffre": "V-2"
+            }
+          ],
+          "linkedGroupSessions": []
+        },
+        {
+          "id": "sv-3",
+          "date": "2026-07-15",
+          "supervisorName": "Supervision Eins",
+          "kind": "group",
+          "durationMinutes": 90,
+          "linkedTherapySessions": [],
+          "linkedGroupSessions": [
+            {
+              "date": "2026-04-16",
+              "groupName": "Gruppe Beispiel"
+            },
+            {
+              "date": "2026-06-18",
+              "groupName": "Gruppe Beispiel"
+            }
+          ]
+        },
+        {
+          "id": "sv-4",
+          "date": "2026-08-13",
+          "supervisorName": "Supervision Eins",
+          "kind": "individual",
+          "durationMinutes": 45,
+          "linkedTherapySessions": [
+            {
+              "date": "2026-07-01",
+              "chiffre": "V-3"
+            }
+          ],
+          "linkedGroupSessions": []
+        }
+      ],
+      "groupSessions": [
+        {
+          "id": "gs-1",
+          "date": "2026-04-09",
+          "groupName": "Gruppe Beispiel",
+          "durationMinutes": 100,
+          "childCount": 2,
+          "countsTowardAmbulanzzeit": true,
+          "supervisions": []
+        },
+        {
+          "id": "gs-2",
+          "date": "2026-04-16",
+          "groupName": "Gruppe Beispiel",
+          "durationMinutes": 100,
+          "childCount": 3,
+          "countsTowardAmbulanzzeit": true,
+          "supervisions": [
+            {
+              "id": "sv-3",
+              "date": "2026-07-15",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        },
+        {
+          "id": "gs-3",
+          "date": "2026-05-07",
+          "groupName": "Gruppe Beispiel",
+          "durationMinutes": 100,
+          "childCount": 5,
+          "countsTowardAmbulanzzeit": false,
+          "supervisions": []
+        },
+        {
+          "id": "gs-4",
+          "date": "2026-06-18",
+          "groupName": "Gruppe Beispiel",
+          "durationMinutes": 100,
+          "childCount": 9,
+          "countsTowardAmbulanzzeit": true,
+          "supervisions": [
+            {
+              "id": "sv-3",
+              "date": "2026-07-15",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        },
+        {
+          "id": "gs-5",
+          "date": "2026-07-02",
+          "groupName": "Gruppe Beispiel",
+          "durationMinutes": 100,
+          "childCount": 12,
+          "countsTowardAmbulanzzeit": true,
+          "supervisions": []
+        },
+        {
+          "id": "gs-8",
+          "date": "2026-08-06",
+          "groupName": "Gruppe Beispiel",
+          "durationMinutes": 100,
+          "childCount": 7,
+          "countsTowardAmbulanzzeit": true,
+          "supervisions": []
+        }
+      ],
+      "totals": {
+        "therapyUnits": 14,
+        "therapyMinutes": 735,
+        "therapyHours": 14.7,
+        "hoursByCategory": {
+          "sprechstunde": 0,
+          "probatorik": 2,
+          "behandlung": 12.2,
+          "bezugsperson": 0.5,
+          "gespraechsziffer": 0
+        },
+        "supervisionUnits": 4,
+        "supervisionMinutes": 265,
+        "supervisionHours": 5.3,
+        "groupSessionUnits": 6,
+        "groupSessionMinutes": 600,
+        "groupSessionHours": 12,
+        "ratio": {
+          "therapyHours": 14.7,
+          "supervisionHours": 5.3,
+          "ratio": 2.8,
+          "isOk": true,
+          "status": "ok"
+        }
+      }
+    },
+    {
+      "period": {
+        "from": "2026-04-01",
+        "to": "2026-09-30"
+      },
+      "pia": {
+        "name": "PiA Vorher-Nachher",
+        "email": "vn@example.com"
+      },
+      "supervisor": {
+        "id": "s-1",
+        "name": "Supervision Eins"
+      },
+      "generatedAt": "2026-08-16T10:00:00.000Z",
+      "therapySessions": [
+        {
+          "id": "t-01",
+          "date": "2026-04-07",
+          "chiffre": "V-1",
+          "category": "probatorik",
+          "durationMinutes": 50,
+          "supervisions": [
+            {
+              "id": "sv-1",
+              "date": "2026-04-28",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        },
+        {
+          "id": "t-02",
+          "date": "2026-04-14",
+          "chiffre": "V-1",
+          "category": "behandlung",
+          "durationMinutes": 50,
+          "supervisions": [
+            {
+              "id": "sv-1",
+              "date": "2026-04-28",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        },
+        {
+          "id": "t-03",
+          "date": "2026-04-21",
+          "chiffre": "V-1",
+          "category": "behandlung",
+          "durationMinutes": 60,
+          "supervisions": [
+            {
+              "id": "sv-1",
+              "date": "2026-04-28",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        },
+        {
+          "id": "t-08",
+          "date": "2026-07-01",
+          "chiffre": "V-3",
+          "category": "probatorik",
+          "durationMinutes": 50,
+          "supervisions": [
+            {
+              "id": "sv-4",
+              "date": "2026-08-13",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        }
+      ],
+      "supervisionSessions": [
+        {
+          "id": "sv-1",
+          "date": "2026-04-28",
+          "supervisorName": "Supervision Eins",
+          "kind": "individual",
+          "durationMinutes": 60,
+          "linkedTherapySessions": [
+            {
+              "date": "2026-04-07",
+              "chiffre": "V-1"
+            },
+            {
+              "date": "2026-04-14",
+              "chiffre": "V-1"
+            },
+            {
+              "date": "2026-04-21",
+              "chiffre": "V-1"
+            }
+          ],
+          "linkedGroupSessions": []
+        },
+        {
+          "id": "sv-3",
+          "date": "2026-07-15",
+          "supervisorName": "Supervision Eins",
+          "kind": "group",
+          "durationMinutes": 90,
+          "linkedTherapySessions": [],
+          "linkedGroupSessions": [
+            {
+              "date": "2026-04-16",
+              "groupName": "Gruppe Beispiel"
+            },
+            {
+              "date": "2026-06-18",
+              "groupName": "Gruppe Beispiel"
+            }
+          ]
+        },
+        {
+          "id": "sv-4",
+          "date": "2026-08-13",
+          "supervisorName": "Supervision Eins",
+          "kind": "individual",
+          "durationMinutes": 45,
+          "linkedTherapySessions": [
+            {
+              "date": "2026-07-01",
+              "chiffre": "V-3"
+            }
+          ],
+          "linkedGroupSessions": []
+        }
+      ],
+      "groupSessions": [
+        {
+          "id": "gs-2",
+          "date": "2026-04-16",
+          "groupName": "Gruppe Beispiel",
+          "durationMinutes": 100,
+          "childCount": 3,
+          "countsTowardAmbulanzzeit": true,
+          "supervisions": [
+            {
+              "id": "sv-3",
+              "date": "2026-07-15",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        },
+        {
+          "id": "gs-4",
+          "date": "2026-06-18",
+          "groupName": "Gruppe Beispiel",
+          "durationMinutes": 100,
+          "childCount": 9,
+          "countsTowardAmbulanzzeit": true,
+          "supervisions": [
+            {
+              "id": "sv-3",
+              "date": "2026-07-15",
+              "supervisorName": "Supervision Eins"
+            }
+          ]
+        }
+      ],
+      "totals": {
+        "therapyUnits": 4,
+        "therapyMinutes": 210,
+        "therapyHours": 4.2,
+        "hoursByCategory": {
+          "sprechstunde": 0,
+          "probatorik": 2,
+          "behandlung": 2.2,
+          "bezugsperson": 0,
+          "gespraechsziffer": 0
+        },
+        "supervisionUnits": 3,
+        "supervisionMinutes": 195,
+        "supervisionHours": 3.9,
+        "groupSessionUnits": 2,
+        "groupSessionMinutes": 200,
+        "groupSessionHours": 4,
+        "ratio": {
+          "therapyHours": 4.2,
+          "supervisionHours": 3.9,
+          "ratio": 1.1,
+          "isOk": true,
+          "status": "ok"
+        }
+      }
+    }
+  ]
+}

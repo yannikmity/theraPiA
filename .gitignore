@@ -1,0 +1,52 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env
+.env*.local
+
+# claude
+.claude/
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Betrieb (deploy/): lokale Konfiguration und Backups
+deploy/.env
+deploy/backups/
+
+# Screenshot-Regression (scripts/screenshots.mjs)
+/screenshots/
+
+# von next dev erzeugt
+/AGENTS.md
+/CLAUDE.md
+
+# Feedback-Widget (lokale Ablage, FEEDBACK_DIR-Standard außerhalb von Docker)
+/data/

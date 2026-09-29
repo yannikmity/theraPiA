@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Tailwind-Majors ändern die Konfiguration grundlegend und werden gezielt umgestellt (siehe #3)
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@tailwindcss/*"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    ignore:
+      # Produktions-Image bleibt auf der aktuellen Node-LTS; Major-Wechsel erfolgen bewusst
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]

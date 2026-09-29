@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.env
+.env.*
+# Versteckte Dateien und Ordner (z. B. lokaler Werkzeuge) nicht in den Build-Kontext
+.*/
+!.env.example
+backups
+deploy
+docs
+screenshots
+data
+brag-output*
