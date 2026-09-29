@@ -61,7 +61,7 @@ function configSchema(production: boolean) {
       NEXTAUTH_URL: production ? productionUrl : z.string().url().default("http://localhost:3010"),
       REGISTRATION_MODE: z.enum(["open", "invite", "closed"]).default("invite"),
       // Einrichtungscode für den ersten Account (Admin), siehe setup-token.ts. Nach der Einrichtung ohne Wirkung.
-      SETUP_TOKEN: z.string().min(16, "muss mindestens 16 Zeichen haben").optional(),
+      SETUP_TOKEN: z.string().trim().min(16, "muss mindestens 16 Zeichen haben").optional(),
       // Ablage des Feedback-Widgets (Markdown + PNG). Im Container ein Volume, lokal ein git-ignorierter Ordner.
       FEEDBACK_DIR: z.string().min(1).default(production ? "/data/feedback" : "./data/feedback"),
       // Optionale Nutzungsstatistik mit einer eigenen Umami-Instanz – zur Laufzeit gelesen (kein NEXT_PUBLIC_),

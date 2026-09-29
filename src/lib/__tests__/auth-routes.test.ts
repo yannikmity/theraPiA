@@ -88,7 +88,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Auth-Routen", () => {
     state.allow = true;
     state.dbDown = false;
     state.setupToken = SETUP_TOKEN;
-    const admin = await registerUser(t.client, { email: "admin@example.com", password: PASSWORD, name: "Admin" }, "invite");
+    const admin = await registerUser(t.client, { email: "admin@example.com", password: PASSWORD, name: "Admin", setup: "ok" }, "invite");
     if (!admin.ok || !admin.created) throw new Error("Setup: erster Account nicht angelegt");
     adminId = admin.userId;
   });

@@ -8,7 +8,8 @@ export interface RegistrationContext {
   userCount: number;
   invitation: { role: Role; email: string | null } | null;
   email: string;
-  // Ergebnis der Prüfung des Einrichtungscodes (checkSetupToken); zählt nur für den ersten Account.
+  // Ergebnis der Prüfung des Einrichtungscodes (checkSetupToken); zählt nur für den ersten Account, fehlt es, gilt es als
+  // nicht bestanden.
   setup?: SetupCheck;
 }
 
@@ -19,8 +20,9 @@ export type RegistrationDecision = { allowed: true; role: Role } | { allowed: fa
 
 export function decideRegistration(ctx: RegistrationContext): RegistrationDecision {
   if (ctx.userCount === 0) {
+    // Fail-closed: Ohne ausdrückliches Prüfergebnis "ok" entsteht kein Admin, auch nicht bei künftigen Aufrufern.
     if (ctx.setup === "missing-config") return { allowed: false, reason: SETUP_BLOCKED_MESSAGE };
-    if (ctx.setup === "wrong-code") return { allowed: false, reason: "Einrichtungscode fehlt oder ist falsch" };
+    if (ctx.setup !== "ok") return { allowed: false, reason: "Einrichtungscode fehlt oder ist falsch" };
     return { allowed: true, role: "admin" };
   }
   if (ctx.mode === "closed") return { allowed: false, reason: "Registrierung ist auf dieser Instanz deaktiviert" };

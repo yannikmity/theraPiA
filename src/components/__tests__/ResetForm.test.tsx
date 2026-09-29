@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -57,7 +57,8 @@ describe("ResetForm", () => {
     expect(confirm().getAttribute("aria-describedby")).toBe(alert.id);
     expect(password().hasAttribute("aria-invalid")).toBe(false);
     expect(confirm().hasAttribute("aria-invalid")).toBe(false);
-    expect(document.activeElement).toBe(alert);
+    // Der Fokus kommt aus einem Effekt nach dem Rendern der Meldung – darauf warten statt sofort prüfen.
+    await waitFor(() => expect(document.activeElement).toBe(alert));
     expect(push).not.toHaveBeenCalled();
   });
 
@@ -71,7 +72,7 @@ describe("ResetForm", () => {
     expect(password().getAttribute("aria-describedby")).toBe(alert.id);
     expect(password().hasAttribute("aria-invalid")).toBe(false);
     expect(confirm().hasAttribute("aria-invalid")).toBe(false);
-    expect(document.activeElement).toBe(alert);
+    await waitFor(() => expect(document.activeElement).toBe(alert));
     expect(push).not.toHaveBeenCalled();
   });
 });

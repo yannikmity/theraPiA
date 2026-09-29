@@ -24,7 +24,12 @@ describe("checkSetupToken", () => {
     expect(checkSetupToken({ NEXTAUTH_URL: publicUrl }, "irgendwas")).toBe("missing-config");
   });
 
-  it("lässt eine lokale Instanz ohne SETUP_TOKEN einrichten (Entwicklung, Screenshot-Harness)", () => {
+  it("verlangt im Produktionsbuild den Code auch auf localhost (z. B. hinter einem Proxy)", () => {
+    expect(checkSetupToken({ NEXTAUTH_URL: "http://localhost:3000" }, undefined, true)).toBe("missing-config");
+    expect(setupState({ NEXTAUTH_URL: "http://localhost:3000" }, true)).toBe("blocked");
+  });
+
+  it("lässt eine lokale Entwicklungsinstanz ohne SETUP_TOKEN einrichten", () => {
     expect(checkSetupToken({ NEXTAUTH_URL: "http://localhost:3010" }, undefined)).toBe("ok");
     expect(checkSetupToken({ NEXTAUTH_URL: "http://127.0.0.1:3100" }, undefined)).toBe("ok");
   });

@@ -22,6 +22,7 @@ Je Instanz verschieden sein müssen:
 |---|---|
 | `THERAPIA_DOMAIN` und `NEXTAUTH_URL` | eigene Adresse und eigenes Zertifikat je Institut |
 | `NEXTAUTH_SECRET` | ein geteiltes Secret würde Anmelde-Cookies zwischen Instanzen gültig machen |
+| `SETUP_TOKEN` | wer den Code einer Instanz kennt, könnte sonst eine andere, noch nicht eingerichtete Instanz übernehmen |
 | `POSTGRES_PASSWORD` | getrennte Zugangsdaten je Datenbank |
 | Ziel und Schlüssel der Backup-Kopie außer Haus | Wiederherstellung und Löschfristen je Institut ([Abschnitt 6](installation.md#6-backups)) |
 | Admin-Accounts | Admins eines Instituts sehen nur dessen Accounts |

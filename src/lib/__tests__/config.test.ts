@@ -150,6 +150,10 @@ describe("SETUP_TOKEN", () => {
     expect(parseConfig({ ...valid, SETUP_TOKEN: "einrichtung-0123456789" }).SETUP_TOKEN).toBe("einrichtung-0123456789");
   });
 
+  it("entfernt Leerzeichen am Rand (Zeilenende in der .env)", () => {
+    expect(parseConfig({ ...valid, SETUP_TOKEN: "einrichtung-0123456789 " }).SETUP_TOKEN).toBe("einrichtung-0123456789");
+  });
+
   it("verlangt mindestens 16 Zeichen", () => {
     expect(() => parseConfig({ ...valid, SETUP_TOKEN: "kurz" })).toThrow("SETUP_TOKEN");
   });

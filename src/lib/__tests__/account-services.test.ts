@@ -43,7 +43,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Konto-Services", () => {
   async function setup() {
     const t = await createTestDb();
     cleanup = t.cleanup;
-    const admin = await registerUser(t.client, { email: "Admin@Example.com ", password: PASSWORD, name: "Admin" }, "invite");
+    const admin = await registerUser(t.client, { email: "Admin@Example.com ", password: PASSWORD, name: "Admin", setup: "ok" }, "invite");
     if (!admin.ok || !admin.created) throw new Error("Setup: erster Account nicht angelegt");
     return { db: t.client, adminId: admin.userId, adminRole: admin.role };
   }
@@ -98,7 +98,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Konto-Services", () => {
 
   it("lässt ohne Einladung niemanden mehr rein", async () => {
     const { db } = await setup();
-    const r = await registerUser(db, { email: "pia@example.com", password: PASSWORD, name: "PiA" }, "invite");
+    const r = await registerUser(db, { email: "pia@example.com", password: PASSWORD, name: "PiA", setup: "ok" }, "invite");
     expect(r).toEqual({ ok: false, reason: "Registrierung nur mit Einladung möglich" });
   });
 
@@ -165,14 +165,14 @@ describe.skipIf(!TEST_DATABASE_URL)("Konto-Services", () => {
 
   it("antwortet im Modus open bei vergebener Adresse wie bei einem Erfolg, legt aber nichts an", async () => {
     const { db } = await setup();
-    const r = await registerUser(db, { email: "admin@example.com", password: PASSWORD, name: "X" }, "open");
+    const r = await registerUser(db, { email: "admin@example.com", password: PASSWORD, name: "X", setup: "ok" }, "open");
     expect(r).toEqual({ ok: true, created: false });
     expect(await listUsers(db)).toHaveLength(1);
   });
 
   it("legt im Modus open eine neue Adresse als pia an (created: true)", async () => {
     const { db } = await setup();
-    const r = await registerUser(db, { email: "neu@example.com", password: PASSWORD, name: "Neu" }, "open");
+    const r = await registerUser(db, { email: "neu@example.com", password: PASSWORD, name: "Neu", setup: "ok" }, "open");
     expect(r).toMatchObject({ ok: true, created: true, role: "pia" });
     expect((await listUsers(db)).map((u) => u.email)).toEqual(["admin@example.com", "neu@example.com"]);
   });

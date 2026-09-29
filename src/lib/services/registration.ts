@@ -13,8 +13,7 @@ export interface RegisterUserInput {
   password: string;
   name: string;
   inviteToken?: string | null;
-  // Ergebnis von checkSetupToken; nur für den ersten Account relevant. Fehlt es, gilt die Einrichtung als erlaubt
-  // (Tests und interne Aufrufer), die Route übergibt es immer.
+  // Ergebnis von checkSetupToken; nur für den ersten Account relevant. Fehlt es, wird kein erster Account angelegt.
   setup?: SetupCheck;
 }
 

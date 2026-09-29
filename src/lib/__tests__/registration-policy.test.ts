@@ -5,7 +5,6 @@ const base = { mode: "invite" as const, userCount: 3, invitation: null, email: "
 
 describe("decideRegistration", () => {
   it("macht den ersten Account zum Admin, egal in welchem Modus", () => {
-    expect(decideRegistration({ ...base, mode: "closed", userCount: 0 })).toEqual({ allowed: true, role: "admin" });
     expect(decideRegistration({ ...base, mode: "closed", userCount: 0, setup: "ok" })).toEqual({ allowed: true, role: "admin" });
   });
 
@@ -17,6 +16,13 @@ describe("decideRegistration", () => {
     expect(decideRegistration({ ...base, userCount: 0, setup: "missing-config" })).toEqual({
       allowed: false,
       reason: SETUP_BLOCKED_MESSAGE,
+    });
+  });
+
+  it("legt ohne Prüfergebnis keinen ersten Account an (fail-closed)", () => {
+    expect(decideRegistration({ ...base, userCount: 0 })).toEqual({
+      allowed: false,
+      reason: "Einrichtungscode fehlt oder ist falsch",
     });
   });
 

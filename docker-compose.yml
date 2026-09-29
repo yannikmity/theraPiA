@@ -12,6 +12,7 @@ services:
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?NEXTAUTH_SECRET fehlt - .env aus .env.example anlegen}"
       AUTH_TRUST_HOST: "true"
       REGISTRATION_MODE: "${REGISTRATION_MODE:-invite}"
+      SETUP_TOKEN: "${SETUP_TOKEN:-}"
       FEEDBACK_DIR: /data/feedback
     ports:
       - "127.0.0.1:3010:3000"

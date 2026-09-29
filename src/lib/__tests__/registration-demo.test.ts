@@ -21,7 +21,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Registrierung über eine Demo-Einladung", (
   async function setup() {
     const t = await createTestDb();
     cleanup = t.cleanup;
-    const admin = await registerUser(t.client, { email: "admin@example.com", password: PASSWORD, name: "Admin" }, "invite", NOW);
+    const admin = await registerUser(t.client, { email: "admin@example.com", password: PASSWORD, name: "Admin", setup: "ok" }, "invite", NOW);
     if (!admin.ok || !admin.created) throw new Error("Setup: erster Account nicht angelegt");
     return { db: t.client, adminId: admin.userId };
   }
