@@ -145,6 +145,8 @@ Das `docker-compose.yml` im Hauptverzeichnis ist für die lokale Nutzung und Ent
 
 Die Berechnungen von Stundenkontingenten und Verhältnissen sind eine Hilfe und ersetzen nicht die Vorgaben der Ausbildungs- und Prüfungsordnung oder des eigenen Instituts. Es gilt der Haftungsausschluss der Lizenz.
 
+**Kein Medizinprodukt.** theraPiA dient ausschließlich der Verwaltung der Ausbildung: Stunden, Supervision, Kontingente, Kosten und Nachweise. Die Software ist nicht dafür bestimmt, Krankheiten zu erkennen, zu überwachen, zu behandeln oder zu lindern, und unterstützt keine diagnostischen oder therapeutischen Entscheidungen. Sie ist kein Medizinprodukt im Sinne der Verordnung (EU) 2017/745 (MDR) und darf nicht zu solchen Zwecken eingesetzt werden.
+
 ## Mitmachen
 
 Beiträge sind willkommen – siehe [CONTRIBUTING.md](CONTRIBUTING.md). Sicherheitslücken bitte nicht als öffentliches Issue melden, sondern wie in [SECURITY.md](SECURITY.md) beschrieben.
