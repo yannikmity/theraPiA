@@ -8,9 +8,9 @@ const SECTIONS: { title: string; items: string[] }[] = [
   {
     title: "Vor dem Start",
     items: [
-      "Behandlungsvertrag-Vorlage vom IVB besorgen",
+      "Behandlungsvertrag-Vorlage vom Institut besorgen",
       "Absagefrist-Regelung klären (48h empfohlen)",
-      "Warteliste beim IVB erfragen",
+      "Warteliste beim Institut erfragen",
       "Supervisor:in festlegen (Gruppe + Einzel)",
       "4er-Gruppensupervision organisieren (günstigste Option!)",
       "Dokumentationsvorlage einrichten",
@@ -39,7 +39,7 @@ const SECTIONS: { title: string; items: string[] }[] = [
 
 const TIPS = [
   "4er-Gruppe statt 2er spart ~2.800€ an Supervisionskosten",
-  "Fahrtkosten zum IVB / zur Supervision sind absetzbar",
+  "Fahrtkosten zum Institut / zur Supervision sind absetzbar",
   "Supervisionskosten = Werbungskosten / Ausbildungskosten",
   "NV-Bescheinigung beim Finanzamt beantragen (bei geringem Einkommen)",
   "Frühzeitig Patient:innen aufnehmen – Wartezeiten in KJP sind lang",
