@@ -72,7 +72,7 @@ export function GroupsClient({ initialGroups, initialGroupSessions, ebmStaffeln 
           </div>
           <ActionError result={error} />
           <FormField label="Gruppenname" htmlFor="group-name">
-            <Input id="group-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. IVB-Gruppe 1" autoFocus disabled={isSaving} />
+            <Input id="group-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Kindergruppe 1" autoFocus disabled={isSaving} />
           </FormField>
           <FormField label="Startdatum" htmlFor="group-start">
             <Input id="group-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={isSaving} />
