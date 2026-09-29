@@ -27,7 +27,7 @@ Für Ausbildungsinstitute, ihre IT und Softwarepartner, die theraPiA für Psycho
 **Einmalig, vor der ersten Einladung:**
 
 - [ ] Server mit Firewall, SSH nur per Schlüssel, Setup aus `deploy/` mit fester `THERAPIA_VERSION` ([Abschnitte 1–2](installation.md#1-voraussetzungen)).
-- [ ] Ersten Account sofort anlegen – er wird Admin ([Abschnitt 3](installation.md#3-ersten-account-anlegen)).
+- [ ] Ersten Account mit dem Einrichtungscode (`SETUP_TOKEN`) anlegen – er wird Admin ([Abschnitt 3](installation.md#3-ersten-account-anlegen)).
 - [ ] Wiederherstellung einmal testen und die Kopie der Backups außer Haus einrichten ([Abschnitt 6](installation.md#6-backups)).
 - [ ] Ausbildungsprofil und EBM-Staffel mit den Vorgaben des Instituts abgleichen ([Abschnitt 9](installation.md#9-ausbildungsregeln)).
 - [ ] Datenschutz-Unterlagen: Datenschutzhinweise, Verzeichnis von Verarbeitungstätigkeiten, AVV, TOMs, Impressum ([datenschutz.md](datenschutz.md)).

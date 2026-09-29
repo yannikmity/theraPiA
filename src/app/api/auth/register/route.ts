@@ -3,6 +3,7 @@ import { withTransaction } from "@/lib/db";
 import { getConfig } from "@/lib/config";
 import { registerSchema } from "@/lib/validation";
 import { registerUser } from "@/lib/services/registration";
+import { checkSetupToken } from "@/lib/setup-token";
 import { registerLimiter, clientIp } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
@@ -18,9 +19,11 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe" }, { status: 400 });
     }
-    const { invite, ...input } = parsed.data;
+    const { invite, setupToken, ...input } = parsed.data;
+    const config = getConfig();
+    const setup = checkSetupToken(config, setupToken);
     const result = await withTransaction((tx) =>
-      registerUser(tx, { ...input, inviteToken: invite ?? null }, getConfig().REGISTRATION_MODE)
+      registerUser(tx, { ...input, inviteToken: invite ?? null, setup }, config.REGISTRATION_MODE)
     );
     if (!result.ok) {
       return NextResponse.json({ error: result.reason }, { status: 400 });

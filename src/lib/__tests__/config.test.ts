@@ -122,3 +122,40 @@ describe("parseConfig – Umami", () => {
     expect(parseConfig({ ...prod, UMAMI_SCRIPT_URL: url, UMAMI_WEBSITE_ID: id }).UMAMI_SCRIPT_URL).toBe(url);
   });
 });
+
+describe("NEXTAUTH_SECRET: öffentlich bekannte Beispielwerte", () => {
+  const prod = { ...valid, NODE_ENV: "production", NEXTAUTH_URL: "https://therapia.beispiel-institut.de" };
+  const screenshotSecret = "screenshots-nur-lokal-0123456789abcdefghijklmnop";
+
+  it("lehnt das Secret der Screenshot-Harness auf einer öffentlichen Instanz ab", () => {
+    expect(() => parseConfig({ ...prod, NEXTAUTH_SECRET: screenshotSecret })).toThrow("öffentlich bekannt");
+  });
+
+  it("lehnt Platzhalter wie „change-this“ oder „changeme“ ab", () => {
+    expect(() =>
+      parseConfig({ ...prod, NEXTAUTH_SECRET: "your-secret-key-change-this-in-production-min-32-chars" })
+    ).toThrow("NEXTAUTH_SECRET");
+    expect(() => parseConfig({ ...prod, NEXTAUTH_SECRET: `changeme-${"x".repeat(32)}` })).toThrow("NEXTAUTH_SECRET");
+  });
+
+  it("erlaubt bekannte Werte nur auf einer lokalen Instanz (Screenshot-Harness mit --prod)", () => {
+    const local = { ...prod, NEXTAUTH_URL: "http://localhost:3100", NEXTAUTH_SECRET: screenshotSecret };
+    expect(parseConfig(local).NEXTAUTH_SECRET).toBe(screenshotSecret);
+  });
+});
+
+describe("SETUP_TOKEN", () => {
+  it("ist optional und wird übernommen", () => {
+    expect(parseConfig(valid).SETUP_TOKEN).toBeUndefined();
+    expect(parseConfig({ ...valid, SETUP_TOKEN: "einrichtung-0123456789" }).SETUP_TOKEN).toBe("einrichtung-0123456789");
+  });
+
+  it("entfernt Leerzeichen am Rand (Zeilenende in der .env)", () => {
+    expect(parseConfig({ ...valid, SETUP_TOKEN: "einrichtung-0123456789 " }).SETUP_TOKEN).toBe("einrichtung-0123456789");
+  });
+
+  it("verlangt mindestens 16 Zeichen", () => {
+    expect(() => parseConfig({ ...valid, SETUP_TOKEN: "kurz" })).toThrow("SETUP_TOKEN");
+  });
+});
+

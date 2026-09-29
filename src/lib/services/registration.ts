@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import type { Db } from "../db";
 import { hashToken } from "../tokens";
 import { decideRegistration, type RegistrationMode, type Role } from "../registration-policy";
+import type { SetupCheck } from "../setup-token";
 import { BCRYPT_SALT_ROUNDS } from "../constants";
 import { todayIso } from "../dates";
 import { generateDemoData } from "../demo/demo-daten.mjs";
@@ -12,6 +13,8 @@ export interface RegisterUserInput {
   password: string;
   name: string;
   inviteToken?: string | null;
+  // Ergebnis von checkSetupToken; nur für den ersten Account relevant. Fehlt es, wird kein erster Account angelegt.
+  setup?: SetupCheck;
 }
 
 export type RegisterUserResult =
@@ -53,7 +56,7 @@ export async function registerUser(
     if (!invitation) return { ok: false, reason: "Einladung ungültig oder abgelaufen" };
   }
 
-  const decision = decideRegistration({ mode, userCount, invitation, email });
+  const decision = decideRegistration({ mode, userCount, invitation, email, setup: input.setup });
   if (!decision.allowed) return { ok: false, reason: decision.reason };
 
   // Hash vor der Existenzprüfung: die Antwort dauert bei vergebener Adresse genauso lang wie bei
