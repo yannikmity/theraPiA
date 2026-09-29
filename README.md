@@ -50,7 +50,7 @@ docker compose up -d --build
 open http://localhost:3010
 ```
 
-Beim ersten Start unter `/auth/register` den ersten Account anlegen – er wird Admin und kann weitere Personen einladen. Die Migrationen in `migrations/` laufen bei jedem Start des Frontend-Containers automatisch.
+Beim ersten Start unter `/auth/register` den ersten Account anlegen – er wird Admin und kann weitere Personen einladen. Lokal geht das ohne Einrichtungscode, auf einem Server verlangt die App den Wert von `SETUP_TOKEN` (siehe [Installation](docs/betrieb/installation.md)). Die Migrationen in `migrations/` laufen bei jedem Start des Frontend-Containers automatisch.
 
 ## Betrieb
 
@@ -128,11 +128,12 @@ scripts/                  # Migrationen, Screenshot-Regression
 
 | Variable | Beschreibung |
 |----------|-------------|
-| `NEXTAUTH_SECRET` | Secret für die JWT-Signierung (mind. 32 Zeichen, Pflicht) |
+| `NEXTAUTH_SECRET` | Secret für die JWT-Signierung (mind. 32 Zeichen, Pflicht; öffentlich bekannte Beispielwerte lehnt die App außerhalb von localhost ab) |
+| `SETUP_TOKEN` | Einrichtungscode für den ersten Account (mind. 16 Zeichen). Lokal optional, auf einer öffentlich erreichbaren Instanz für die Einrichtung Pflicht |
 | `NEXTAUTH_URL` | App-URL (Standard in der Entwicklung `http://localhost:3010`; in Produktion Pflicht und mit `https://`) |
 | `DATABASE_URL` | PostgreSQL-Connection-String (nur bei `npm run dev`) |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Zugangsdaten der lokalen Datenbank |
-| `REGISTRATION_MODE` | Wer sich registrieren darf: `invite` (Standard, nur mit Einladungslink), `open` (alle) oder `closed` (niemand). Der erste Account einer Instanz ist immer möglich und wird Admin |
+| `REGISTRATION_MODE` | Wer sich registrieren darf: `invite` (Standard, nur mit Einladungslink), `open` (alle) oder `closed` (niemand). Der erste Account einer Instanz ist immer möglich (auf einem Server mit Einrichtungscode) und wird Admin |
 | `FEEDBACK_DIR` | Ablage des Feedback-Widgets (Standard `./data/feedback`, im Container `/data/feedback`) |
 | `UMAMI_SCRIPT_URL`, `UMAMI_WEBSITE_ID` | optional, nur gemeinsam: eigene Umami-Instanz für die Nutzungsstatistik |
 

@@ -17,6 +17,22 @@ function isHttpsOrLocalhost(url: string): boolean {
   return url.startsWith("https://") || LOCALHOST_HTTP.test(url);
 }
 
+// Lokale Instanz (Entwicklung, Screenshot-Harness): Beispiel-Secrets und die Einrichtung ohne SETUP_TOKEN sind erlaubt.
+export function isLocalUrl(url: string): boolean {
+  return LOCALHOST_HTTP.test(url);
+}
+
+// Secrets, die öffentlich im Repository oder in alten Vorlagen stehen: Wer sie kennt, kann Sitzungen fälschen.
+const KNOWN_EXAMPLE_SECRETS = new Set([
+  "screenshots-nur-lokal-0123456789abcdefghijklmnop",
+  "your-secret-key-change-this-in-production-min-32-chars-12345678901234567890",
+]);
+const PLACEHOLDER_SECRET = /change[-_ ]?(this|me)/i;
+
+function isKnownExampleSecret(secret: string): boolean {
+  return KNOWN_EXAMPLE_SECRETS.has(secret) || PLACEHOLDER_SECRET.test(secret);
+}
+
 // In Produktion gibt es keinen Default: Einladungs- und Reset-Links werden aus NEXTAUTH_URL gebaut,
 // ein vergessener Platzhalter oder http:// würde unbrauchbare bzw. unsichere Links erzeugen.
 const productionUrl = z
@@ -44,6 +60,8 @@ function configSchema(production: boolean) {
       NEXTAUTH_SECRET: z.string({ error: "fehlt" }).min(32, "muss mindestens 32 Zeichen haben"),
       NEXTAUTH_URL: production ? productionUrl : z.string().url().default("http://localhost:3010"),
       REGISTRATION_MODE: z.enum(["open", "invite", "closed"]).default("invite"),
+      // Einrichtungscode für den ersten Account (Admin), siehe setup-token.ts. Nach der Einrichtung ohne Wirkung.
+      SETUP_TOKEN: z.string().min(16, "muss mindestens 16 Zeichen haben").optional(),
       // Ablage des Feedback-Widgets (Markdown + PNG). Im Container ein Volume, lokal ein git-ignorierter Ordner.
       FEEDBACK_DIR: z.string().min(1).default(production ? "/data/feedback" : "./data/feedback"),
       // Optionale Nutzungsstatistik mit einer eigenen Umami-Instanz – zur Laufzeit gelesen (kein NEXT_PUBLIC_),
@@ -54,6 +72,10 @@ function configSchema(production: boolean) {
     .refine((config) => Boolean(config.UMAMI_SCRIPT_URL) === Boolean(config.UMAMI_WEBSITE_ID), {
       path: ["UMAMI_WEBSITE_ID"],
       message: "UMAMI_SCRIPT_URL und UMAMI_WEBSITE_ID nur gemeinsam setzen",
+    })
+    .refine((config) => isLocalUrl(config.NEXTAUTH_URL) || !isKnownExampleSecret(config.NEXTAUTH_SECRET), {
+      path: ["NEXTAUTH_SECRET"],
+      message: "ist ein öffentlich bekannter Beispielwert – eigenes Secret erzeugen, z. B. `openssl rand -base64 32`",
     });
 }
 

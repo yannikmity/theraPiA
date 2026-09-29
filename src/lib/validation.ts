@@ -190,6 +190,7 @@ export const registerSchema = z.object({
   password: z.string().min(MIN_PASSWORD_LENGTH, `Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein`),
   name: z.string().min(1, "Name ist erforderlich").max(100),
   invite: z.string().max(100).optional(),
+  setupToken: z.string().max(200).optional(),
 });
 
 // Admin: Einladung, optional an eine Adresse gebunden. withDemoData (#9): der Account startet mit fiktiven

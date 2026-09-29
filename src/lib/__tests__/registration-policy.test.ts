@@ -1,11 +1,27 @@
 import { describe, it, expect } from "vitest";
-import { decideRegistration } from "../registration-policy";
+import { decideRegistration, SETUP_BLOCKED_MESSAGE } from "../registration-policy";
 
 const base = { mode: "invite" as const, userCount: 3, invitation: null, email: "pia@example.com" };
 
 describe("decideRegistration", () => {
   it("macht den ersten Account zum Admin, egal in welchem Modus", () => {
     expect(decideRegistration({ ...base, mode: "closed", userCount: 0 })).toEqual({ allowed: true, role: "admin" });
+    expect(decideRegistration({ ...base, mode: "closed", userCount: 0, setup: "ok" })).toEqual({ allowed: true, role: "admin" });
+  });
+
+  it("verlangt für den ersten Account einen gültigen Einrichtungscode", () => {
+    expect(decideRegistration({ ...base, userCount: 0, setup: "wrong-code" })).toEqual({
+      allowed: false,
+      reason: "Einrichtungscode fehlt oder ist falsch",
+    });
+    expect(decideRegistration({ ...base, userCount: 0, setup: "missing-config" })).toEqual({
+      allowed: false,
+      reason: SETUP_BLOCKED_MESSAGE,
+    });
+  });
+
+  it("ignoriert den Einrichtungscode, sobald es Accounts gibt", () => {
+    expect(decideRegistration({ ...base, mode: "open", setup: "wrong-code" })).toEqual({ allowed: true, role: "pia" });
   });
 
   it("lässt im Modus invite ohne Einladung niemanden rein", () => {

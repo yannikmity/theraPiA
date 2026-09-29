@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   mode: "invite" as RegistrationMode,
   allow: true,
   dbDown: false,
+  setupToken: undefined as string | undefined,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -33,7 +34,14 @@ vi.mock("@/lib/db", () => ({
     }
   },
 }));
-vi.mock("@/lib/config", () => ({ getConfig: () => ({ REGISTRATION_MODE: state.mode }) }));
+vi.mock("@/lib/config", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/config")>()),
+  getConfig: () => ({
+    REGISTRATION_MODE: state.mode,
+    NEXTAUTH_URL: "https://therapia.beispiel-institut.de",
+    SETUP_TOKEN: state.setupToken,
+  }),
+}));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
   const stub: RateLimiter = { check: () => state.allow, reset: () => undefined, size: () => 0 };
@@ -48,12 +56,14 @@ vi.mock("../constants", async (importOriginal) => ({
 }));
 
 import { registerUser } from "../services/registration";
+import { SETUP_BLOCKED_MESSAGE } from "../registration-policy";
 import { createInvitation } from "../services/invitations";
 import { createPasswordResetToken } from "../services/accounts";
 import { POST as register } from "@/app/api/auth/register/route";
 import { POST as reset } from "@/app/api/auth/reset/route";
 
 const PASSWORD = "sicheres-passwort";
+const SETUP_TOKEN = "einrichtung-0123456789";
 
 function post(path: string, body: unknown, raw = false): NextRequest {
   return new NextRequest(`http://localhost:3200${path}`, {
@@ -77,6 +87,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Auth-Routen", () => {
     state.mode = "invite";
     state.allow = true;
     state.dbDown = false;
+    state.setupToken = SETUP_TOKEN;
     const admin = await registerUser(t.client, { email: "admin@example.com", password: PASSWORD, name: "Admin" }, "invite");
     if (!admin.ok || !admin.created) throw new Error("Setup: erster Account nicht angelegt");
     adminId = admin.userId;
@@ -183,6 +194,34 @@ describe.skipIf(!TEST_DATABASE_URL)("Auth-Routen", () => {
       const again = await register(post("/api/auth/register", { ...body, email: "neu@example.com", invite: probe.token }));
       expect(again.status).toBe(400);
       expect(await again.json()).toEqual({ error: "Einladung ungültig oder abgelaufen" });
+    });
+
+    describe("erster Account (Einrichtung)", () => {
+      beforeEach(async () => {
+        await state.client!.query("DELETE FROM users");
+      });
+
+      it("legt den ersten Account nur mit dem Einrichtungscode an, auch im Modus closed", async () => {
+        state.mode = "closed";
+        const without = await register(post("/api/auth/register", body));
+        expect(without.status).toBe(400);
+        expect(await without.json()).toEqual({ error: "Einrichtungscode fehlt oder ist falsch" });
+        const wrong = await register(post("/api/auth/register", { ...body, setupToken: "falsch" }));
+        expect(wrong.status).toBe(400);
+        expect(await count("SELECT count(*)::int AS n FROM users")).toBe(0);
+
+        const res = await register(post("/api/auth/register", { ...body, setupToken: SETUP_TOKEN }));
+        expect(res.status).toBe(201);
+        expect(await count("SELECT count(*)::int AS n FROM users WHERE role = 'admin'")).toBe(1);
+      });
+
+      it("sperrt die Einrichtung einer öffentlichen Instanz ohne SETUP_TOKEN", async () => {
+        state.setupToken = undefined;
+        const res = await register(post("/api/auth/register", { ...body, setupToken: "irgendwas" }));
+        expect(res.status).toBe(400);
+        expect(await res.json()).toEqual({ error: SETUP_BLOCKED_MESSAGE });
+        expect(await count("SELECT count(*)::int AS n FROM users")).toBe(0);
+      });
     });
 
     it("antwortet 500 ohne Details, wenn die Datenbank ausfällt", async () => {

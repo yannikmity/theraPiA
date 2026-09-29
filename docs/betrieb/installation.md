@@ -67,11 +67,12 @@ ls -la
 
 `ls -la` muss `docker-compose.yml`, `Caddyfile` und `.env` zeigen. Bricht `curl` mit „404“ ab, stimmt die Versionsnummer nicht.
 
-**Zufallswerte erzeugen.** Du brauchst zwei Zufallswerte – einmal für die Anmelde-Sitzungen, einmal als Datenbankpasswort:
+**Zufallswerte erzeugen.** Du brauchst drei Zufallswerte – für die Anmelde-Sitzungen, als Datenbankpasswort und als Einrichtungscode für den ersten Account:
 
 ```bash
 openssl rand -base64 32   # für NEXTAUTH_SECRET
 openssl rand -hex 24      # für POSTGRES_PASSWORD
+openssl rand -hex 16      # für SETUP_TOKEN
 ```
 
 Für das Datenbankpasswort `-hex` verwenden: Es landet in einer Verbindungs-URL, und Zeichen wie `/` oder `+` aus `-base64` würden sie unbrauchbar machen.
@@ -83,8 +84,9 @@ Für das Datenbankpasswort `-hex` verwenden: Es landet in einer Verbindungs-URL,
 | `THERAPIA_DOMAIN` | die Domain ohne `https://`, z. B. `therapia.example.org` |
 | `NEXTAUTH_URL` | dieselbe Domain mit `https://` davor, ohne `/` am Ende. Pflicht: Der Platzhalter `https://therapia.example.org` aus der Vorlage muss ersetzt werden – mit fehlendem Wert, `http://` (einzige Ausnahme: `http://localhost` bzw. `http://127.0.0.1` für lokale Tests) oder einer `example.org`-/`example.com`-Adresse startet die App nicht |
 | `THERAPIA_VERSION` | die Versionsnummer von oben, z. B. `0.2.0`. `latest` nur zum Ausprobieren – sonst weißt du nie, welche Version läuft |
-| `NEXTAUTH_SECRET` | der erste Zufallswert (mindestens 32 Zeichen – sonst beendet sich die App beim Start und der Container startet ständig neu, siehe [Fehlersuche](#7-fehlersuche)) |
-| `REGISTRATION_MODE` | `invite` (empfohlen): Registrierung nur mit Einladungslink. Jeder abgeschlossene Versuch verbraucht den Link – auch wenn die Adresse schon einen Account hat (dann gilt das bisherige Passwort weiter; die Antwort sieht wie eine Registrierung aus, damit der Link keine vergebenen Adressen verrät). `open`: jede Person mit der Adresse kann sich registrieren – eine schon vergebene Adresse wird dabei nicht verraten, die Registrierung sieht dann wie erfolgreich aus und das bisherige Passwort gilt weiter. `closed`: niemand kann sich registrieren (außer dem allerersten Account) |
+| `NEXTAUTH_SECRET` | der erste Zufallswert (mindestens 32 Zeichen – sonst beendet sich die App beim Start und der Container startet ständig neu, siehe [Fehlersuche](#7-fehlersuche)). Werte aus Beispielen oder Vorlagen (etwa mit `change-this` oder `changeme`) lehnt die App ab |
+| `SETUP_TOKEN` | der dritte Zufallswert (mindestens 16 Zeichen). Einrichtungscode für den ersten Account, siehe [Abschnitt 3](#3-ersten-account-anlegen). Ohne ihn lässt sich eine öffentlich erreichbare Instanz nicht einrichten; nach der Einrichtung hat er keine Wirkung mehr |
+| `REGISTRATION_MODE` | `invite` (empfohlen): Registrierung nur mit Einladungslink. Jeder abgeschlossene Versuch verbraucht den Link – auch wenn die Adresse schon einen Account hat (dann gilt das bisherige Passwort weiter; die Antwort sieht wie eine Registrierung aus, damit der Link keine vergebenen Adressen verrät). `open`: jede Person mit der Adresse kann sich registrieren – eine schon vergebene Adresse wird dabei nicht verraten, die Registrierung sieht dann wie erfolgreich aus und das bisherige Passwort gilt weiter. `closed`: niemand kann sich registrieren (außer dem allerersten Account mit Einrichtungscode) |
 | `POSTGRES_DB`, `POSTGRES_USER` | so lassen (`therapia`) |
 | `POSTGRES_PASSWORD` | der zweite Zufallswert |
 | `UMAMI_SCRIPT_URL`, `UMAMI_WEBSITE_ID` | optional, nur gemeinsam: eigene Umami-Instanz für eine Nutzungsstatistik, siehe [analytics.md](analytics.md). Leer lassen = keine Statistik |
@@ -124,9 +126,9 @@ curl https://therapia.example.org/api/health
 
 ## 3. Ersten Account anlegen
 
-Direkt nach dem Start im Browser `https://therapia.example.org/auth/register` öffnen und einen Account anlegen (Passwort mindestens 10 Zeichen). **Der erste Account einer Instanz wird Admin** – unabhängig von `REGISTRATION_MODE`.
+Direkt nach dem Start im Browser `https://therapia.example.org/auth/register` öffnen und einen Account anlegen (Passwort mindestens 10 Zeichen). Das Formular fragt zusätzlich den **Einrichtungscode** ab: den Wert von `SETUP_TOKEN` aus der `.env`. **Der erste Account einer Instanz wird Admin** – unabhängig von `REGISTRATION_MODE`.
 
-> **Warnung:** Bis der erste Account existiert, kann sich jede Person, die die Adresse kennt, als Admin registrieren. Lege ihn deshalb sofort nach dem ersten Start an.
+Der Code verhindert, dass eine fremde Person, die die Adresse vor dir aufruft, den Admin-Account anlegt. Fehlt `SETUP_TOKEN`, zeigt die Registrierungsseite nur einen Hinweis; dann den Wert eintragen und `docker compose up -d` ausführen. Nach der Einrichtung kannst du die Zeile in der `.env` stehen lassen oder leeren.
 
 Danach sind weitere Registrierungen je nach `REGISTRATION_MODE` nur mit Einladungslink (`invite`), frei (`open`) oder gar nicht (`closed`) möglich.
 
@@ -253,7 +255,7 @@ Alle Befehle im Ordner der Installation ausführen (`cd ~/therapia`).
 - **Läuft alles?** `docker compose ps` – alle vier Container müssen `Up` sein. Steht bei einem `Restarting` oder `Exited`, dessen Log ansehen.
 - **Logs:** `docker compose logs app` (bzw. `db`, `caddy`, `backup`); mit `--tail 100` nur die letzten Zeilen, mit `-f` fortlaufend.
 - **Health-Check:** `curl https://therapia.example.org/api/health` antwortet mit `{"status":"ok"}`. `{"status":"error"}` heißt: Die App läuft, erreicht aber die Datenbank nicht → `docker compose logs db`.
-- **Container `app` startet ständig neu (`Restarting`), `docker compose logs app` zeigt `Ungültige Konfiguration – …`:** Die App prüft ihre Konfiguration beim Start und beendet sich, wenn etwas nicht stimmt. Die Meldung nennt die Ursache, z. B. `NEXTAUTH_SECRET: muss mindestens 32 Zeichen haben`, `NEXTAUTH_URL: muss mit https:// beginnen (Ausnahme: localhost)` oder einen ungültigen `REGISTRATION_MODE`. Wert in `.env` korrigieren (siehe Abschnitt 2), dann `docker compose up -d`.
+- **Container `app` startet ständig neu (`Restarting`), `docker compose logs app` zeigt `Ungültige Konfiguration – …`:** Die App prüft ihre Konfiguration beim Start und beendet sich, wenn etwas nicht stimmt. Die Meldung nennt die Ursache, z. B. `NEXTAUTH_SECRET: muss mindestens 32 Zeichen haben`, `NEXTAUTH_URL: muss mit https:// beginnen (Ausnahme: localhost)` `NEXTAUTH_SECRET: ist ein öffentlich bekannter Beispielwert` oder einen ungültigen `REGISTRATION_MODE`. Wert in `.env` korrigieren (siehe Abschnitt 2), dann `docker compose up -d`.
 - **App startet nicht oder startet ständig neu, Log zeigt `password authentication failed`:** `POSTGRES_PASSWORD` in `.env` wurde nach dem ersten Start geändert. Den alten Wert wieder eintragen.
 - **Zertifikatsprobleme** (Browser meldet unsicheres Zertifikat, `curl` meldet einen SSL-Fehler, oder `docker compose logs caddy` zeigt Fehler zu `acme` oder `challenge`): Meist stimmt der DNS-Eintrag nicht oder Port 80/443 ist gesperrt. Prüfen, dass `getent hosts therapia.example.org` die Server-IP liefert, dass `THERAPIA_DOMAIN` in `.env` genau diese Domain enthält und dass die Ports 80 und 443 in der Hoster-Firewall und in `ufw` offen sind. Danach `docker compose restart caddy`. Let's Encrypt begrenzt fehlgeschlagene Versuche; nach vielen Fehlversuchen eine Stunde warten.
 - **Anmeldung klappt nicht oder Links in der App zeigen auf eine falsche Adresse:** `NEXTAUTH_URL` muss genau die Adresse sein, unter der die App im Browser aufgerufen wird (mit `https://`, ohne `/` am Ende). Nach einer Änderung `docker compose up -d`.

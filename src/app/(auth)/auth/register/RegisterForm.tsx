@@ -9,23 +9,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { SetupState } from "@/lib/setup-token";
 
 export function RegisterForm({
   inviteToken,
   registrationOpen,
   closedMode,
   isSetup,
+  setup = "open",
 }: {
   inviteToken: string | null;
   registrationOpen: boolean;
   closedMode: boolean;
   isSetup: boolean;
+  // Einrichtung des ersten Accounts: Code aus SETUP_TOKEN nötig, gesperrt (SETUP_TOKEN fehlt) oder frei (lokal).
+  setup?: SetupState;
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [name, setName] = useState("");
+  const [setupToken, setSetupToken] = useState("");
+  const codeRequired = isSetup && setup === "code-required";
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -55,7 +61,13 @@ export function RegisterForm({
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name, invite: inviteToken ?? undefined }),
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          invite: inviteToken ?? undefined,
+          setupToken: codeRequired ? setupToken : undefined,
+        }),
       });
 
       const data = await response.json();
@@ -74,6 +86,18 @@ export function RegisterForm({
       setLoading(false);
     }
   };
+
+  if (isSetup && setup === "blocked") {
+    return (
+      <Card className="items-center text-center">
+        <h1 className="sr-only">Registrieren</h1>
+        <p className="text-foreground">
+          Diese Instanz ist noch nicht eingerichtet. Für den ersten Account muss die Betreiberin oder der Betreiber{" "}
+          <code>SETUP_TOKEN</code> in der <code>.env</code> setzen und die App neu starten.
+        </p>
+      </Card>
+    );
+  }
 
   if (!registrationOpen) {
     return (
@@ -145,6 +169,25 @@ export function RegisterForm({
               onChange={(e) => setPasswordConfirm(e.target.value)}
             />
           </div>
+          {codeRequired && (
+            <div className="space-y-1.5">
+              <Label htmlFor="setup-token">Einrichtungscode</Label>
+              <Input
+                id="setup-token"
+                name="setup-token"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                required
+                aria-describedby="setup-token-hint"
+                value={setupToken}
+                onChange={(e) => setSetupToken(e.target.value)}
+              />
+              <p id="setup-token-hint" className="text-sm text-muted-foreground">
+                Steht als <code>SETUP_TOKEN</code> in der <code>.env</code> der Instanz.
+              </p>
+            </div>
+          )}
           <Button type="submit" className="w-full" loading={loading}>
             {loading ? "Wird angelegt …" : "Registrieren"}
           </Button>
