@@ -28,7 +28,7 @@ Port `587` nutzt STARTTLS, Port `465` TLS ab Verbindungsbeginn. Die App verschic
 
 ## Was die Nutzer:in sieht
 
-Unabhängig davon, ob es zur Adresse ein Konto gibt, antwortet die App immer gleich („Falls ein Konto mit dieser Adresse existiert, ist eine Mail unterwegs.“) – so lässt sich nicht herausfinden, wer registriert ist. Anfragen sind begrenzt: 5 pro Stunde je Client und Adresse, 3 pro Stunde je Adresse. Die Zähler liegen im Speicher des App-Containers; ein Neustart setzt sie zurück.
+Unabhängig davon, ob es zur Adresse ein Konto gibt, antwortet die App immer gleich („Falls ein Konto mit dieser Adresse existiert, ist eine Mail unterwegs.“) – so lässt sich nicht herausfinden, wer registriert ist. Anfragen sind begrenzt: 10 pro Stunde je IP-Adresse, 3 pro Stunde je Mail-Adresse. Die Zähler liegen im Speicher des App-Containers; ein Neustart setzt sie zurück.
 
 ## Fehlersuche
 

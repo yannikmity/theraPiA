@@ -1,6 +1,6 @@
 import {
-  FORGOT_LIMIT_PER_CLIENT,
   FORGOT_LIMIT_PER_EMAIL,
+  FORGOT_LIMIT_PER_IP,
   FORGOT_WINDOW_MINUTES,
   LOGIN_LIMIT_PER_CLIENT,
   LOGIN_LIMIT_PER_EMAIL,
@@ -90,8 +90,23 @@ export const passwordCheckLimiter = createRateLimiter({
   windowMs: PASSWORD_CHECK_WINDOW_MINUTES * 60_000,
 });
 
-// „Passwort vergessen“: pro Client+Adresse und pro Adresse über alle Clients – begrenzt Mails an fremde Postfächer.
-export const forgotThrottle = createLoginThrottle(
-  createRateLimiter({ limit: FORGOT_LIMIT_PER_CLIENT, windowMs: FORGOT_WINDOW_MINUTES * 60_000 }),
+// „Passwort vergessen“: pro IP-Adresse (ein Client mit wechselnden Adressen) und pro Mail-Adresse über alle
+// Clients – begrenzt Mails an fremde Postfächer. Wie beim Anmelden bewegt jeder Versuch beide Zähler.
+export interface ForgotThrottle {
+  allow(clientIp: string, email: string): boolean;
+}
+
+export function createForgotThrottle(perIp: RateLimiter, perEmail: RateLimiter): ForgotThrottle {
+  return {
+    allow(clientIp, email) {
+      const ipOk = perIp.check(clientIp);
+      const emailOk = perEmail.check(email);
+      return ipOk && emailOk;
+    },
+  };
+}
+
+export const forgotThrottle = createForgotThrottle(
+  createRateLimiter({ limit: FORGOT_LIMIT_PER_IP, windowMs: FORGOT_WINDOW_MINUTES * 60_000 }),
   createRateLimiter({ limit: FORGOT_LIMIT_PER_EMAIL, windowMs: FORGOT_WINDOW_MINUTES * 60_000 })
 );

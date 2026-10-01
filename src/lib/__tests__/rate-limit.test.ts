@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createRateLimiter, createLoginThrottle, clientIp } from "../rate-limit";
+import { createRateLimiter, createLoginThrottle, createForgotThrottle, clientIp } from "../rate-limit";
 
 describe("createRateLimiter", () => {
   it("blockt nach dem Limit und gibt nach Ablauf des Fensters wieder frei", () => {
@@ -100,6 +100,47 @@ describe("createLoginThrottle", () => {
     const t = throttle(1, 1);
     t.allow("203.0.113.5", "pia@example.com");
     t.reset("203.0.113.5", "pia@example.com");
+    expect(t.allow("203.0.113.5", "pia@example.com")).toBe(true);
+  });
+});
+
+describe("createForgotThrottle", () => {
+  function throttle(perIp: number, perEmail: number, now: () => number = () => 0) {
+    return createForgotThrottle(
+      createRateLimiter({ limit: perIp, windowMs: 1000, now }),
+      createRateLimiter({ limit: perEmail, windowMs: 1000, now })
+    );
+  }
+
+  it("begrenzt Anfragen pro IP-Adresse, auch mit wechselnden Mail-Adressen", () => {
+    const t = throttle(10, 3);
+    for (let i = 0; i < 10; i++) expect(t.allow("203.0.113.5", `nutzer${i}@example.com`)).toBe(true);
+    expect(t.allow("203.0.113.5", "nutzer10@example.com")).toBe(false);
+    expect(t.allow("203.0.113.6", "nutzer10@example.com")).toBe(true);
+  });
+
+  it("begrenzt Anfragen pro Mail-Adresse über alle IP-Adressen", () => {
+    const t = throttle(10, 3);
+    expect(t.allow("203.0.113.1", "pia@example.com")).toBe(true);
+    expect(t.allow("203.0.113.2", "pia@example.com")).toBe(true);
+    expect(t.allow("203.0.113.3", "pia@example.com")).toBe(true);
+    expect(t.allow("203.0.113.4", "pia@example.com")).toBe(false);
+    expect(t.allow("203.0.113.4", "andere@example.com")).toBe(true);
+  });
+
+  it("bewegt bei jedem Versuch beide Zähler, auch wenn einer schon blockt", () => {
+    const t = throttle(2, 1);
+    t.allow("203.0.113.5", "pia@example.com"); // IP 1/2, Adresse 1/1
+    expect(t.allow("203.0.113.5", "pia@example.com")).toBe(false); // Adresse blockt, IP 2/2
+    expect(t.allow("203.0.113.5", "andere@example.com")).toBe(false); // IP voll
+  });
+
+  it("gibt nach Ablauf des Fensters wieder frei", () => {
+    let now = 0;
+    const t = throttle(1, 1, () => now);
+    expect(t.allow("203.0.113.5", "pia@example.com")).toBe(true);
+    expect(t.allow("203.0.113.5", "pia@example.com")).toBe(false);
+    now = 1000;
     expect(t.allow("203.0.113.5", "pia@example.com")).toBe(true);
   });
 });
