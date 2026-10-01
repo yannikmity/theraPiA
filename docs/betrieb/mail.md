@@ -1,0 +1,45 @@
+# Mailversand für „Passwort vergessen“
+
+Standard ist **aus**: Ohne Konfiguration verschickt theraPiA keine Mails. Wer das Passwort vergessen hat, sieht auf `/auth/forgot` den Hinweis, sich an die Betreiber:in zu wenden; ein Admin erzeugt dann einen Reset-Link (siehe [installation.md, Abschnitt 4](installation.md#4-personen-einladen)).
+
+Mit einem SMTP-Zugang fordern Nutzer:innen den Link selbst an. Die App schickt ihn an die Adresse des Kontos; er gilt **1 Stunde** und nur einmal, ein neuer Link entwertet ältere. Gesperrte Konten bekommen keine Mail.
+
+## Einschalten
+
+1. Beim Mail-Anbieter einen SMTP-Zugang und eine Absenderadresse der eigenen Domain einrichten (SPF/DKIM nach Anleitung des Anbieters), z. B. `noreply@therapia.example.org`.
+2. In der `.env` der Installation eintragen:
+
+   ```
+   SMTP_HOST=smtp.example.net
+   SMTP_PORT=587
+   SMTP_USER=<Benutzername>
+   SMTP_PASSWORD=<Passwort oder SMTP-Schlüssel>
+   MAIL_FROM=theraPiA <noreply@therapia.example.org>
+   MAIL_REPLY_TO=kontakt@therapia.example.org
+   ```
+
+   `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` und `MAIL_FROM` nur gemeinsam, sonst startet die App nicht (`docker compose logs app` nennt die Ursache). `SMTP_PORT` ist ohne Eintrag `587`. `MAIL_REPLY_TO` ist optional und wirkt nur zusammen mit den vier anderen Werten.
+3. `docker compose up -d`.
+4. Testen: abmelden, auf der Anmeldeseite „Passwort vergessen?“ wählen, die eigene Adresse eingeben. Die Mail kommt in der Regel innerhalb einer Minute.
+
+## Verschlüsselung
+
+Port `587` nutzt STARTTLS, Port `465` TLS ab Verbindungsbeginn. Die App verschickt in Produktion **nie unverschlüsselt**: Bietet der Server kein STARTTLS an, schlägt der Versand fehl.
+
+## Was die Nutzer:in sieht
+
+Unabhängig davon, ob es zur Adresse ein Konto gibt, antwortet die App immer gleich („Falls ein Konto mit dieser Adresse existiert, ist eine Mail unterwegs.“) – so lässt sich nicht herausfinden, wer registriert ist. Anfragen sind begrenzt: 5 pro Stunde je Client und Adresse, 3 pro Stunde je Adresse. Die Zähler liegen im Speicher des App-Containers; ein Neustart setzt sie zurück.
+
+## Fehlersuche
+
+Kommt keine Mail an: `docker compose logs app | grep "Passwort vergessen"`. Eine Zeile `Passwort vergessen: Versand fehlgeschlagen: …` heißt, dass beim Anlegen oder Verschicken des Links etwas schiefging – meist beim SMTP-Server, möglich ist aber auch ein Datenbankfehler. Sie nennt nur die Fehlerart, nie Adresse oder Link: z. B. `EAUTH` = Anmeldung beim SMTP-Server abgelehnt, `ETIMEDOUT`/`ECONNECTION` = Server nicht erreichbar. Andere Werte (etwa ein Fehlername wie `Error`) deuten eher auf die Datenbank; dann die übrigen Zeilen in `docker compose logs app` ansehen.
+
+Ohne Logzeile wurde entweder kein aktives Konto zur Adresse gefunden, die Anfrage wurde vom Limit abgewiesen (die Seite meldet dann „Zu viele Versuche“) oder die Mail ist beim Anbieter angekommen – dann dort im Versandprotokoll und beim Empfang im Spam-Ordner nachsehen.
+
+## Datenschutz
+
+Der Mail-Anbieter verarbeitet die E-Mail-Adresse, den Zeitpunkt und den Link, also nur Kontaktdaten, keine Gesundheitsdaten. Er ist Auftragsverarbeiter – siehe [datenschutz.md](datenschutz.md#mailversand-passwort-vergessen).
+
+## Ausschalten
+
+`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` und `MAIL_REPLY_TO` leeren oder entfernen, `docker compose up -d`. `MAIL_REPLY_TO` gehört dazu: Allein gesetzt, startet die App nicht. Offene Links bleiben bis zum Ablauf gültig.
