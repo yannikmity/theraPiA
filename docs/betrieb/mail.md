@@ -32,7 +32,22 @@ Unabhängig davon, ob es zur Adresse ein Konto gibt, antwortet die App immer gle
 
 ## Fehlersuche
 
-Kommt keine Mail an: `docker compose logs app | grep "Passwort vergessen"`. Eine Zeile `Passwort vergessen: Versand fehlgeschlagen: …` heißt, dass beim Anlegen oder Verschicken des Links etwas schiefging – meist beim SMTP-Server, möglich ist aber auch ein Datenbankfehler. Sie nennt nur die Fehlerart, nie Adresse oder Link: z. B. `EAUTH` = Anmeldung beim SMTP-Server abgelehnt, `ETIMEDOUT`/`ECONNECTION` = Server nicht erreichbar. Andere Werte (etwa ein Fehlername wie `Error`) deuten eher auf die Datenbank; dann die übrigen Zeilen in `docker compose logs app` ansehen.
+Kommt keine Mail an: `docker compose logs app | grep "Passwort vergessen"`. Eine Zeile `Passwort vergessen: Versand fehlgeschlagen: …` heißt, dass beim Anlegen oder Verschicken des Links etwas schiefging. Sie nennt nur die Fehlerart, nie Adresse oder Link.
+
+Fehler beim SMTP-Server:
+
+| Code | Bedeutung |
+|---|---|
+| `EDNS` | `SMTP_HOST` unbekannt (Tippfehler, DNS) |
+| `ESOCKET` | Verbindung abgelehnt oder abgebrochen: falscher Port, Port und TLS-Art passen nicht zusammen, Zertifikatsfehler, Firewall |
+| `ETIMEDOUT` | Server antwortet nicht (Firewall, falscher Host oder Port) |
+| `ECONNECTION` | Server hat die Verbindung beendet |
+| `ETLS` | Verschlüsselung gescheitert, z. B. Server bietet auf Port 587 kein STARTTLS an (siehe [Verschlüsselung](#verschlüsselung)) |
+| `EAUTH` | Anmeldung abgelehnt: `SMTP_USER` oder `SMTP_PASSWORD` falsch |
+| `EENVELOPE` | Absender oder Empfänger abgelehnt, meist ist `MAIL_FROM` für den Zugang nicht freigegeben |
+| `EPROTOCOL` | unerwartete Antwort des Servers, oft ein falscher Port |
+
+Andere Werte kommen meist von der Datenbank: ein Postgres-Code wie `57P01`, `ECONNREFUSED` (Datenbank nicht erreichbar) oder nur ein Fehlername wie `Error`. Dann die übrigen Zeilen in `docker compose logs app` und `docker compose logs db` ansehen.
 
 Ohne Logzeile wurde entweder kein aktives Konto zur Adresse gefunden, die Anfrage wurde vom Limit abgewiesen (die Seite meldet dann „Zu viele Versuche“) oder die Mail ist beim Anbieter angekommen – dann dort im Versandprotokoll und beim Empfang im Spam-Ordner nachsehen.
 
