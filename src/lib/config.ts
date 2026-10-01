@@ -68,10 +68,34 @@ function configSchema(production: boolean) {
       // damit ein Image für alle Betreiber:innen reicht. Beide leer = kein Script, keine CSP-Änderung.
       UMAMI_SCRIPT_URL: umamiScriptUrl(production),
       UMAMI_WEBSITE_ID: z.string().uuid("muss die Website-ID (UUID) aus dem Umami-Dashboard sein").optional(),
+      // Optionaler Mailversand für „Passwort vergessen“ über einen beliebigen SMTP-Anbieter. Ohne diese Werte
+      // verschickt die App keine Mails; Reset-Links gibt es dann nur über die Administration.
+      SMTP_HOST: z.string().trim().min(1).optional(),
+      SMTP_PORT: z.coerce
+        .number({ error: "muss eine Zahl sein" })
+        .int("muss eine ganze Zahl sein")
+        .min(1, "muss zwischen 1 und 65535 liegen")
+        .max(65535, "muss zwischen 1 und 65535 liegen")
+        .default(587),
+      SMTP_USER: z.string().min(1).optional(),
+      SMTP_PASSWORD: z.string().min(1).optional(),
+      MAIL_FROM: z.string().trim().min(3).optional(),
+      MAIL_REPLY_TO: z.string().trim().email("muss eine E-Mail-Adresse sein").optional(),
     })
     .refine((config) => Boolean(config.UMAMI_SCRIPT_URL) === Boolean(config.UMAMI_WEBSITE_ID), {
       path: ["UMAMI_WEBSITE_ID"],
       message: "UMAMI_SCRIPT_URL und UMAMI_WEBSITE_ID nur gemeinsam setzen",
+    })
+    .refine(
+      (config) => {
+        const set = [config.SMTP_HOST, config.SMTP_USER, config.SMTP_PASSWORD, config.MAIL_FROM].filter(Boolean).length;
+        return set === 0 || set === 4;
+      },
+      { path: ["SMTP_HOST"], message: "SMTP_HOST, SMTP_USER, SMTP_PASSWORD und MAIL_FROM nur gemeinsam setzen" }
+    )
+    .refine((config) => !config.MAIL_REPLY_TO || Boolean(config.SMTP_HOST), {
+      path: ["MAIL_REPLY_TO"],
+      message: "wirkt nur zusammen mit SMTP_HOST, SMTP_USER, SMTP_PASSWORD und MAIL_FROM",
     })
     .refine((config) => isLocalUrl(config.NEXTAUTH_URL) || !isKnownExampleSecret(config.NEXTAUTH_SECRET), {
       path: ["NEXTAUTH_SECRET"],

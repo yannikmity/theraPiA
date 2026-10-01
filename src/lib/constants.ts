@@ -13,6 +13,13 @@ export const INVITATION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 // Adresse einer nie eingelösten Einladung: 30 Tage nach Ablauf entfernen (Person ohne Account, kein Zweck mehr).
 export const INVITATION_EMAIL_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export const RESET_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+// Selbst angeforderter Reset-Link (Passwort vergessen): kurz gültig, die Mail kommt sofort an. Der Link aus der
+// Administration bleibt bei RESET_TOKEN_TTL_MS, weil er von Hand weitergegeben wird.
+export const SELF_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+// Anfragen „Passwort vergessen“ pro Zeitfenster: pro Client und zusätzlich pro Adresse über alle Clients.
+export const FORGOT_WINDOW_MINUTES = 60;
+export const FORGOT_LIMIT_PER_CLIENT = 5;
+export const FORGOT_LIMIT_PER_EMAIL = 3;
 // Anmeldeversuche pro Zeitfenster: pro Client+Adresse und zusätzlich pro Adresse über alle Clients.
 export const LOGIN_WINDOW_MINUTES = 15;
 export const LOGIN_LIMIT_PER_CLIENT = 10;
