@@ -211,6 +211,10 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(MIN_PASSWORD_LENGTH, `Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein`),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Bitte eine gültige E-Mail-Adresse eingeben").max(255),
+});
+
 // Password change schema
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Aktuelles Passwort ist erforderlich"),
