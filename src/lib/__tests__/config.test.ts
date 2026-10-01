@@ -161,7 +161,6 @@ describe("SETUP_TOKEN", () => {
   });
 });
 
-
 describe("parseConfig – Mailversand", () => {
   const base = { DATABASE_URL: "postgres://x", NEXTAUTH_SECRET: "a".repeat(32) };
   const smtp = {
@@ -188,6 +187,10 @@ describe("parseConfig – Mailversand", () => {
       SMTP_PORT: 465,
       MAIL_REPLY_TO: "kontakt@example.net",
     });
+  });
+
+  it("entfernt Leerzeichen am Rand von SMTP_USER", () => {
+    expect(parseConfig({ ...base, ...smtp, SMTP_USER: " nutzer " }).SMTP_USER).toBe("nutzer");
   });
 
   it("lehnt eine unvollständige Gruppe ab", () => {

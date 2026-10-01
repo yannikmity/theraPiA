@@ -77,7 +77,7 @@ function configSchema(production: boolean) {
         .min(1, "muss zwischen 1 und 65535 liegen")
         .max(65535, "muss zwischen 1 und 65535 liegen")
         .default(587),
-      SMTP_USER: z.string().min(1).optional(),
+      SMTP_USER: z.string().trim().min(1).optional(),
       SMTP_PASSWORD: z.string().min(1).optional(),
       MAIL_FROM: z.string().trim().min(3).optional(),
       MAIL_REPLY_TO: z.string().trim().email("muss eine E-Mail-Adresse sein").optional(),
