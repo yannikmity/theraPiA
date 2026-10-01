@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import type { Db } from "../db";
 import { generateToken, hashToken } from "../tokens";
 import type { Role } from "../registration-policy";
-import { BCRYPT_SALT_ROUNDS, RESET_TOKEN_TTL_MS } from "../constants";
+import { BCRYPT_SALT_ROUNDS, RESET_TOKEN_TTL_MS, SELF_RESET_TOKEN_TTL_MS } from "../constants";
 import { passwordCheckLimiter, type RateLimiter } from "../rate-limit";
 import { checkPasswordThrottled, PASSWORD_CHECK_LIMITED_MESSAGE } from "./password-check";
 
@@ -63,14 +63,39 @@ export async function setUserDisabled(db: Db, userId: string, disabled: boolean)
   return { ok: true };
 }
 
-export async function createPasswordResetToken(db: Db, userId: string, now: Date = new Date()): Promise<string> {
+export async function createPasswordResetToken(
+  db: Db,
+  userId: string,
+  now: Date = new Date(),
+  ttlMs: number = RESET_TOKEN_TTL_MS
+): Promise<string> {
   const { token, hash } = generateToken();
   await db.query("INSERT INTO password_reset_tokens (token_hash, user_id, expires_at) VALUES ($1, $2, $3)", [
     hash,
     userId,
-    new Date(now.getTime() + RESET_TOKEN_TTL_MS),
+    new Date(now.getTime() + ttlMs),
   ]);
   return token;
+}
+
+// „Passwort vergessen“: Link nur für aktive Konten mit Passwort. Die Route antwortet unabhängig vom Ergebnis gleich,
+// damit sich nicht erkennen lässt, ob eine Adresse registriert ist. Ältere offene Links des Kontos werden entwertet –
+// es gilt nur der zuletzt verschickte.
+export async function requestPasswordReset(
+  db: Db,
+  email: string,
+  now: Date = new Date()
+): Promise<{ email: string; token: string } | null> {
+  const normalized = email.trim().toLowerCase();
+  const { rows } = await db.query(
+    "SELECT id, email FROM users WHERE email = $1 AND disabled_at IS NULL AND password_hash IS NOT NULL",
+    [normalized]
+  );
+  if (rows.length === 0) return null;
+  const userId: string = rows[0].id;
+  await db.query("UPDATE password_reset_tokens SET used_at = $1 WHERE user_id = $2 AND used_at IS NULL", [now, userId]);
+  const token = await createPasswordResetToken(db, userId, now, SELF_RESET_TOKEN_TTL_MS);
+  return { email: rows[0].email, token };
 }
 
 export async function resetPassword(db: Db, token: string, newPassword: string, now: Date = new Date()): Promise<boolean> {

@@ -75,4 +75,9 @@ describe("ResetForm", () => {
     await waitFor(() => expect(document.activeElement).toBe(alert));
     expect(push).not.toHaveBeenCalled();
   });
+
+  it("verweist bei unvollständigem Link auf das erneute Anfordern", () => {
+    render(<ResetForm token="" />);
+    expect(screen.getByRole("link", { name: "Neuen Link anfordern" }).getAttribute("href")).toBe("/auth/forgot");
+  });
 });

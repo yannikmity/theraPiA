@@ -106,6 +106,15 @@ Angemeldete Nutzer:innen können über den Knopf „Feedback“ Rückmeldungen z
 - [ ] **Aufbewahrung:** Lege eine Frist fest (z. B. Ende der Pilotphase oder 90 Tage nach Eingang) und lösche die Dateien danach ([installation.md, Abschnitt 8](installation.md#8-feedback-aus-dem-widget)). Löscht eine Person ihren Account, werden ihre Feedback-Dateien mitgelöscht – nach der Löschung in der Datenbank; schlägt das Löschen der Dateien fehl, bleibt die Account-Löschung gültig und das App-Log nennt die `user_id` zum Nachräumen (siehe [Export und Löschung](#export-und-löschung)).
 - [ ] **Datenschutzhinweise:** Zweck (Verbesserung der App im Pilot), gespeicherte Daten, Screenshot-Option und Frist aufnehmen. Weise Nutzer:innen darauf hin, im Feedback-Text keine Klarnamen zu nennen.
 
+## Mailversand (Passwort vergessen)
+
+Standard: aus. Mit eingerichtetem SMTP-Zugang ([mail.md](mail.md)) schickt die App auf Anfrage einen Link zum Zurücksetzen des Passworts an die Adresse des Kontos. Die Mail enthält nur den Link und einen Hinweistext – keinen Namen, keine Gesundheitsdaten.
+
+- [ ] Der Mail-Anbieter verarbeitet E-Mail-Adresse, Zeitpunkt und Link. Der Link erlaubt eine Stunde lang, ein neues Passwort zu setzen – er ist eine Zugangsberechtigung, auch wenn die Mail selbst keine Gesundheitsdaten enthält. Deshalb: AVV abschließen, Anbieter mit Sitz bzw. Verarbeitung in der EU wählen, nur verschlüsselt versenden ([mail.md](mail.md#verschlüsselung)).
+- [ ] Verarbeitung in Datenschutzhinweise und Verzeichnis von Verarbeitungstätigkeiten aufnehmen (Zweck: Zugang wiederherstellen).
+- [ ] Aufbewahrung im Versandprotokoll des Anbieters möglichst kurz einstellen.
+- [ ] Ausschalten: SMTP-Werte, `MAIL_FROM` und `MAIL_REPLY_TO` entfernen, `docker compose up -d` ([mail.md](mail.md#ausschalten)).
+
 ## Optionale Nutzungsstatistik (Umami)
 
 Standard: aus. Wer eine eigene Umami-Instanz einschaltet (`UMAMI_SCRIPT_URL`, `UMAMI_WEBSITE_ID`), sendet bei jedem Seitenaufruf und wenigen Ereignissen anonymisierte Daten an diese Instanz – ohne Cookies, ohne Namen, Adressen, Chiffren oder Datensatz-IDs, ohne Query-String und Seitentitel; welche genau, steht in [analytics.md](analytics.md).

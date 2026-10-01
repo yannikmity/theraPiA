@@ -19,6 +19,7 @@ Für Ausbildungsinstitute, ihre IT und Softwarepartner, die theraPiA für Psycho
 | Demo-Zugänge mit fiktiven Beispieldaten anlegen, erkennen und löschen | [demo-accounts.md](demo-accounts.md) |
 | Datenschutz: Rollen, Pflichten, Export und Löschung | [datenschutz.md](datenschutz.md) |
 | Optionale Nutzungsstatistik | [analytics.md](analytics.md) |
+| Mailversand für „Passwort vergessen“ | [mail.md](mail.md) |
 | Wie Versionen entstehen und was die Nummern bedeuten | [RELEASING.md](../../RELEASING.md) |
 | Sicherheitslücke melden | [SECURITY.md](../../SECURITY.md) |
 

@@ -11,12 +11,13 @@ import {
   purgeExpiredInvitationEmails,
   revokeInvitation,
 } from "../services/invitations";
-import { INVITATION_TTL_MS } from "../constants";
+import { INVITATION_TTL_MS, RESET_TOKEN_TTL_MS, SELF_RESET_TOKEN_TTL_MS } from "../constants";
 import {
   listUsers,
   setUserDisabled,
   createPasswordResetToken,
   resetPassword,
+  requestPasswordReset,
   LAST_ADMIN_MESSAGE,
 } from "../services/accounts";
 import { loadAdminOverview } from "../services/admin-overview";
@@ -221,6 +222,58 @@ describe.skipIf(!TEST_DATABASE_URL)("Konto-Services", () => {
     const row = (await db.query("SELECT password_hash, session_version FROM users WHERE id = $1", [adminId])).rows[0];
     expect(await bcrypt.compare("neues-passwort-123", row.password_hash)).toBe(true);
     expect(row.session_version).toBe(1);
+  });
+
+  describe("requestPasswordReset", () => {
+    const NOW = new Date("2026-10-01T10:00:00Z");
+
+    async function tokens(db: pg.Client, userId: string) {
+      return (
+        await db.query(
+          "SELECT token_hash, expires_at, used_at FROM password_reset_tokens WHERE user_id = $1 ORDER BY created_at",
+          [userId]
+        )
+      ).rows;
+    }
+
+    it("liefert für ein aktives Konto einen Link, 1 Stunde gültig, auch bei abweichender Schreibweise", async () => {
+      const { db, adminId } = await setup();
+      const userId = await registerPia(db, adminId, "pia@example.com");
+      const result = await requestPasswordReset(db, "  PiA@Example.com ", NOW);
+      expect(result?.email).toBe("pia@example.com");
+      const rows = await tokens(db, userId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].token_hash).toBe(hashToken(result!.token));
+      expect(new Date(rows[0].expires_at).getTime()).toBe(NOW.getTime() + SELF_RESET_TOKEN_TTL_MS);
+    });
+
+    it("liefert null für unbekannte Adressen, gesperrte Konten und Konten ohne Passwort", async () => {
+      const { db, adminId } = await setup();
+      expect(await requestPasswordReset(db, "niemand@example.com", NOW)).toBeNull();
+      const userId = await registerPia(db, adminId, "pia@example.com");
+      await db.query("UPDATE users SET disabled_at = now() WHERE id = $1", [userId]);
+      expect(await requestPasswordReset(db, "pia@example.com", NOW)).toBeNull();
+      await db.query("UPDATE users SET password_hash = NULL WHERE id = $1", [adminId]);
+      expect(await requestPasswordReset(db, "admin@example.com", NOW)).toBeNull();
+      expect((await db.query("SELECT count(*)::int AS n FROM password_reset_tokens")).rows[0].n).toBe(0);
+    });
+
+    it("entwertet ältere offene Links, nur der jüngste gilt", async () => {
+      const { db, adminId } = await setup();
+      await registerPia(db, adminId, "pia@example.com");
+      const first = await requestPasswordReset(db, "pia@example.com", NOW);
+      const second = await requestPasswordReset(db, "pia@example.com", new Date(NOW.getTime() + 60_000));
+      expect(await resetPassword(db, first!.token, "neues-passwort-123", new Date(NOW.getTime() + 120_000))).toBe(false);
+      expect(await resetPassword(db, second!.token, "neues-passwort-123", new Date(NOW.getTime() + 120_000))).toBe(true);
+    });
+
+    it("lässt den Admin-Link bei 24 Stunden", async () => {
+      const { db, adminId } = await setup();
+      const userId = await registerPia(db, adminId, "pia@example.com");
+      await createPasswordResetToken(db, userId, NOW);
+      const [row] = await tokens(db, userId);
+      expect(new Date(row.expires_at).getTime()).toBe(NOW.getTime() + RESET_TOKEN_TTL_MS);
+    });
   });
 
   it("sperrt einen Account und erhöht die Session-Version", async () => {

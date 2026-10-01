@@ -10,6 +10,7 @@ describe("parseConfig", () => {
       NEXTAUTH_URL: "http://localhost:3010",
       REGISTRATION_MODE: "invite",
       FEEDBACK_DIR: "./data/feedback",
+      SMTP_PORT: 587,
     });
   });
 
@@ -19,6 +20,7 @@ describe("parseConfig", () => {
       NEXTAUTH_URL: "http://localhost:3010",
       REGISTRATION_MODE: "invite",
       FEEDBACK_DIR: "./data/feedback",
+      SMTP_PORT: 587,
     });
   });
 
@@ -159,3 +161,49 @@ describe("SETUP_TOKEN", () => {
   });
 });
 
+describe("parseConfig – Mailversand", () => {
+  const base = { DATABASE_URL: "postgres://x", NEXTAUTH_SECRET: "a".repeat(32) };
+  const smtp = {
+    SMTP_HOST: "smtp.example.net",
+    SMTP_USER: "nutzer",
+    SMTP_PASSWORD: "geheim",
+    MAIL_FROM: "theraPiA <noreply@example.net>",
+  };
+
+  it("ist ohne SMTP-Werte aus und setzt den Port-Standard 587", () => {
+    const config = parseConfig(base);
+    expect(config.SMTP_HOST).toBeUndefined();
+    expect(config.SMTP_PORT).toBe(587);
+  });
+
+  it("behandelt leere SMTP-Werte wie nicht gesetzte", () => {
+    const config = parseConfig({ ...base, SMTP_HOST: "", SMTP_USER: "", SMTP_PASSWORD: "", MAIL_FROM: "" });
+    expect(config.SMTP_HOST).toBeUndefined();
+  });
+
+  it("übernimmt Host, Zugang, Absender und Port gemeinsam", () => {
+    expect(parseConfig({ ...base, ...smtp, SMTP_PORT: "465", MAIL_REPLY_TO: "kontakt@example.net" })).toMatchObject({
+      ...smtp,
+      SMTP_PORT: 465,
+      MAIL_REPLY_TO: "kontakt@example.net",
+    });
+  });
+
+  it("entfernt Leerzeichen am Rand von SMTP_USER", () => {
+    expect(parseConfig({ ...base, ...smtp, SMTP_USER: " nutzer " }).SMTP_USER).toBe("nutzer");
+  });
+
+  it("lehnt eine unvollständige Gruppe ab", () => {
+    expect(() => parseConfig({ ...base, SMTP_HOST: "smtp.example.net" })).toThrow("nur gemeinsam");
+    expect(() => parseConfig({ ...base, ...smtp, MAIL_FROM: "" })).toThrow("nur gemeinsam");
+  });
+
+  it("lehnt MAIL_REPLY_TO ohne SMTP ab", () => {
+    expect(() => parseConfig({ ...base, MAIL_REPLY_TO: "kontakt@example.net" })).toThrow("MAIL_REPLY_TO");
+  });
+
+  it("lehnt einen ungültigen Port ab", () => {
+    expect(() => parseConfig({ ...base, ...smtp, SMTP_PORT: "abc" })).toThrow("SMTP_PORT");
+    expect(() => parseConfig({ ...base, ...smtp, SMTP_PORT: "70000" })).toThrow("SMTP_PORT");
+  });
+});

@@ -41,7 +41,7 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const path = nextUrl.pathname;
       const matches = (p: string) => path === p || path.startsWith(p + "/");
-      const isAuthPage = ["/auth/login", "/auth/register", "/auth/reset"].some(matches);
+      const isAuthPage = ["/auth/login", "/auth/register", "/auth/reset", "/auth/forgot"].some(matches);
       const isPublicApi = matches("/api/auth") || path === "/api/health";
       // Browser laden das Web-App-Manifest ohne Cookies – ein Redirect zum Login würde es unbrauchbar machen.
       const isPublicAsset = path === "/manifest.json";

@@ -12,7 +12,7 @@ function check(path: string, loggedIn: boolean) {
 }
 
 describe("authorized", () => {
-  it.each(["/api/health", "/auth/reset", "/auth/register", "/api/auth/session"])("lässt %s ohne Login zu", (path) => {
+  it.each(["/api/health", "/auth/reset", "/auth/register", "/auth/forgot", "/api/auth/session", "/api/auth/forgot"])("lässt %s ohne Login zu", (path) => {
     expect(check(path, false)).toBe(true);
   });
 
@@ -29,7 +29,7 @@ describe("authorized", () => {
     expect(check("/auth/login", true)).toBe(true);
   });
 
-  it.each(["/auth/login-x", "/auth/resetting"])("behandelt %s nicht als öffentlich", (path) => {
+  it.each(["/auth/login-x", "/auth/resetting", "/auth/forgotten"])("behandelt %s nicht als öffentlich", (path) => {
     const res = check(path, false) as Response;
     expect(res.headers.get("location")).toBe("http://localhost/auth/login");
   });

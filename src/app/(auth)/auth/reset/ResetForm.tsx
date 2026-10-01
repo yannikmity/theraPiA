@@ -36,8 +36,11 @@ export function ResetForm({ token }: { token: string }) {
         {/* Seitenüberschrift für Screenreader; sichtbar bleibt nur der Hinweis. */}
         <h1 className="sr-only">Neues Passwort setzen</h1>
         <p className="text-foreground">
-          Dieser Link ist unvollständig. Bitte einen neuen Link bei der Administration anfordern.
+          Dieser Link ist unvollständig. Fordere einen neuen an oder wende dich an die Administration.
         </p>
+        <Button asChild variant="link">
+          <Link href="/auth/forgot">Neuen Link anfordern</Link>
+        </Button>
         <Button asChild variant="link">
           <Link href="/auth/login">Zur Anmeldung</Link>
         </Button>
