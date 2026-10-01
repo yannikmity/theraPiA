@@ -53,7 +53,7 @@ Ohne Logzeile wurde entweder kein aktives Konto zur Adresse gefunden, die Anfrag
 
 ## Datenschutz
 
-Der Mail-Anbieter verarbeitet die E-Mail-Adresse, den Zeitpunkt und den Link, also nur Kontaktdaten, keine Gesundheitsdaten. Er ist Auftragsverarbeiter – siehe [datenschutz.md](datenschutz.md#mailversand-passwort-vergessen).
+Der Mail-Anbieter verarbeitet die E-Mail-Adresse, den Zeitpunkt und den Link. Die Mail selbst enthält keine Gesundheitsdaten. Der Link ist aber eine Zugangsberechtigung: Wer ihn hat, kann eine Stunde lang ein neues Passwort für ein Konto mit Gesundheitsdaten setzen. Deshalb: AVV mit dem Anbieter, kurze Aufbewahrung im Versandprotokoll, Versand nur verschlüsselt (siehe [Verschlüsselung](#verschlüsselung)). Der Anbieter ist Auftragsverarbeiter – siehe [datenschutz.md](datenschutz.md#mailversand-passwort-vergessen).
 
 ## Ausschalten
 

@@ -110,7 +110,7 @@ Angemeldete Nutzer:innen können über den Knopf „Feedback“ Rückmeldungen z
 
 Standard: aus. Mit eingerichtetem SMTP-Zugang ([mail.md](mail.md)) schickt die App auf Anfrage einen Link zum Zurücksetzen des Passworts an die Adresse des Kontos. Die Mail enthält nur den Link und einen Hinweistext – keinen Namen, keine Gesundheitsdaten.
 
-- [ ] Der Mail-Anbieter verarbeitet E-Mail-Adresse, Zeitpunkt und Link: AVV abschließen, Anbieter mit Sitz bzw. Verarbeitung in der EU wählen.
+- [ ] Der Mail-Anbieter verarbeitet E-Mail-Adresse, Zeitpunkt und Link. Der Link erlaubt eine Stunde lang, ein neues Passwort zu setzen – er ist eine Zugangsberechtigung, auch wenn die Mail selbst keine Gesundheitsdaten enthält. Deshalb: AVV abschließen, Anbieter mit Sitz bzw. Verarbeitung in der EU wählen, nur verschlüsselt versenden ([mail.md](mail.md#verschlüsselung)).
 - [ ] Verarbeitung in Datenschutzhinweise und Verzeichnis von Verarbeitungstätigkeiten aufnehmen (Zweck: Zugang wiederherstellen).
 - [ ] Aufbewahrung im Versandprotokoll des Anbieters möglichst kurz einstellen.
 - [ ] Ausschalten: SMTP-Werte, `MAIL_FROM` und `MAIL_REPLY_TO` entfernen, `docker compose up -d` ([mail.md](mail.md#ausschalten)).
