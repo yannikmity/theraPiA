@@ -29,6 +29,15 @@ describe("ForgotForm", () => {
     );
   });
 
+  it("zeigt die Bestätigung auch bei einer Antwort ohne Text", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({}), { status: 200 })));
+    render(<ForgotForm mailEnabled />);
+    fireEvent.change(email(), { target: { value: "pia@example.com" } });
+    fireEvent.click(submit());
+    expect(await screen.findByText(/ist eine Mail unterwegs/)).toBeTruthy();
+    expect(screen.queryByLabelText("E-Mail")).toBeNull();
+  });
+
   it("zeigt eine Fehlermeldung des Servers und lässt das Formular stehen", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "Zu viele Versuche. Bitte später erneut versuchen." }), { status: 429 })));
     render(<ForgotForm mailEnabled />);

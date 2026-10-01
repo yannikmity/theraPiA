@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FORGOT_RESPONSE_MESSAGE } from "@/lib/password-reset-mail";
 
 function BackToLogin() {
   return (
@@ -61,7 +62,7 @@ export function ForgotForm({ mailEnabled }: { mailEnabled: boolean }) {
         setError(data.error || "Anfrage fehlgeschlagen");
         return;
       }
-      setSent(data.message);
+      setSent(data.message || FORGOT_RESPONSE_MESSAGE);
     } catch {
       setError("Ein Fehler ist aufgetreten");
     } finally {
