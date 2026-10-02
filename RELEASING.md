@@ -78,7 +78,7 @@ gh run list --workflow release.yml --limit 1
 gh run watch
 ```
 
-Oder im Reiter „Actions“. Erst läuft `ci` (Lint, Tests mit PostgreSQL 15, Build, Docker-Bau), danach `image`. Ist `ci` rot, entsteht kein Image.
+Oder im Reiter „Actions“. Erst läuft `ci` (Lint, Tests mit PostgreSQL 15, Build, Docker-Bau), danach `image` einmal je Plattform (amd64, arm64) und zuletzt `manifest`, der beide zu einem Image mit den Tags zusammenfasst. Ist `ci` oder einer der `image`-Jobs rot, entsteht kein getaggtes Image.
 
 ### 5. Image prüfen
 
@@ -105,6 +105,7 @@ Für Vorabversionen zusätzlich `--prerelease`. Alternativ im Browser: „Releas
 ## Wenn etwas schiefgeht
 
 - **`ci` rot:** Es gibt kein Image. Fehler auf `master` beheben und die nächste Patch-Version taggen. Den Tag nur löschen (`git push --delete origin v0.8.0`, dann `git tag -d v0.8.0`), wenn noch niemand ihn verwendet hat.
+- **`image` oder `manifest` rot:** Es entsteht kein getaggtes Image. Bereits hochgeladene Plattform-Images bleiben in GHCR als Versionen ohne Tag liegen; sie stören nicht und lassen sich in den Paket-Einstellungen löschen. Ursache beheben und die nächste (Vorab-)Version taggen.
 - **Image fehlerhaft:** eine neue Patch-Version veröffentlichen; Image-Tags nicht von Hand überschreiben. Die Release-Notes des fehlerhaften Release um einen Hinweis ergänzen.
 - **Migration scheitert bei Betreiber:innen:** Rückweg nach [installation.md, Abschnitt 5.3](docs/betrieb/installation.md#53-zurück-zur-vorigen-version-rollback); die Korrektur kommt als neue Migration in einer neuen Version.
 
