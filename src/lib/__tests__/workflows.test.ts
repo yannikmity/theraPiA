@@ -54,7 +54,17 @@ describe("GitHub-Workflows", () => {
         /^(actions|attestations|checks|contents|deployments|discussions|id-token|issues|packages|pages|pull-requests|repository-projects|security-events|statuses): (read|write|none)$/.test(line)
       );
 
-  it("vergibt nur contents: read – und packages: write allein im Image-Job von release.yml", () => {
+  // Job-Blöcke unter `jobs:` (zwei Leerzeichen Einrückung), Name → Text des Blocks.
+  const jobBlocks = (text: string) => {
+    const jobs = text.slice(text.indexOf("\njobs:\n"));
+    const blocks: Record<string, string> = {};
+    for (const part of jobs.split(/\n(?=  [\w-]+:\n)/).slice(1)) {
+      blocks[part.match(/^  ([\w-]+):/)![1]] = part;
+    }
+    return blocks;
+  };
+
+  it("vergibt nur contents: read – und packages: write allein in den Image-Jobs von release.yml", () => {
     const ci = read("ci.yml");
     expect(ci).not.toMatch(/permissions: (write-all|read-all)/);
     expect(new Set(permissionLines(ci))).toEqual(new Set(["contents: read"]));
@@ -62,9 +72,20 @@ describe("GitHub-Workflows", () => {
     const release = read("release.yml");
     expect(release).not.toMatch(/permissions: (write-all|read-all)/);
     expect(new Set(permissionLines(release))).toEqual(new Set(["contents: read", "packages: write"]));
-    expect(release.match(/packages: write/g)).toHaveLength(1);
-    expect(release).toMatch(
-      /^  image:\n    needs: ci\n    runs-on: ubuntu-latest\n    permissions:\n      contents: read\n      packages: write$/m
-    );
+    // Schreiben in die Registry nur dort, wo gebaut bzw. das Multi-Arch-Image angelegt wird – nicht im CI-Aufruf.
+    const blocks = jobBlocks(release);
+    const writers = Object.keys(blocks).filter((job) => /packages: write/.test(blocks[job]));
+    expect(writers.sort()).toEqual(["image", "manifest"]);
+    for (const job of writers) {
+      expect(blocks[job]).toMatch(/^    permissions:\n      contents: read\n      packages: write$/m);
+    }
+  });
+
+  it("release.yml baut arm64 auf einem nativen Runner statt per Emulation und begrenzt die Laufzeit", () => {
+    const release = read("release.yml");
+    expect(release).not.toMatch(/setup-qemu-action/);
+    expect(release).toMatch(/^\s+runner: ubuntu-24\.04-arm$/m);
+    const blocks = jobBlocks(release);
+    for (const job of ["image", "manifest"]) expect(blocks[job]).toMatch(/^    timeout-minutes: \d+$/m);
   });
 });
