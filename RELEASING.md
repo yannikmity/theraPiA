@@ -8,7 +8,7 @@ Ein Release besteht aus drei Teilen: einem Git-Tag, dem Container-Image in der G
 |---|---|---|
 | Tag `vX.Y.Z` auf `master` setzen und pushen | `git tag -a …`, `git push origin vX.Y.Z` | nein |
 | Lint, Tests, Build, Docker-Bau | Workflow „Release“ (`.github/workflows/release.yml`), Job `ci` – ruft `.github/workflows/ci.yml` auf | ja |
-| Image für `linux/amd64` und `linux/arm64` bauen und nach `ghcr.io/<owner>/therapia` pushen | Workflow „Release“, Job `image`, nur nach grünem `ci` | ja |
+| Image für `linux/amd64` und `linux/arm64` bauen und nach `ghcr.io/<owner>/therapia` pushen | Workflow „Release“, nur nach grünem `ci`: Job `image` baut je Plattform auf einem eigenen Runner (kein Emulator), Job `manifest` fasst beide zu einem Image mit den Tags zusammen | ja |
 | Release-Notes veröffentlichen | GitHub-Release zum Tag | nein |
 | Versionsnummer in `package.json` | wird nicht gepflegt: steht auf `0.1.0`, weder App noch Workflow lesen sie. Maßgeblich sind Tag und Image-Tag. | – |
 
