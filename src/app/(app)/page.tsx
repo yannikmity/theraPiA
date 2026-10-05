@@ -8,6 +8,7 @@ import { QuickCaptureLink } from "@/components/QuickCaptureLink";
 import { QuarterForecastCard } from "@/components/dashboard/QuarterForecastCard";
 import { TherapyHoursCard } from "@/components/dashboard/TherapyHoursCard";
 import { SupervisionStatusCard } from "@/components/dashboard/SupervisionStatusCard";
+import { SupervisionDueBadge } from "@/components/SupervisionDueBadge";
 import { SectionHeader } from "@/components/ui";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -35,6 +36,7 @@ export default async function Dashboard() {
     regeln,
     therapyH,
     supervisionH,
+    supervisionBySetting,
     overallRatio,
     categoryHours,
     unsupervisedCount,
@@ -59,6 +61,7 @@ export default async function Dashboard() {
         ratio={overallRatio}
         regeln={regeln}
         unsupervisedCount={unsupervisedCount}
+        bySetting={supervisionBySetting}
       />
 
       <Button asChild variant="success" size="lg" className="w-full md:col-span-2 md:w-auto md:justify-self-start">
@@ -92,13 +95,16 @@ export default async function Dashboard() {
           <SectionHeader>Verhältnis pro Patient:in</SectionHeader>
           {/* Zeile = Link zur Patient:in plus eigener Schnelleinstieg daneben (kein Link im Link). */}
           <div className="-mx-1">
-            {patientRatios.map(({ patient, ratio }) => (
+            {patientRatios.map(({ patient, ratio, due }) => (
               <div key={patient.id} className="flex items-center gap-1">
                 <Link
                   href={`/patients/${patient.id}`}
                   className="flex min-w-0 flex-1 items-center justify-between rounded-lg px-1 py-2 transition-colors hover:bg-muted"
                 >
-                  <span className="font-mono text-sm font-medium text-foreground">{patient.chiffre}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono text-sm font-medium text-foreground">{patient.chiffre}</span>
+                    {due && <SupervisionDueBadge />}
+                  </span>
                   <RatioIndicator ratio={ratio} compact />
                 </Link>
                 <QuickCaptureLink patientId={patient.id} chiffre={patient.chiffre} source="dashboard" compact />

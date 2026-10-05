@@ -40,7 +40,7 @@ describe("GET /api/export/csv/[entity]", () => {
     const res = await get("expenses");
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Disposition")).toMatch(/^attachment; filename="therapia-ausgaben-\d{4}-\d{2}-\d{2}\.csv"$/);
-    expect((await res.text()).split("\r\n").at(-2)).toBe("Summe;;;;;;;192,00");
+    expect((await res.text()).split("\r\n").at(-2)).toBe("Summe;;;;;;;;192,00");
     expect(state.loadedFor).toEqual(["u-1"]);
   });
 
@@ -48,7 +48,7 @@ describe("GET /api/export/csv/[entity]", () => {
     const res = await get("expenses", "?jahr=2025");
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Disposition")).toMatch(/filename="therapia-ausgaben-2025-stand-\d{4}-\d{2}-\d{2}\.csv"/);
-    expect((await res.text()).split("\r\n").slice(1, -1)).toEqual(["Summe;;;;;;;0,00"]);
+    expect((await res.text()).split("\r\n").slice(1, -1)).toEqual(["Summe;;;;;;;;0,00"]);
   });
 
   it("ungültiges Jahr: 400, ohne Daten zu laden", async () => {

@@ -215,6 +215,15 @@ describe("addSupervisionSessionSchema", () => {
       expect(result.data.linkedTherapySessionIds).toEqual([]);
     }
   });
+
+  it("nimmt ohne Angabe das Setting Einzel an und lehnt unbekannte Settings ab", () => {
+    const base = { supervisorId: "550e8400-e29b-41d4-a716-446655440000", date: "2024-06-01", durationMinutes: 60 };
+    const ohne = addSupervisionSessionSchema.safeParse(base);
+    expect(ohne.success && ohne.data.setting).toBe("einzel");
+    const gruppe = addSupervisionSessionSchema.safeParse({ ...base, setting: "gruppe" });
+    expect(gruppe.success && gruppe.data.setting).toBe("gruppe");
+    expect(addSupervisionSessionSchema.safeParse({ ...base, setting: "paar" }).success).toBe(false);
+  });
 });
 
 describe("updateFinancialSettingsSchema", () => {
@@ -358,11 +367,12 @@ describe("updateSupervisionSessionSchema", () => {
       date: "2026-02-10",
       durationMinutes: 60,
       kind: "individual",
+      setting: "einzel",
       linkedTherapySessionIds: [],
       linkedGroupSessionIds: [],
     };
     expect(updateSupervisionSessionSchema.safeParse(full).success).toBe(true);
-    for (const missing of ["id", "kind", "linkedTherapySessionIds", "linkedGroupSessionIds"] as const) {
+    for (const missing of ["id", "kind", "setting", "linkedTherapySessionIds", "linkedGroupSessionIds"] as const) {
       const { [missing]: _weg, ...rest } = full;
       void _weg;
       const result = updateSupervisionSessionSchema.safeParse(rest);
@@ -372,7 +382,7 @@ describe("updateSupervisionSessionSchema", () => {
   });
 
   it("lehnt Verknüpfungen ab, die nicht zur Art passen", () => {
-    const base = { id: UUID_B, supervisorId: UUID_A, date: "2026-02-10", durationMinutes: 60 };
+    const base = { id: UUID_B, supervisorId: UUID_A, date: "2026-02-10", durationMinutes: 60, setting: "einzel" };
     const einzel = updateSupervisionSessionSchema.safeParse({
       ...base,
       kind: "individual",
@@ -396,7 +406,7 @@ describe("updateSupervisionSessionSchema", () => {
   });
 
   it("fasst doppelte Verknüpfungs-IDs zusammen", () => {
-    const base = { id: UUID_B, supervisorId: UUID_A, date: "2026-02-10", durationMinutes: 60 };
+    const base = { id: UUID_B, supervisorId: UUID_A, date: "2026-02-10", durationMinutes: 60, setting: "einzel" };
     const einzel = updateSupervisionSessionSchema.safeParse({
       ...base,
       kind: "individual",

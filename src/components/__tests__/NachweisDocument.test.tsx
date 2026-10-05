@@ -38,11 +38,20 @@ describe("NachweisDocument", () => {
     expect(screen.queryByText(/SUMME/)).toBeNull();
   });
 
-  it("listet Supervisionen mit Art und besprochenen Sitzungen sowie Doppelstunden mit Teilnehmenden", () => {
+  it("listet Supervisionen mit Art, Setting und besprochenen Sitzungen sowie Doppelstunden mit Teilnehmenden", () => {
     render(<NachweisDocument nachweis={buildNachweis(sampleUserData(), Q1, STANDARD, NOW)} />);
+    expect(within(region(/Supervisionen \(2\)/)).getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
+      "Datum",
+      "Supervisor:in",
+      "Art",
+      "Setting",
+      "Dauer",
+      "Besprochene Sitzungen",
+    ]);
     const sv = bodyRows(/Supervisionen \(2\)/);
-    expect(sv[0].textContent).toContain("Supervision Eins");
-    expect(sv[0].textContent).toContain("Einzel");
+    const cells = (row: HTMLElement) => within(row).getAllByRole("cell").map((c) => c.textContent);
+    expect(cells(sv[0]).slice(1, 4)).toEqual(["Supervision Eins", "Einzeltherapie", "Einzel"]);
+    expect(cells(sv[1]).slice(1, 4)).toEqual(["Supervision Zwei", "Einzeltherapie", "Gruppe"]);
     expect(sv[0].textContent).toContain("60 Min");
     expect(sv[0].textContent).toContain("A-01 (10.01.2026), A-02 (14.02.2026)");
     const gs = bodyRows(/Doppelstunden \(1\)/);

@@ -39,6 +39,7 @@ const supervision = (date: string, durationMinutes = 60): SupervisionSession => 
   date,
   durationMinutes,
   kind: "individual",
+  setting: "einzel",
   linkedTherapySessionIds: [],
   linkedGroupSessionIds: [],
 });

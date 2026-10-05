@@ -7,6 +7,7 @@ import { BookOpen, Pencil, Trash2 } from "lucide-react";
 import { SupervisionSession } from "@/types";
 import { linkableTherapySessions, linkableGroupSessions, totalSupervisionHours } from "@/lib/calculations";
 import { formatDecimal } from "@/lib/csv";
+import { SUPERVISION_KIND_LABELS, SUPERVISION_SETTING_LABELS } from "@/lib/labels";
 import { ActionError, errorAt, type ScopedActionError } from "@/components/ActionError";
 import { runAction } from "@/lib/run-action";
 import { track, trackFailure } from "@/lib/analytics/track";
@@ -45,8 +46,9 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
     return sv.kind === "group" ? sv.linkedGroupSessionIds.length : sv.linkedTherapySessionIds.length;
   }
 
-  // Angeboten werden Sitzungen, die keiner anderen Supervision zugeordnet sind – plus die eigenen.
-  function linkOptionsFor(sv: SupervisionSession): LinkOption[] {
+  // Angeboten werden Sitzungen, die keiner anderen Supervision zugeordnet sind – plus die eigenen. Therapiesitzungen
+  // nur bis zum Datum, das gerade im Formular steht.
+  function linkOptionsFor(sv: SupervisionSession, date: string): LinkOption[] {
     if (sv.kind === "group") {
       return linkableGroupSessions(data.groupSessions, data.supervisionSessions, sv.id)
         .sort((a, b) => b.date.localeCompare(a.date))
@@ -55,7 +57,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
           label: `${data.groups.find((g) => g.id === gs.groupId)?.name ?? "Gruppe"} · ${format(parseISO(gs.date), "dd.MM.yyyy")}${gs.status === "durchgefuehrt" ? "" : " (nicht durchgeführt)"}`,
         }));
     }
-    return linkableTherapySessions(data.therapySessions, data.supervisionSessions, sv.id)
+    return linkableTherapySessions(data.therapySessions, data.supervisionSessions, sv.id, date)
       .sort((a, b) => b.date.localeCompare(a.date))
       .map((ts) => ({
         id: ts.id,
@@ -73,6 +75,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
         date: values.date,
         durationMinutes: values.durationMinutes,
         kind: sv.kind,
+        setting: values.setting,
         linkedTherapySessionIds: sv.kind === "group" ? [] : values.linkedIds,
         linkedGroupSessionIds: sv.kind === "group" ? values.linkedIds : [],
       })
@@ -122,7 +125,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
                   <SupervisionSessionEditForm
                     session={sv}
                     supervisors={data.supervisors}
-                    linkOptions={linkOptionsFor(sv)}
+                    linkOptionsFor={(date) => linkOptionsFor(sv, date)}
                     saving={isSaving}
                     onSave={(values) => handleSave(sv, values)}
                     onCancel={() => {
@@ -139,7 +142,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
                     <span className="text-sm text-foreground">{format(parseISO(sv.date), "dd. MMM yyyy", { locale: de })}</span>
                     <span className="ml-2 text-xs text-muted-foreground">{supervisorName(sv.supervisorId)}</span>
                     <p className="text-xs text-muted-foreground">
-                      {sv.kind === "group" ? "Gruppe" : "Einzel"} · {linkCount(sv)} zugeordnet
+                      {SUPERVISION_KIND_LABELS[sv.kind]} · {SUPERVISION_SETTING_LABELS[sv.setting]} · {linkCount(sv)} zugeordnet
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground">{sv.durationMinutes} Min</span>

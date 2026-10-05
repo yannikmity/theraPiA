@@ -1,8 +1,10 @@
 import { parseISO } from "date-fns";
 import {
   TherapySession,
+  TherapySessionId,
   SupervisionSession,
   SupervisionSessionId,
+  SupervisionSetting,
   Patient,
   PatientId,
   SupervisorId,
@@ -56,6 +58,23 @@ export function totalSupervisionHours(sessions: SupervisionSession[]): number {
   return minutesToUnits(sessions.reduce((sum, s) => sum + s.durationMinutes, 0));
 }
 
+// SV-Einheiten getrennt nach Setting – für Einzel und Gruppe gelten eigene Mindestanteile.
+export function supervisionHoursBySetting(sessions: SupervisionSession[]): Record<SupervisionSetting, number> {
+  return {
+    einzel: totalSupervisionHours(sessions.filter((s) => s.setting === "einzel")),
+    gruppe: totalSupervisionHours(sessions.filter((s) => s.setting === "gruppe")),
+  };
+}
+
+// Vorgabe beim Erfassen: das Setting der letzten Supervision zu Einzeltherapien bei derselben Supervisor:in.
+// Supervisionen von Gruppentherapien (Gruppenseite) zählen nicht – sie werden dort ohne Setting-Wahl gespeichert.
+export function lastSettingBySupervisor(sessions: SupervisionSession[]): Record<string, SupervisionSetting> {
+  const result: Record<string, SupervisionSetting> = {};
+  const individual = sessions.filter((s) => s.kind === "individual");
+  for (const sv of individual.sort((a, b) => a.date.localeCompare(b.date))) result[sv.supervisorId] = sv.setting;
+  return result;
+}
+
 export function therapyHoursForPatient(
   sessions: TherapySession[],
   patientId: PatientId
@@ -63,27 +82,21 @@ export function therapyHoursForPatient(
   return totalTherapyHours(sessions.filter((s) => s.patientId === patientId));
 }
 
+// SV-Anrechnung je Fall: die Dauer einer Supervision verteilt sich gleich auf die besprochenen Fälle – 50 Min mit zwei
+// Fällen ergeben je 25 Min, unabhängig davon, wie viele Sitzungen eines Falls zugeordnet sind. Erfasst wird die Dauer je
+// Fall; gespeichert ist die Summe, die Teilung ergibt also wieder die Dauer je Fall.
 export function supervisionHoursForPatient(
   supervisionSessions: SupervisionSession[],
   therapySessions: TherapySession[],
   patientId: PatientId
 ): number {
-  // Find all therapy session IDs for this patient
-  const patientSessionIds = new Set(
-    therapySessions.filter((s) => s.patientId === patientId).map((s) => s.id)
-  );
-
-  // Sum supervision time where linked sessions include this patient
+  const patientOf = new Map(therapySessions.map((s) => [s.id, s.patientId]));
   let totalMinutes = 0;
   for (const sv of supervisionSessions) {
-    const linkedToPatient = sv.linkedTherapySessionIds.filter((id) =>
-      patientSessionIds.has(id)
-    ).length;
-    const totalLinked = sv.linkedTherapySessionIds.length;
-    if (totalLinked > 0 && linkedToPatient > 0) {
-      // Proportional: if 2 of 4 linked sessions are for this patient, count 50%
-      totalMinutes += (sv.durationMinutes * linkedToPatient) / totalLinked;
-    }
+    const cases = new Set(
+      sv.linkedTherapySessionIds.map((id) => patientOf.get(id)).filter((p): p is PatientId => p !== undefined)
+    );
+    if (cases.has(patientId)) totalMinutes += sv.durationMinutes / cases.size;
   }
   return minutesToUnits(totalMinutes);
 }
@@ -144,18 +157,63 @@ export function getUnsupervisedSessions(
   return therapySessions.filter((s) => !supervisedIds.has(s.id));
 }
 
+export interface SupervisionCase {
+  patient: Patient;
+  sessionIds: TherapySessionId[];
+  openUnits: number;
+  due: boolean;
+}
+
+// Supervision nach Fällen: je Patient:in die offenen Sitzungen (keiner Supervision zugeordnet) bis einschließlich
+// `upTo` – spätere können in dieser Supervision nicht besprochen worden sein. „Fällig“ über dem Soll
+// (1 : verhaeltnisWarnung Einheiten je Fall), bei 50-Min-Sitzungen also ab der fünften ohne Supervision.
+export function supervisionCases(
+  unsupervisedSessions: TherapySession[],
+  patients: Patient[],
+  upTo: string,
+  regeln: Ausbildungsregeln
+): SupervisionCase[] {
+  const cases: SupervisionCase[] = [];
+  for (const patient of patients) {
+    const sessions = unsupervisedSessions
+      .filter((s) => s.patientId === patient.id && s.date <= upTo)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    if (sessions.length === 0) continue;
+    const openUnits = totalTherapyHours(sessions);
+    cases.push({ patient, sessionIds: sessions.map((s) => s.id), openUnits, due: openUnits > regeln.verhaeltnisWarnung });
+  }
+  return cases.sort((a, b) => b.openUnits - a.openUnits || a.patient.chiffre.localeCompare(b.patient.chiffre));
+}
+
+// Markierung „SV fällig“ in Dashboard und Patient:innen-Liste – ohne Datumsgrenze, alle offenen Sitzungen zählen.
+export function supervisionDuePatientIds(
+  therapySessions: TherapySession[],
+  supervisionSessions: SupervisionSession[],
+  patients: Patient[],
+  regeln: Ausbildungsregeln
+): Set<PatientId> {
+  const open = getUnsupervisedSessions(therapySessions, supervisionSessions);
+  return new Set(
+    supervisionCases(open, patients, "9999-12-31", regeln)
+      .filter((c) => c.due)
+      .map((c) => c.patient.id)
+  );
+}
+
 // Beim Bearbeiten einer Supervision: welche Sitzungen dürfen ihr zugeordnet werden?
-// Alle, die keiner anderen Supervision zugeordnet sind – die eigenen Zuordnungen bleiben wählbar,
-// damit man sie abwählen kann. Entspricht der Konvention „eine Supervision je Sitzung“ der Erfassung.
+// Alle bis zum Datum der Supervision, die keiner anderen Supervision zugeordnet sind – spätere können darin nicht
+// besprochen worden sein. Die eigenen Zuordnungen bleiben unabhängig vom Datum wählbar, damit man sie abwählen kann.
 export function linkableTherapySessions(
   therapySessions: TherapySession[],
   supervisionSessions: SupervisionSession[],
-  supervisionId: SupervisionSessionId
+  supervisionId: SupervisionSessionId,
+  upTo: string
 ): TherapySession[] {
   const takenByOthers = new Set(
     supervisionSessions.filter((sv) => sv.id !== supervisionId).flatMap((sv) => sv.linkedTherapySessionIds)
   );
-  return therapySessions.filter((s) => !takenByOthers.has(s.id));
+  const own = new Set(supervisionSessions.find((sv) => sv.id === supervisionId)?.linkedTherapySessionIds ?? []);
+  return therapySessions.filter((s) => own.has(s.id) || (s.date <= upTo && !takenByOthers.has(s.id)));
 }
 
 // Doppelstunden: freie nur, wenn durchgeführt. Eigene Zuordnungen bleiben unabhängig vom Status

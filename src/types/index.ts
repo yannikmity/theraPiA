@@ -21,6 +21,7 @@ export const newUserId = (id: string) => id as UserId;
 export type TherapyType = "kurzzeittherapie" | "langzeittherapie";
 export type SessionCategory = "sprechstunde" | "probatorik" | "behandlung" | "bezugsperson" | "gespraechsziffer";
 export type SupervisionKind = "individual" | "group";
+export type SupervisionSetting = "einzel" | "gruppe";
 export type GroupSessionStatus = "durchgefuehrt" | "ausgefallen" | "urlaub" | "geplant";
 
 export interface Patient {
@@ -59,6 +60,7 @@ export interface SupervisionSession {
   date: string; // ISO date
   durationMinutes: number;
   kind: SupervisionKind;
+  setting: SupervisionSetting; // einzeln oder in der Gruppe wahrgenommen
   linkedTherapySessionIds: TherapySessionId[];
   linkedGroupSessionIds: GroupSessionId[];
 }

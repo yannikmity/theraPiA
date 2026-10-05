@@ -43,6 +43,8 @@ const ui = {
       ratio={calculateRatio(therapyHours, supervisionHours, R)}
       regeln={R}
       unsupervisedCount={unsupervisedCount}
+      // Aufteilung nach Setting kam nach der Umstellung dazu – hier alles Einzel.
+      bySetting={{ einzel: supervisionHours, gruppe: 0 }}
     />
   ),
   verhaeltnis: (therapyHours: number, supervisionHours: number, compact: boolean) => (

@@ -57,6 +57,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
         date: "2026-01-03",
         durationMinutes: 50,
         kind: "individual",
+        setting: "einzel",
         linkedTherapySessionIds: [sessB.id],
         linkedGroupSessionIds: [],
       } as never)
@@ -89,6 +90,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
         date: "2026-01-03",
         durationMinutes: 50,
         kind: "group",
+        setting: "einzel",
         linkedTherapySessionIds: [],
         linkedGroupSessionIds: [gsB.id],
       } as never)
@@ -98,6 +100,25 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
     expect(links.n).toBe(0);
     const sessions = await q("SELECT count(*)::int AS n FROM supervision_sessions");
     expect(sessions.n).toBe(0);
+  });
+
+  it("speichert das Setting der Supervision", async () => {
+    const t = await createTestDb();
+    cleanup = t.cleanup;
+    const f = await seedOwnershipFixture(t.client);
+    const id = crypto.randomUUID();
+    await insertSupervisionSession(t.client, f.a.userId, {
+      id: newSupervisionSessionId(id),
+      supervisorId: newSupervisorId(f.a.supervisorId),
+      date: "2026-01-20",
+      durationMinutes: 60,
+      kind: "individual",
+      setting: "gruppe",
+      linkedTherapySessionIds: [],
+      linkedGroupSessionIds: [],
+    });
+    const { rows } = await t.client.query("SELECT setting FROM supervision_sessions WHERE id = $1", [id]);
+    expect(rows[0].setting).toBe("gruppe");
   });
 
   it("fasst doppelte Verknüpfungs-IDs zusammen, statt am Primärschlüssel zu scheitern (23505)", async () => {
@@ -111,6 +132,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
       date: "2026-01-20",
       durationMinutes: 60,
       kind: "individual",
+      setting: "einzel",
       linkedTherapySessionIds: [f.a.therapySessionId, f.a.therapySessionId].map(newTherapySessionId),
       linkedGroupSessionIds: [],
     });
@@ -122,6 +144,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
       date: "2026-01-21",
       durationMinutes: 60,
       kind: "individual",
+      setting: "einzel",
       linkedTherapySessionIds: [f.a.therapySessionId, f.a.therapySessionId].map(newTherapySessionId),
       linkedGroupSessionIds: [],
     });
@@ -139,6 +162,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
         date: "2026-01-20",
         durationMinutes: 60,
         kind: "individual",
+        setting: "einzel",
         linkedTherapySessionIds: [newTherapySessionId(f.a.therapySessionId)],
         linkedGroupSessionIds: [],
       })
@@ -165,6 +189,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
         date: "2026-01-20",
         durationMinutes: 60,
         kind: "individual",
+        setting: "einzel",
         linkedTherapySessionIds: [newTherapySessionId(f.a.therapySessionId)],
         linkedGroupSessionIds: [],
       })

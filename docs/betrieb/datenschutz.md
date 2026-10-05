@@ -68,12 +68,12 @@ Eine Datei `therapia-datenexport-JJJJ-MM-TT.json`, UTF-8. Feldnamen wie in der A
 
 | Feld | Inhalt |
 |---|---|
-| `format`, `version`, `exportedAt` | `"therapia-datenexport"`, `3`, Zeitstempel des Exports (ISO 8601, UTC) |
+| `format`, `version`, `exportedAt` | `"therapia-datenexport"`, `4`, Zeitstempel des Exports (ISO 8601, UTC) |
 | `account` | `id`, `email`, `name`, `role` (`admin` oder `pia`), `createdAt` – kein Passwort-Hash |
 | `patients` | je `id`, `chiffre`, `therapyType`, `startDate`, `endDate`, `isActive`, `createdAt`, `antragsdatum`, `genehmigungsdatum`, `beantragteStunden`, `sprechstundenAmbulanz` |
 | `supervisors` | je `id`, `name`, `costPerHour`, `isActive` |
 | `therapySessions` | je `id`, `patientId`, `date`, `durationMinutes`, `notes`, `category` |
-| `supervisionSessions` | je `id`, `supervisorId`, `date`, `durationMinutes`, `kind`, `linkedTherapySessionIds`, `linkedGroupSessionIds` |
+| `supervisionSessions` | je `id`, `supervisorId`, `date`, `durationMinutes`, `kind` (`individual` oder `group`), `setting` (`einzel` oder `gruppe`), `linkedTherapySessionIds`, `linkedGroupSessionIds` |
 | `groups` | je `id`, `name`, `startDate`, `plannedSessionCount`, `avgKids`, `isActive`, `createdAt` |
 | `groupSessions` | je `id`, `groupId`, `date`, `status`, `childCount`, `countsTowardAmbulanzzeit`, `durationMinutes`, `notes` |
 | `financialSettings` | `incomePerHour` |
@@ -89,10 +89,12 @@ Eine Datei je Datenart: Semikolon-getrennt, UTF-8 mit BOM, Zeilenende CRLF, Datu
 | Datei | Spalten |
 |---|---|
 | `therapia-therapiesitzungen-….csv` | Datum; Chiffre; Kategorie; Dauer (Minuten); Dauer (Stunden); Notiz; Supervision am; Supervisor:in |
-| `therapia-supervisionen-….csv` | Datum; Supervisor:in; Art; Dauer (Minuten); Dauer (Stunden); Besprochene Sitzungen; Besprochene Doppelstunden |
+| `therapia-supervisionen-….csv` | Datum; Supervisor:in; Art; Setting; Dauer (Minuten); Dauer (Stunden); Besprochene Sitzungen; Besprochene Doppelstunden |
 | `therapia-doppelstunden-….csv` | Datum; Gruppe; Status; Teilnehmende; Zählt zur Ambulanzzeit; Dauer (Minuten); Dauer (Stunden); Notiz; Supervision am; Supervisor:in |
 | `therapia-patientinnen-….csv` | Chiffre; Therapieart; Beginn; Ende; Aktiv; Antragsdatum; Genehmigungsdatum; Beantragte Behandlungsstunden; Sprechstunden durch Ambulanzleitung; Sitzungen (Anzahl); Sitzungen (Stunden) |
-| `therapia-ausgaben-….csv`, mit Jahr `therapia-ausgaben-JJJJ-stand-….csv` | Datum; Quartal; Supervisor:in; Art; Dauer (Minuten); SV-Einheiten; Kosten je SV-Einheit (EUR); Betrag (EUR) – letzte Zeile „Summe“ |
+| `therapia-ausgaben-….csv`, mit Jahr `therapia-ausgaben-JJJJ-stand-….csv` | Datum; Quartal; Supervisor:in; Art; Setting; Dauer (Minuten); SV-Einheiten; Kosten je SV-Einheit (EUR); Betrag (EUR) – letzte Zeile „Summe“ |
+
+In Supervisionen und Ausgaben nennt „Art“, was besprochen wurde (`Einzeltherapie` oder `Gruppentherapie`), „Setting“, wie die Supervision stattfand (`Einzel` oder `Gruppe`).
 
 Die Spalten „Dauer (Stunden)“ und „Sitzungen (Stunden)“ sind Uhrzeit-Stunden (Minuten ÷ 60) als Rohdaten. Sie sind nicht die Behandlungsstunden und SV-Einheiten à 50 Minuten, mit denen die App die Ausbildung zählt; umrechnen lässt sich das jederzeit aus der Spalte „Dauer (Minuten)“. Ausnahme ist die Ausgaben-Datei: Sie rechnet wie die Finanzseite in SV-Einheiten à 50 Minuten (Einheiten mal Kosten je SV-Einheit), rundet jeden Betrag auf Cent und addiert in der Summenzeile die gerundeten Beträge. Die Summe kann daher um wenige Cent von der auf Euro gerundeten Kachel „Ausgaben“ abweichen.
 

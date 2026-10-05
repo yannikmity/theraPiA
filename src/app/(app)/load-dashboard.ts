@@ -16,6 +16,8 @@ import {
   groupSessionCounts,
   ambulanzzeitRemaining,
   getUnsupervisedSessions,
+  supervisionDuePatientIds,
+  supervisionHoursBySetting,
 } from "@/lib/calculations";
 import { quarterForecast } from "@/lib/quarter-forecast";
 import { todayIso } from "@/lib/dates";
@@ -61,11 +63,15 @@ export async function loadDashboard() {
     .slice(0, DASHBOARD_RECENT_ENTRIES)
     .map((entry) => ({ ...entry, dateLabel: format(parseISO(entry.date), "dd. MMM yyyy", { locale: de }) }));
 
+  const activePatients = patients.filter((p) => p.isActive);
+  const due = supervisionDuePatientIds(therapySessions, supervisionSessions, activePatients, regeln);
+
   return {
     settings,
     regeln,
     therapyH: totalTherapyHours(therapySessions),
     supervisionH: totalSupervisionHours(supervisionSessions),
+    supervisionBySetting: supervisionHoursBySetting(supervisionSessions),
     overallRatio: calculateOverallRatio(therapySessions, supervisionSessions, regeln),
     categoryHours: sessionHoursByCategory(therapySessions),
     unsupervisedCount: getUnsupervisedSessions(therapySessions, supervisionSessions).length,
@@ -73,9 +79,11 @@ export async function loadDashboard() {
     groupCounts: groupSessionCounts(groupSessions),
     ambulanzzeitLeft: ambulanzzeitRemaining(groupSessions, regeln),
     recentEntries,
-    patientRatios: patients
-      .filter((p) => p.isActive)
-      .map((patient) => ({ patient, ratio: calculatePatientRatio(patient, therapySessions, supervisionSessions, regeln) })),
+    patientRatios: activePatients.map((patient) => ({
+      patient,
+      ratio: calculatePatientRatio(patient, therapySessions, supervisionSessions, regeln),
+      due: due.has(patient.id),
+    })),
   };
 }
 

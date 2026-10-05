@@ -116,6 +116,7 @@ export const addGroupSupervisionSession: (
       date: input.date,
       durationMinutes: input.durationMinutes,
       kind: "group",
+      setting: input.setting,
       linkedTherapySessionIds: [],
       linkedGroupSessionIds: input.linkedGroupSessionIds as GroupSessionId[],
     };

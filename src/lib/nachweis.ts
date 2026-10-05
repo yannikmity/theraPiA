@@ -1,4 +1,4 @@
-import type { SessionCategory, SupervisionKind } from "@/types";
+import type { SessionCategory, SupervisionKind, SupervisionSetting } from "@/types";
 import type { UserData } from "./db/user-data";
 import { calculateRatio, minutesToUnits, type RatioResult } from "./calculations";
 import { compareNatural } from "./collation";
@@ -27,6 +27,7 @@ export interface NachweisSupervisionRow {
   date: string;
   supervisorName: string;
   kind: SupervisionKind;
+  setting: SupervisionSetting;
   durationMinutes: number;
   linkedTherapySessions: { date: string; chiffre: string }[];
   linkedGroupSessions: { date: string; groupName: string }[];
@@ -136,6 +137,7 @@ export function buildNachweis(data: UserData, filter: NachweisFilter, regelwerk:
       date: sv.date,
       supervisorName: supervisorNameOf.get(sv.supervisorId) ?? "",
       kind: sv.kind,
+      setting: sv.setting,
       durationMinutes: sv.durationMinutes,
       linkedTherapySessions: sv.linkedTherapySessionIds
         .map((id) => therapyById.get(id))

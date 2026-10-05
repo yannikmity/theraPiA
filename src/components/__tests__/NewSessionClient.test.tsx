@@ -18,6 +18,8 @@ import { NewSessionClient } from "../../app/(app)/sessions/new/NewSessionClient"
 import { addSupervisionSession, addTherapySession, addTherapySessions } from "../../app/(app)/sessions/new/actions";
 import { track } from "../../lib/analytics/track";
 import type { LastWeekSuggestion } from "../../lib/quick-capture";
+import { standardRegelwerk } from "../../lib/ausbildungsregeln/resolve";
+import { DURATION_MAX_MINUTES } from "../../components/forms/duration";
 import { newPatientId, newSupervisorId, newTherapySessionId, type Patient, type Supervisor, type TherapySession } from "@/types";
 
 const P1 = "550e8400-e29b-41d4-a716-446655440001";
@@ -48,6 +50,7 @@ const unsupervised: TherapySession[] = [
 ];
 const props = {
   initialPatients: patients,
+  supervisionPatients: patients,
   initialSupervisors: supervisors,
   initialUnsupervisedSessions: unsupervised,
   today: "2026-09-27",
@@ -55,7 +58,19 @@ const props = {
   initialPatientId: P2,
   categoryByPatient: { [P1]: "behandlung" as const, [P2]: "probatorik" as const },
   suggestions,
+  regeln: standardRegelwerk().regeln,
+  settingBySupervisor: {},
 };
+
+const open = (id: string, patientId: string, date: string): TherapySession => ({
+  id: newTherapySessionId(id),
+  patientId: newPatientId(patientId),
+  date,
+  durationMinutes: 50,
+  notes: "",
+  category: "behandlung",
+});
+const firstCall = () => vi.mocked(addSupervisionSession).mock.calls[0][0];
 
 // Radix rendert die Chips einer ToggleGroup type="single" als role="radio" mit aria-checked.
 const chip = (name: string) => screen.getByRole("radio", { name });
@@ -178,7 +193,7 @@ describe("NewSessionClient", () => {
     render(<NewSessionClient {...props} initialType="supervision" />);
     expect((screen.getByLabelText("Supervisor:in") as HTMLSelectElement).value).toBe(S1);
     expect(checked("50 Min")).toBe(true);
-    expect(screen.getByText("Besprochene Sitzungen zuordnen")).toBeDefined();
+    expect(screen.getByText("Besprochene Patient:innen")).toBeDefined();
     expect(screen.queryByRole("button", { name: /Wie letzte Woche/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Notiz hinzufügen" })).toBeNull();
   });
@@ -249,12 +264,13 @@ describe("NewSessionClient", () => {
     expect(screen.getByRole("alert").textContent).toContain("Patient:in nicht gefunden");
   });
 
-  it("Supervision speichert mit zugeordneten Sitzungen wie bisher", async () => {
+  it("Supervision: Fall antippen ordnet seine offenen Sitzungen zu, Einzel ist Vorgabe", async () => {
     vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
     render(<NewSessionClient {...props} />);
     fireEvent.click(chip("Supervision"));
     expect(checked("50 Min")).toBe(true);
-    fireEvent.click(screen.getByRole("checkbox"));
+    expect(checked("Einzel")).toBe(true);
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() =>
       expect(addSupervisionSession).toHaveBeenCalledWith({
@@ -262,6 +278,7 @@ describe("NewSessionClient", () => {
         date: "2026-09-27",
         durationMinutes: 50,
         kind: "individual",
+        setting: "einzel",
         linkedTherapySessionIds: ["t-9"],
         linkedGroupSessionIds: [],
       })
@@ -272,10 +289,200 @@ describe("NewSessionClient", () => {
     expect(addTherapySessions).not.toHaveBeenCalled();
   });
 
-  it("beschriftet die Zuordnungsliste der Supervision als Gruppe (fieldset/legend)", () => {
+  it("beschriftet die Fallauswahl der Supervision als Gruppe (fieldset/legend)", () => {
     render(<NewSessionClient {...props} initialType="supervision" />);
-    const group = screen.getByRole("group", { name: "Besprochene Sitzungen zuordnen" });
+    const group = screen.getByRole("group", { name: "Besprochene Patient:innen" });
     expect(within(group).getAllByRole("checkbox")).toHaveLength(1);
+    expect(group.textContent).toContain("1 Sitzung offen");
+  });
+
+  it("Supervision: Dauer gilt je Fall – 25 Min und zwei Fälle ergeben 50 Min", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    const sessions = [open("a", P1, "2026-09-10"), open("b", P2, "2026-09-11")];
+    render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={sessions} />);
+    expect(screen.getByText("Dauer je Patient:in")).toBeDefined();
+    fireEvent.click(chip("25 Min"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-2/ }));
+    expect(screen.getByText("Gesamt: 2 × 25 Min = 50 Min")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().durationMinutes).toBe(50));
+    expect(firstCall().linkedTherapySessionIds).toEqual(["a", "b"]);
+  });
+
+  it("Supervision: ohne gewählten Fall zählt die gewählte Dauer einmal, ohne Zuordnung", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    render(<NewSessionClient {...props} initialType="supervision" />);
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().durationMinutes).toBe(50));
+    expect(firstCall().linkedTherapySessionIds).toEqual([]);
+  });
+
+  it("Supervision: Gruppe wählbar, Vorgabe aus der letzten Supervision der Supervisor:in", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    render(<NewSessionClient {...props} initialType="supervision" settingBySupervisor={{ [S1]: "gruppe" }} />);
+    expect(checked("Gruppe")).toBe(true);
+    fireEvent.click(chip("Einzel"));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().setting).toBe("einzel"));
+  });
+
+  it("Supervision: Fälle ab der 5. Sitzung ohne Supervision sind markiert und vorausgewählt", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    const five = ["a", "b", "c", "d", "e"].map((x, i) => open(x, P1, `2026-09-0${i + 1}`));
+    const four = ["f", "g", "h", "i"].map((x, i) => open(x, P2, `2026-09-0${i + 1}`));
+    render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={[...five, ...four]} />);
+    expect(screen.getByRole("checkbox", { name: /A-1/ }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("checkbox", { name: /A-2/ }).getAttribute("aria-checked")).toBe("false");
+    expect(screen.getAllByText("SV fällig")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().linkedTherapySessionIds).toEqual(["e", "d", "c", "b", "a"]));
+  });
+
+  it("Supervision: bietet nur Fälle mit Sitzungen bis zum Datum der Supervision an", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    const sessions = [open("alt", P1, "2026-07-20"), open("neu", P1, "2026-09-24"), open("spaet", P2, "2026-09-24")];
+    render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={sessions} />);
+    fireEvent.change(screen.getByLabelText("Datum"), { target: { value: "2026-07-22" } });
+    expect(screen.queryByRole("checkbox", { name: /A-2/ })).toBeNull();
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().linkedTherapySessionIds).toEqual(["alt"]));
+  });
+
+  it("Supervision: „Andere“ gilt je Fall – 30 Min und zwei Fälle ergeben 60 Min, mit Gesamt-Zeile", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    const sessions = [open("a", P1, "2026-09-10"), open("b", P2, "2026-09-11")];
+    render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={sessions} />);
+    fireEvent.click(chip("Andere"));
+    fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "30" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-2/ }));
+    expect(screen.getByText("Gesamt: 2 × 30 Min = 60 Min")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().durationMinutes).toBe(60));
+  });
+
+  it("Supervision: ungültige freie Dauer zeigt keine Gesamt-Zeile", () => {
+    const sessions = [open("a", P1, "2026-09-10"), open("b", P2, "2026-09-11")];
+    render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={sessions} />);
+    fireEvent.click(chip("Andere"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-2/ }));
+    fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "0" } });
+    expect(screen.queryByText(/^Gesamt:/)).toBeNull();
+    fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "" } });
+    expect(screen.queryByText(/^Gesamt:/)).toBeNull();
+  });
+
+  it("Supervision: Abschluss-Supervision – offene Sitzungen abgeschlossener Fälle bleiben wählbar", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    const P3 = "550e8400-e29b-41d4-a716-446655440003";
+    const ended = { ...patient(P3, "A-3"), isActive: false, endDate: "2026-09-15" };
+    const sessions = [open("a", P1, "2026-09-10"), open("z", P3, "2026-09-12")];
+    render(
+      <NewSessionClient
+        {...props}
+        initialType="supervision"
+        supervisionPatients={[...patients, ended]}
+        initialUnsupervisedSessions={sessions}
+      />
+    );
+    const group = screen.getByRole("group", { name: "Besprochene Patient:innen" });
+    expect(group.textContent).toContain("abgeschlossen");
+    expect(within(group).getAllByText("abgeschlossen")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-3/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().linkedTherapySessionIds).toEqual(["z"]));
+  });
+
+  it("Supervision: abgeschlossene Fälle sind trotz vieler offener Sitzungen nicht vorausgewählt und ohne „SV fällig“", () => {
+    const P3 = "550e8400-e29b-41d4-a716-446655440003";
+    const ended = { ...patient(P3, "A-3"), isActive: false, endDate: "2026-09-15" };
+    const active = ["a", "b", "c", "d", "e"].map((x, i) => open(x, P1, `2026-09-0${i + 1}`));
+    const old = ["v", "w", "x", "y", "z"].map((x, i) => open(x, P3, `2026-09-0${i + 1}`));
+    render(
+      <NewSessionClient
+        {...props}
+        initialType="supervision"
+        supervisionPatients={[...patients, ended]}
+        initialUnsupervisedSessions={[...active, ...old]}
+      />
+    );
+    const endedCase = screen.getByRole("checkbox", { name: /A-3/ });
+    expect(endedCase.getAttribute("aria-checked")).toBe("false");
+    const endedRow = endedCase.closest("label") as HTMLElement;
+    expect(within(endedRow).getByText("abgeschlossen")).toBeDefined();
+    expect(within(endedRow).queryByText("SV fällig")).toBeNull();
+    const activeCase = screen.getByRole("checkbox", { name: /A-1/ });
+    expect(activeCase.getAttribute("aria-checked")).toBe("true");
+    expect(within(activeCase.closest("label") as HTMLElement).getByText("SV fällig")).toBeDefined();
+    expect(screen.getAllByText("SV fällig")).toHaveLength(1);
+  });
+
+  it("Supervision: abgeschlossene Fälle stehen hinter laufenden, auch mit mehr offenen Sitzungen", () => {
+    const P3 = "550e8400-e29b-41d4-a716-446655440003";
+    const ended = { ...patient(P3, "A-3"), isActive: false, endDate: "2026-09-15" };
+    const active = [open("a", P1, "2026-09-10")];
+    const old = ["x", "y", "z"].map((x, i) => open(x, P3, `2026-09-0${i + 1}`));
+    render(
+      <NewSessionClient
+        {...props}
+        initialType="supervision"
+        supervisionPatients={[...patients, ended]}
+        initialUnsupervisedSessions={[...active, ...old]}
+      />
+    );
+    const group = screen.getByRole("group", { name: "Besprochene Patient:innen" });
+    const names = within(group)
+      .getAllByRole("checkbox")
+      .map((c) => c.closest("label")?.textContent ?? "");
+    expect(names).toHaveLength(2);
+    expect(names[0]).toContain("A-1");
+    expect(names[1]).toContain("A-3");
+  });
+
+  it("Therapie: die Auswahl der Patient:in zeigt nur aktive Fälle", () => {
+    const P3 = "550e8400-e29b-41d4-a716-446655440003";
+    const ended = { ...patient(P3, "A-3"), isActive: false, endDate: "2026-09-15" };
+    render(<NewSessionClient {...props} supervisionPatients={[...patients, ended]} />);
+    const options = Array.from((screen.getByLabelText("Patient:in (Chiffre)") as HTMLSelectElement).options).map(
+      (o) => o.textContent
+    );
+    expect(options).toEqual(["A-1", "A-2"]);
+  });
+
+  it("Supervision: Gesamtdauer über dem Maximum (10 fällige Fälle × 50 Min) wird gemeldet, nicht gespeichert", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    const ids = Array.from({ length: 10 }, (_, i) => `550e8400-e29b-41d4-a716-4466554401${String(i).padStart(2, "0")}`);
+    const many = ids.map((id, i) => patient(id, `B-${i + 1}`));
+    const sessions = ids.flatMap((id, i) => [1, 2, 3, 4, 5].map((d) => open(`s-${i}-${d}`, id, `2026-09-0${d}`)));
+    render(
+      <NewSessionClient {...props} initialType="supervision" supervisionPatients={many} initialUnsupervisedSessions={sessions} />
+    );
+    expect(screen.getAllByText("SV fällig")).toHaveLength(10);
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    const message = screen.getByText(new RegExp(`Gesamtdauer 500 Min überschreitet das Maximum von ${DURATION_MAX_MINUTES} Min`));
+    expect(message.getAttribute("role")).toBe("alert");
+    expect(addSupervisionSession).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("checkbox", { name: /B-10/ }));
+    expect(screen.queryByText(/Gesamtdauer/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().durationMinutes).toBe(450));
+  });
+
+  it("Supervision: „Andere“ 250 Min bei zwei Fällen überschreitet das Maximum – keine Action, Meldung", () => {
+    const sessions = [open("a", P1, "2026-09-10"), open("b", P2, "2026-09-11")];
+    render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={sessions} />);
+    fireEvent.click(chip("Andere"));
+    fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "250" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-2/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(addSupervisionSession).not.toHaveBeenCalled();
+    expect(screen.getByText(/Gesamtdauer 500 Min überschreitet/)).toBeDefined();
+    fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "200" } });
+    expect(screen.queryByText(/Gesamtdauer/)).toBeNull();
   });
 
   it("meldet Dauer 0 bei „Andere“ am Feld und ruft die Action nicht auf", () => {

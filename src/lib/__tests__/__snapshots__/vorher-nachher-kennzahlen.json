@@ -483,6 +483,7 @@
           "date": "2026-04-28",
           "supervisorName": "Supervision Eins",
           "kind": "individual",
+          "setting": "einzel",
           "durationMinutes": 60,
           "linkedTherapySessions": [
             {
@@ -505,6 +506,7 @@
           "date": "2026-06-10",
           "supervisorName": "Supervision Zwei",
           "kind": "individual",
+          "setting": "einzel",
           "durationMinutes": 70,
           "linkedTherapySessions": [
             {
@@ -519,6 +521,7 @@
           "date": "2026-07-15",
           "supervisorName": "Supervision Eins",
           "kind": "group",
+          "setting": "einzel",
           "durationMinutes": 90,
           "linkedTherapySessions": [],
           "linkedGroupSessions": [
@@ -537,6 +540,7 @@
           "date": "2026-08-13",
           "supervisorName": "Supervision Eins",
           "kind": "individual",
+          "setting": "einzel",
           "durationMinutes": 45,
           "linkedTherapySessions": [
             {
@@ -719,6 +723,7 @@
           "date": "2026-04-28",
           "supervisorName": "Supervision Eins",
           "kind": "individual",
+          "setting": "einzel",
           "durationMinutes": 60,
           "linkedTherapySessions": [
             {
@@ -741,6 +746,7 @@
           "date": "2026-07-15",
           "supervisorName": "Supervision Eins",
           "kind": "group",
+          "setting": "einzel",
           "durationMinutes": 90,
           "linkedTherapySessions": [],
           "linkedGroupSessions": [
@@ -759,6 +765,7 @@
           "date": "2026-08-13",
           "supervisorName": "Supervision Eins",
           "kind": "individual",
+          "setting": "einzel",
           "durationMinutes": 45,
           "linkedTherapySessions": [
             {

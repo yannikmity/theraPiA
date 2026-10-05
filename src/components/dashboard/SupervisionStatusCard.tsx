@@ -9,6 +9,8 @@ import { hoursRemaining, supervisionHoursMissingForRatio, type RatioResult } fro
 import type { Ausbildungsregeln } from "@/lib/ausbildungsregeln/model";
 import { formatDecimal } from "@/lib/csv";
 import { countNoun, formatVerhaeltnis } from "@/lib/format";
+import { SUPERVISION_SETTING_LABELS, SUPERVISION_SETTING_ORDER } from "@/lib/labels";
+import type { SupervisionSetting } from "@/types";
 
 interface SupervisionStatusCardProps {
   therapyHours: number;
@@ -16,6 +18,7 @@ interface SupervisionStatusCardProps {
   ratio: RatioResult;
   regeln: Ausbildungsregeln;
   unsupervisedCount: number;
+  bySetting: Record<SupervisionSetting, number>;
 }
 
 // Ohne Behandlungsstunden meldet calculateRatio „kritisch“, es fehlt aber keine Supervision – deshalb zuerst dieser Fall,
@@ -26,12 +29,15 @@ function ratioHint(therapyHours: number, missingHours: number, soll: string): st
   return `Verhältnis passt – im Soll von 1:${soll}.`;
 }
 
-// „Wie viel Supervision habe ich, wie viel fehlt, passt das Verhältnis?“ – Stand, Rest bis zum Ziel, Verhältnis mit
-// konkretem Bedarf und die offene Supervision (Sitzungen ohne Zuordnung) mit Sprung in die Erfassung. Ziel und Soll
-// kommen aus dem Regelwerk (#8).
-export function SupervisionStatusCard({ therapyHours, supervisionHours, ratio, regeln, unsupervisedCount }: SupervisionStatusCardProps) {
+// „Wie viel Supervision habe ich, wie viel fehlt, passt das Verhältnis?“ – Stand (getrennt nach Einzel und Gruppe),
+// Rest bis zum Ziel, Verhältnis mit konkretem Bedarf und die offene Supervision (Sitzungen ohne Zuordnung) mit Sprung
+// in die Erfassung. Ziel und Soll kommen aus dem Regelwerk (#8).
+export function SupervisionStatusCard({ therapyHours, supervisionHours, ratio, regeln, unsupervisedCount, bySetting }: SupervisionStatusCardProps) {
   const missing = supervisionHoursMissingForRatio(therapyHours, supervisionHours, regeln);
   const target = regeln.svEinheitenZiel;
+  // Anteile ergänzen sich zu 100 %: Einzel gerundet, Gruppe als Rest – unabhängig gerundet ergäbe 1 + 7 sonst 101 %.
+  const einzelPercent = supervisionHours > 0 ? Math.round((bySetting.einzel / supervisionHours) * 100) : 0;
+  const percent: Record<SupervisionSetting, number> = { einzel: einzelPercent, gruppe: 100 - einzelPercent };
   return (
     <Card role="region" aria-label="Supervision">
       <SectionHeader>Supervision</SectionHeader>
@@ -41,6 +47,16 @@ export function SupervisionStatusCard({ therapyHours, supervisionHours, ratio, r
         <span className="font-semibold text-foreground">{formatDecimal(hoursRemaining(supervisionHours, target), 1)} SV-Einheiten</span>{" "}
         bis {target}
       </p>
+      {supervisionHours > 0 && (
+        <p className="text-sm text-muted-foreground">
+          {SUPERVISION_SETTING_ORDER.map((s, i) => (
+            <span key={s}>
+              {i > 0 && " · "}
+              {SUPERVISION_SETTING_LABELS[s]} {formatDecimal(bySetting[s], 1)} ({percent[s]} %)
+            </span>
+          ))}
+        </p>
+      )}
       <RatioIndicator ratio={ratio} />
       <p className="text-sm font-medium text-foreground">{ratioHint(therapyHours, missing, formatVerhaeltnis(regeln.verhaeltnisWarnung))}</p>
       <div className="flex flex-wrap items-center justify-between gap-2">

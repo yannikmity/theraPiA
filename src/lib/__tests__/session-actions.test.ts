@@ -73,6 +73,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Server Actions Ändern/Löschen", () => {
     date: "2026-02-11",
     durationMinutes: 90,
     kind: "individual" as const,
+    setting: "einzel" as const,
     linkedTherapySessionIds: [f.a.therapySessionId],
     linkedGroupSessionIds: [] as string[],
     ...overrides,

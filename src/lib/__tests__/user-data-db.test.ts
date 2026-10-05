@@ -42,6 +42,13 @@ describe.skipIf(!TEST_DATABASE_URL)("Daten eines Accounts laden", () => {
     expect(data.groupSessions[0].date).toBe("2026-01-03");
   });
 
+  it("liefert das Setting der Supervision (Einzel/Gruppe)", async () => {
+    const { db, f } = await setup();
+    await db.query("UPDATE supervision_sessions SET setting = 'gruppe' WHERE id = $1", [f.a.supervisionId]);
+    const data = await loadUserData(db, f.a.userId);
+    expect(data.supervisionSessions[0].setting).toBe("gruppe");
+  });
+
   it("liefert Verknüpfungen nur auf eigene Sitzungen – fremde Ziele fallen weg (Defense in Depth)", async () => {
     const { db, f } = await setup();
     // Direkt in die Tabellen geschrieben, an der Besitzprüfung der App vorbei.

@@ -42,6 +42,7 @@ describe("buildNachweis ohne Supervisor:in", () => {
       date: "2026-02-20",
       supervisorName: "Supervision Eins",
       kind: "individual",
+      setting: "einzel",
       durationMinutes: 60,
       linkedTherapySessions: [
         { date: "2026-01-10", chiffre: "A-01" },
