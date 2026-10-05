@@ -66,10 +66,12 @@ export function supervisionHoursBySetting(sessions: SupervisionSession[]): Recor
   };
 }
 
-// Vorgabe beim Erfassen: das Setting der letzten Supervision bei derselben Supervisor:in.
+// Vorgabe beim Erfassen: das Setting der letzten Supervision zu Einzeltherapien bei derselben Supervisor:in.
+// Supervisionen von Gruppentherapien (Gruppenseite) zählen nicht – sie werden dort ohne Setting-Wahl gespeichert.
 export function lastSettingBySupervisor(sessions: SupervisionSession[]): Record<string, SupervisionSetting> {
   const result: Record<string, SupervisionSetting> = {};
-  for (const sv of [...sessions].sort((a, b) => a.date.localeCompare(b.date))) result[sv.supervisorId] = sv.setting;
+  const individual = sessions.filter((s) => s.kind === "individual");
+  for (const sv of individual.sort((a, b) => a.date.localeCompare(b.date))) result[sv.supervisorId] = sv.setting;
   return result;
 }
 

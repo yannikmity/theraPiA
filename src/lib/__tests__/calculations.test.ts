@@ -190,7 +190,7 @@ describe("supervisionHoursForPatient", () => {
     expect(supervisionHoursForPatient(supervisionSessions, therapySessions, newPatientId("p-2"))).toBe(0.5);
   });
 
-  it("calculates proportional supervision hours", () => {
+  it("teilt eine Supervision mit je einem Fall pro Patient:in hälftig auf", () => {
     const ts1 = newTherapySessionId("ts-1");
     const ts2 = newTherapySessionId("ts-2");
 
@@ -713,6 +713,15 @@ describe("lastSettingBySupervisor", () => {
     const sessions = [
       makeSupervisionSession({ supervisorId: sup, date: "2026-07-01", setting: "einzel" }),
       makeSupervisionSession({ supervisorId: sup, date: "2026-08-01", setting: "gruppe" }),
+    ];
+    expect(lastSettingBySupervisor(sessions)).toEqual({ "sup-1": "gruppe" });
+  });
+
+  it("übergeht Supervisionen von Gruppentherapien – sie setzen die Vorgabe nicht zurück", () => {
+    const sup = newSupervisorId("sup-1");
+    const sessions = [
+      makeSupervisionSession({ supervisorId: sup, date: "2026-07-01", setting: "gruppe" }),
+      makeSupervisionSession({ supervisorId: sup, date: "2026-08-01", setting: "einzel", kind: "group" }),
     ];
     expect(lastSettingBySupervisor(sessions)).toEqual({ "sup-1": "gruppe" });
   });

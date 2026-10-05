@@ -60,6 +60,13 @@ describe("SupervisionStatusCard", () => {
     expect(text).toContain("Gruppe 2,5 (25 %)");
   });
 
+  it("rundet die Anteile so, dass sie zusammen 100 % ergeben", () => {
+    render(<SupervisionStatusCard therapyHours={40} supervisionHours={8} ratio={calculateRatio(40, 8, R)} regeln={R} unsupervisedCount={0} bySetting={{ einzel: 1, gruppe: 7 }} />);
+    const text = screen.getByRole("region", { name: "Supervision" }).textContent;
+    expect(text).toContain("Einzel 1,0 (13 %)");
+    expect(text).toContain("Gruppe 7,0 (87 %)");
+  });
+
   it("zeigt ohne Supervision keine Prozentangaben", () => {
     render(<SupervisionStatusCard therapyHours={0} supervisionHours={0} ratio={calculateRatio(0, 0, R)} regeln={R} unsupervisedCount={0} bySetting={{ einzel: 0, gruppe: 0 }} />);
     // Der Fortschrittsbalken zeigt „(0%)“ – gemeint ist nur die Aufteilung nach Einzel und Gruppe.

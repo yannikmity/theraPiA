@@ -35,6 +35,9 @@ function ratioHint(therapyHours: number, missingHours: number, soll: string): st
 export function SupervisionStatusCard({ therapyHours, supervisionHours, ratio, regeln, unsupervisedCount, bySetting }: SupervisionStatusCardProps) {
   const missing = supervisionHoursMissingForRatio(therapyHours, supervisionHours, regeln);
   const target = regeln.svEinheitenZiel;
+  // Anteile ergänzen sich zu 100 %: Einzel gerundet, Gruppe als Rest – unabhängig gerundet ergäbe 1 + 7 sonst 101 %.
+  const einzelPercent = supervisionHours > 0 ? Math.round((bySetting.einzel / supervisionHours) * 100) : 0;
+  const percent: Record<SupervisionSetting, number> = { einzel: einzelPercent, gruppe: 100 - einzelPercent };
   return (
     <Card role="region" aria-label="Supervision">
       <SectionHeader>Supervision</SectionHeader>
@@ -49,7 +52,7 @@ export function SupervisionStatusCard({ therapyHours, supervisionHours, ratio, r
           {SUPERVISION_SETTING_ORDER.map((s, i) => (
             <span key={s}>
               {i > 0 && " · "}
-              {SUPERVISION_SETTING_LABELS[s]} {formatDecimal(bySetting[s], 1)} ({Math.round((bySetting[s] / supervisionHours) * 100)} %)
+              {SUPERVISION_SETTING_LABELS[s]} {formatDecimal(bySetting[s], 1)} ({percent[s]} %)
             </span>
           ))}
         </p>

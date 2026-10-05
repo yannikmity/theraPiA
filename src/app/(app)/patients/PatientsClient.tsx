@@ -63,7 +63,7 @@ export function PatientsClient({
 
   const active = patients.filter((p) => p.isActive);
   const completed = patients.filter((p) => !p.isActive);
-  const due = supervisionDuePatientIds(initialTherapySessions, initialSupervisionSessions, patients, regeln);
+  const due = supervisionDuePatientIds(initialTherapySessions, initialSupervisionSessions, active, regeln);
 
   return (
     <div className="space-y-4">
