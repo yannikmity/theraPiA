@@ -396,6 +396,30 @@ describe("NewSessionClient", () => {
     await waitFor(() => expect(firstCall().linkedTherapySessionIds).toEqual(["z"]));
   });
 
+  it("Supervision: abgeschlossene Fälle sind trotz vieler offener Sitzungen nicht vorausgewählt und ohne „SV fällig“", () => {
+    const P3 = "550e8400-e29b-41d4-a716-446655440003";
+    const ended = { ...patient(P3, "A-3"), isActive: false, endDate: "2026-09-15" };
+    const active = ["a", "b", "c", "d", "e"].map((x, i) => open(x, P1, `2026-09-0${i + 1}`));
+    const old = ["v", "w", "x", "y", "z"].map((x, i) => open(x, P3, `2026-09-0${i + 1}`));
+    render(
+      <NewSessionClient
+        {...props}
+        initialType="supervision"
+        supervisionPatients={[...patients, ended]}
+        initialUnsupervisedSessions={[...active, ...old]}
+      />
+    );
+    const endedCase = screen.getByRole("checkbox", { name: /A-3/ });
+    expect(endedCase.getAttribute("aria-checked")).toBe("false");
+    const endedRow = endedCase.closest("label") as HTMLElement;
+    expect(within(endedRow).getByText("abgeschlossen")).toBeDefined();
+    expect(within(endedRow).queryByText("SV fällig")).toBeNull();
+    const activeCase = screen.getByRole("checkbox", { name: /A-1/ });
+    expect(activeCase.getAttribute("aria-checked")).toBe("true");
+    expect(within(activeCase.closest("label") as HTMLElement).getByText("SV fällig")).toBeDefined();
+    expect(screen.getAllByText("SV fällig")).toHaveLength(1);
+  });
+
   it("Therapie: die Auswahl der Patient:in zeigt nur aktive Fälle", () => {
     const P3 = "550e8400-e29b-41d4-a716-446655440003";
     const ended = { ...patient(P3, "A-3"), isActive: false, endDate: "2026-09-15" };

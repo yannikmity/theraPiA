@@ -126,7 +126,10 @@ export function NewSessionClient({
     () => supervisionCases(initialUnsupervisedSessions, supervisionPatients, date, regeln),
     [initialUnsupervisedSessions, supervisionPatients, date, regeln]
   );
-  const selectedPatientIds = chosenPatientIds ?? cases.filter((c) => c.due).map((c) => c.patient.id);
+  // „SV fällig“ und Vorauswahl nur für laufende Fälle: Abgeschlossene tragen oft viele alte, nie zugeordnete
+  // Sitzungen und wären sonst bei jeder Supervision vorausgewählt. Sie bleiben wählbar (Abschluss-Supervision).
+  const isDue = (c: (typeof cases)[number]) => c.due && c.patient.isActive;
+  const selectedPatientIds = chosenPatientIds ?? cases.filter(isDue).map((c) => c.patient.id);
   const selectedCases = cases.filter((c) => selectedPatientIds.includes(c.patient.id));
   // Dauer je Fall für die Gesamt-Zeile; bei ungültiger freier Dauer keine Zeile.
   const perCaseMinutes = customDuration ? (durationError(customText) ? undefined : Number(customText)) : duration;
@@ -603,7 +606,7 @@ export function NewSessionClient({
                     {!c.patient.isActive && <span className="ml-2 text-xs text-muted-foreground">abgeschlossen</span>}
                   </span>
                   <span className="text-xs text-muted-foreground">{sitzungen(c.sessionIds.length)} offen</span>
-                  {c.due && <SupervisionDueBadge />}
+                  {isDue(c) && <SupervisionDueBadge />}
                 </label>
               );
             })}
