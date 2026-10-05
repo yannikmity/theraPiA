@@ -42,6 +42,8 @@ import { z } from "zod";
 
 export interface SessionsData {
   patients: Patient[];
+  /** Alle Patient:innen für die Fallauswahl der Supervision – auch abgeschlossene (Abschluss-Supervision). */
+  supervisionPatients: Patient[];
   supervisors: Supervisor[];
   unsupervisedSessions: TherapySession[];
   lastUsedPatientId: PatientId | null;
@@ -64,6 +66,7 @@ export async function loadSessionsData(today: string): Promise<SessionsData> {
 
   return {
     patients: patients.filter((p) => p.isActive),
+    supervisionPatients: patients,
     supervisors: supervisors.filter((s) => s.isActive),
     unsupervisedSessions: getUnsupervisedSessions(therapySessions, supervisionSessions),
     lastUsedPatientId: lastUsedPatientId(therapySessions, patients),

@@ -36,7 +36,10 @@ import { cn } from "@/lib/utils";
 import { addTherapySession, addTherapySessions, addSupervisionSession, type BatchSaveResult } from "./actions";
 
 interface NewSessionClientProps {
+  /** Aktive Patient:innen – Auswahl für Therapiesitzungen. */
   initialPatients: Patient[];
+  /** Alle Patient:innen, auch abgeschlossene – eine Abschluss-Supervision bespricht offene Sitzungen nach Therapieende. */
+  supervisionPatients: Patient[];
   initialSupervisors: Supervisor[];
   initialUnsupervisedSessions: TherapySession[];
   /** Heutiges Datum (YYYY-MM-DD) vom Server – Vorgabe für das Datumsfeld, gleich auf Server und Client. */
@@ -69,6 +72,7 @@ const CHIP_OUTLINE =
 
 export function NewSessionClient({
   initialPatients,
+  supervisionPatients,
   initialSupervisors,
   initialUnsupervisedSessions,
   today,
@@ -119,11 +123,13 @@ export function NewSessionClient({
 
   // Fälle mit offenen Sitzungen bis zum Datum der Supervision – spätere können nicht besprochen worden sein.
   const cases = useMemo(
-    () => supervisionCases(initialUnsupervisedSessions, initialPatients, date, regeln),
-    [initialUnsupervisedSessions, initialPatients, date, regeln]
+    () => supervisionCases(initialUnsupervisedSessions, supervisionPatients, date, regeln),
+    [initialUnsupervisedSessions, supervisionPatients, date, regeln]
   );
   const selectedPatientIds = chosenPatientIds ?? cases.filter((c) => c.due).map((c) => c.patient.id);
   const selectedCases = cases.filter((c) => selectedPatientIds.includes(c.patient.id));
+  // Dauer je Fall für die Gesamt-Zeile; bei ungültiger freier Dauer keine Zeile.
+  const perCaseMinutes = customDuration ? (durationError(customText) ? undefined : Number(customText)) : duration;
 
   function toggleCase(id: string) {
     setTotalMessage(undefined);
@@ -592,16 +598,19 @@ export function NewSessionClient({
                   )}
                 >
                   <Checkbox checked={isChecked} onCheckedChange={() => toggleCase(c.patient.id)} disabled={isSaving} />
-                  <span className="flex-1 font-mono text-sm font-medium text-foreground">{c.patient.chiffre}</span>
+                  <span className="flex-1 text-sm">
+                    <span className="font-mono font-medium text-foreground">{c.patient.chiffre}</span>
+                    {!c.patient.isActive && <span className="ml-2 text-xs text-muted-foreground">abgeschlossen</span>}
+                  </span>
                   <span className="text-xs text-muted-foreground">{sitzungen(c.sessionIds.length)} offen</span>
                   {c.due && <SupervisionDueBadge />}
                 </label>
               );
             })}
           </div>
-          {selectedCases.length > 1 && !customDuration && (
+          {selectedCases.length > 1 && perCaseMinutes !== undefined && (
             <p className="mt-2 text-sm font-medium text-foreground">
-              Gesamt: {selectedCases.length} × {duration} Min = {selectedCases.length * duration} Min
+              Gesamt: {selectedCases.length} × {perCaseMinutes} Min = {selectedCases.length * perCaseMinutes} Min
             </p>
           )}
           {totalMessage && (

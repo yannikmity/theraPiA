@@ -25,6 +25,7 @@ export default async function NewSessionPage({ searchParams }: { searchParams: P
       <NewSessionClient
         key={`${params.type ?? ""}|${params.patient ?? ""}`}
         initialPatients={data.patients}
+        supervisionPatients={data.supervisionPatients}
         initialSupervisors={data.supervisors}
         initialUnsupervisedSessions={data.unsupervisedSessions}
         today={today}

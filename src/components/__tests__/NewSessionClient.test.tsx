@@ -50,6 +50,7 @@ const unsupervised: TherapySession[] = [
 ];
 const props = {
   initialPatients: patients,
+  supervisionPatients: patients,
   initialSupervisors: supervisors,
   initialUnsupervisedSessions: unsupervised,
   today: "2026-09-27",
@@ -349,7 +350,7 @@ describe("NewSessionClient", () => {
     await waitFor(() => expect(firstCall().linkedTherapySessionIds).toEqual(["alt"]));
   });
 
-  it("Supervision: „Andere“ gilt je Fall – 30 Min und zwei Fälle ergeben 60 Min, ohne Gesamt-Zeile", async () => {
+  it("Supervision: „Andere“ gilt je Fall – 30 Min und zwei Fälle ergeben 60 Min, mit Gesamt-Zeile", async () => {
     vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
     const sessions = [open("a", P1, "2026-09-10"), open("b", P2, "2026-09-11")];
     render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={sessions} />);
@@ -357,9 +358,52 @@ describe("NewSessionClient", () => {
     fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /A-2/ }));
-    expect(screen.queryByText(/^Gesamt:/)).toBeNull();
+    expect(screen.getByText("Gesamt: 2 × 30 Min = 60 Min")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(firstCall().durationMinutes).toBe(60));
+  });
+
+  it("Supervision: ungültige freie Dauer zeigt keine Gesamt-Zeile", () => {
+    const sessions = [open("a", P1, "2026-09-10"), open("b", P2, "2026-09-11")];
+    render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={sessions} />);
+    fireEvent.click(chip("Andere"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-2/ }));
+    fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "0" } });
+    expect(screen.queryByText(/^Gesamt:/)).toBeNull();
+    fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "" } });
+    expect(screen.queryByText(/^Gesamt:/)).toBeNull();
+  });
+
+  it("Supervision: Abschluss-Supervision – offene Sitzungen abgeschlossener Fälle bleiben wählbar", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    const P3 = "550e8400-e29b-41d4-a716-446655440003";
+    const ended = { ...patient(P3, "A-3"), isActive: false, endDate: "2026-09-15" };
+    const sessions = [open("a", P1, "2026-09-10"), open("z", P3, "2026-09-12")];
+    render(
+      <NewSessionClient
+        {...props}
+        initialType="supervision"
+        supervisionPatients={[...patients, ended]}
+        initialUnsupervisedSessions={sessions}
+      />
+    );
+    const group = screen.getByRole("group", { name: "Besprochene Patient:innen" });
+    expect(group.textContent).toContain("abgeschlossen");
+    expect(within(group).getAllByText("abgeschlossen")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-3/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().linkedTherapySessionIds).toEqual(["z"]));
+  });
+
+  it("Therapie: die Auswahl der Patient:in zeigt nur aktive Fälle", () => {
+    const P3 = "550e8400-e29b-41d4-a716-446655440003";
+    const ended = { ...patient(P3, "A-3"), isActive: false, endDate: "2026-09-15" };
+    render(<NewSessionClient {...props} supervisionPatients={[...patients, ended]} />);
+    const options = Array.from((screen.getByLabelText("Patient:in (Chiffre)") as HTMLSelectElement).options).map(
+      (o) => o.textContent
+    );
+    expect(options).toEqual(["A-1", "A-2"]);
   });
 
   it("Supervision: Gesamtdauer über dem Maximum (10 fällige Fälle × 50 Min) wird gemeldet, nicht gespeichert", async () => {
@@ -368,7 +412,7 @@ describe("NewSessionClient", () => {
     const many = ids.map((id, i) => patient(id, `B-${i + 1}`));
     const sessions = ids.flatMap((id, i) => [1, 2, 3, 4, 5].map((d) => open(`s-${i}-${d}`, id, `2026-09-0${d}`)));
     render(
-      <NewSessionClient {...props} initialType="supervision" initialPatients={many} initialUnsupervisedSessions={sessions} />
+      <NewSessionClient {...props} initialType="supervision" supervisionPatients={many} initialUnsupervisedSessions={sessions} />
     );
     expect(screen.getAllByText("SV fällig")).toHaveLength(10);
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
