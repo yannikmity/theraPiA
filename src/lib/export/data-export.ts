@@ -9,7 +9,8 @@ import type { RegelAbweichungen } from "../ausbildungsregeln/model";
 export const DATA_EXPORT_FORMAT = "therapia-datenexport";
 // Version 2 (#8): persönliche Ausbildungsregeln (ausbildungsregelnAbweichungen).
 // Version 3 (#66): Patient:innen mit genehmigungsdatum und sprechstundenAmbulanz.
-export const DATA_EXPORT_VERSION = 3;
+// Version 4: Supervisionen mit setting (einzel/gruppe).
+export const DATA_EXPORT_VERSION = 4;
 
 export interface DataExport {
   format: typeof DATA_EXPORT_FORMAT;
