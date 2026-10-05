@@ -420,6 +420,28 @@ describe("NewSessionClient", () => {
     expect(screen.getAllByText("SV fällig")).toHaveLength(1);
   });
 
+  it("Supervision: abgeschlossene Fälle stehen hinter laufenden, auch mit mehr offenen Sitzungen", () => {
+    const P3 = "550e8400-e29b-41d4-a716-446655440003";
+    const ended = { ...patient(P3, "A-3"), isActive: false, endDate: "2026-09-15" };
+    const active = [open("a", P1, "2026-09-10")];
+    const old = ["x", "y", "z"].map((x, i) => open(x, P3, `2026-09-0${i + 1}`));
+    render(
+      <NewSessionClient
+        {...props}
+        initialType="supervision"
+        supervisionPatients={[...patients, ended]}
+        initialUnsupervisedSessions={[...active, ...old]}
+      />
+    );
+    const group = screen.getByRole("group", { name: "Besprochene Patient:innen" });
+    const names = within(group)
+      .getAllByRole("checkbox")
+      .map((c) => c.closest("label")?.textContent ?? "");
+    expect(names).toHaveLength(2);
+    expect(names[0]).toContain("A-1");
+    expect(names[1]).toContain("A-3");
+  });
+
   it("Therapie: die Auswahl der Patient:in zeigt nur aktive Fälle", () => {
     const P3 = "550e8400-e29b-41d4-a716-446655440003";
     const ended = { ...patient(P3, "A-3"), isActive: false, endDate: "2026-09-15" };

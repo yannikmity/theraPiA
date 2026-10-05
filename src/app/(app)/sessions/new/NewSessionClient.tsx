@@ -122,8 +122,13 @@ export function NewSessionClient({
   const durationChipWidth = presets.length > 4 ? "flex-[1_1_calc(33.333%-0.5rem)] sm:flex-1" : undefined;
 
   // Fälle mit offenen Sitzungen bis zum Datum der Supervision – spätere können nicht besprochen worden sein.
+  // Laufende Fälle zuerst: Abgeschlossene tragen oft viele alte offene Sitzungen und stünden sonst über den
+  // vorausgewählten laufenden. Stabile Sortierung, innerhalb der Gruppen bleibt die Reihenfolge erhalten.
   const cases = useMemo(
-    () => supervisionCases(initialUnsupervisedSessions, supervisionPatients, date, regeln),
+    () =>
+      [...supervisionCases(initialUnsupervisedSessions, supervisionPatients, date, regeln)].sort(
+        (a, b) => Number(b.patient.isActive) - Number(a.patient.isActive)
+      ),
     [initialUnsupervisedSessions, supervisionPatients, date, regeln]
   );
   // „SV fällig“ und Vorauswahl nur für laufende Fälle: Abgeschlossene tragen oft viele alte, nie zugeordnete
