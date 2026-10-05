@@ -62,6 +62,20 @@ describe("SupervisionClient", () => {
     vi.mocked(updateSupervisionSessionAction).mockReset();
   });
 
+  it("bietet im Seitenkopf „Supervision erfassen“ an – Sprung in die Erfassung mit Supervision vorgewählt", () => {
+    render(<SupervisionClient initialData={data([])} />);
+    const link = screen.getByRole("link", { name: "Supervision erfassen" });
+    expect(link.getAttribute("href")).toBe("/sessions/new?type=supervision");
+    expect(link.textContent).toBe("Supervision");
+  });
+
+  it("hält „SV-Einheiten“ im Untertitel zusammen", () => {
+    render(<SupervisionClient initialData={data([])} />);
+    const units = screen.getByText("1,2 SV-Einheiten");
+    expect(units.className).toContain("whitespace-nowrap");
+    expect(units.parentElement?.textContent).toBe("1 Supervisionen · 1,2 SV-Einheiten");
+  });
+
   it("formuliert die Nachfrage beim Löschen ohne „Zuordnung(en)“", () => {
     const { unmount } = render(<SupervisionClient initialData={data(["t-1"])} />);
     fireEvent.click(screen.getByRole("button", { name: "Supervision löschen" }));

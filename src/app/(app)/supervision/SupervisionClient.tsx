@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
-import { BookOpen, Pencil, Trash2 } from "lucide-react";
+import { BookOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { SupervisionSession } from "@/types";
 import { linkableTherapySessions, linkableGroupSessions, totalSupervisionHours } from "@/lib/calculations";
 import { formatDecimal } from "@/lib/csv";
@@ -12,7 +13,7 @@ import { ActionError, errorAt, type ScopedActionError } from "@/components/Actio
 import { runAction } from "@/lib/run-action";
 import { track, trackFailure } from "@/lib/analytics/track";
 import { ConfirmButton, SectionHeader } from "@/components/ui";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { updateSupervisionSessionAction, deleteSupervisionSessionAction, type SupervisionData } from "./actions";
@@ -110,7 +111,24 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
       <PageHeader
         title="Supervisionen"
         backHref="/profile"
-        subtitle={`${sessions.length} Supervisionen · ${formatDecimal(totalHours, 1)} SV-Einheiten`}
+        subtitle={
+          // Mit dem Knopf daneben wird der Kopf am Handy schmal – die Einheiten nicht am Bindestrich umbrechen.
+          <>
+            {sessions.length} Supervisionen ·{" "}
+            <span className="whitespace-nowrap">{formatDecimal(totalHours, 1)} SV-Einheiten</span>
+          </>
+        }
+        actions={
+          // Wie „+ Sitzung“ auf der Patient:innen-Seite: Sprung in das gemeinsame Erfassen-Formular, Supervision vorgewählt.
+          <Link
+            href="/sessions/new?type=supervision"
+            aria-label="Supervision erfassen"
+            className={buttonVariants({ variant: "success" })}
+          >
+            <Plus aria-hidden="true" />
+            Supervision
+          </Link>
+        }
       />
 
       <Card>
