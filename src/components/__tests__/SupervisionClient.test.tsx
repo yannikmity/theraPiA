@@ -69,6 +69,13 @@ describe("SupervisionClient", () => {
     expect(link.textContent).toBe("Supervision");
   });
 
+  it("hält „SV-Einheiten“ im Untertitel zusammen", () => {
+    render(<SupervisionClient initialData={data([])} />);
+    const units = screen.getByText("1,2 SV-Einheiten");
+    expect(units.className).toContain("whitespace-nowrap");
+    expect(units.parentElement?.textContent).toBe("1 Supervisionen · 1,2 SV-Einheiten");
+  });
+
   it("formuliert die Nachfrage beim Löschen ohne „Zuordnung(en)“", () => {
     const { unmount } = render(<SupervisionClient initialData={data(["t-1"])} />);
     fireEvent.click(screen.getByRole("button", { name: "Supervision löschen" }));

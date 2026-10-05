@@ -111,7 +111,13 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
       <PageHeader
         title="Supervisionen"
         backHref="/profile"
-        subtitle={`${sessions.length} Supervisionen · ${formatDecimal(totalHours, 1)} SV-Einheiten`}
+        subtitle={
+          // Mit dem Knopf daneben wird der Kopf am Handy schmal – die Einheiten nicht am Bindestrich umbrechen.
+          <>
+            {sessions.length} Supervisionen ·{" "}
+            <span className="whitespace-nowrap">{formatDecimal(totalHours, 1)} SV-Einheiten</span>
+          </>
+        }
         actions={
           // Wie „+ Sitzung“ auf der Patient:innen-Seite: Sprung in das gemeinsame Erfassen-Formular, Supervision vorgewählt.
           <Link
