@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { SupervisionSessionEditForm } from "../../app/(app)/supervision/SupervisionSessionEditForm";
 import { newSupervisionSessionId, newSupervisorId, newTherapySessionId, type SupervisionSession, type Supervisor } from "@/types";
 
@@ -33,7 +33,7 @@ describe("SupervisionSessionEditForm", () => {
     expect(boxes[0].getAttribute("aria-checked")).toBe("true");
     fireEvent.click(boxes[1]);
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    expect(onSave).toHaveBeenCalledWith({ supervisorId: "s-1", date: "2026-09-20", durationMinutes: 60, linkedIds: ["t-1", "t-2"] });
+    expect(onSave).toHaveBeenCalledWith({ supervisorId: "s-1", date: "2026-09-20", durationMinutes: 60, setting: "einzel", linkedIds: ["t-1", "t-2"] });
   });
 
   it("nennt die Gruppe bei Gruppen-Supervision „Besprochene Doppelstunden“", () => {
@@ -44,7 +44,7 @@ describe("SupervisionSessionEditForm", () => {
   it("meldet Dauer 0 am Feld und speichert nicht", () => {
     const onSave = vi.fn(async () => {});
     renderForm(onSave);
-    const duration = screen.getByLabelText("Dauer (Minuten)") as HTMLInputElement;
+    const duration = screen.getByLabelText("Dauer gesamt (Minuten)") as HTMLInputElement;
     fireEvent.change(duration, { target: { value: "0" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(onSave).not.toHaveBeenCalled();
@@ -60,5 +60,13 @@ describe("SupervisionSessionEditForm", () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(date.getAttribute("aria-describedby")).toBe(screen.getByText("Bitte ein Datum angeben").id);
     expect(document.activeElement).toBe(date);
+  });
+
+  it("ändert das Setting und gibt es beim Speichern mit", async () => {
+    const onSave = vi.fn(async () => {});
+    render(<SupervisionSessionEditForm session={session} supervisors={supervisors} linkOptions={[]} saving={false} onSave={onSave} onCancel={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Setting"), { target: { value: "gruppe" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ setting: "gruppe" })));
   });
 });

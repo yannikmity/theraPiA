@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { SupervisionSession, Supervisor } from "@/types";
+import { SupervisionSession, SupervisionSetting, Supervisor } from "@/types";
 import { FormField, fieldErrorId } from "@/components/ui";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { dateError } from "@/components/forms/date";
 import { DURATION_MAX_MINUTES, DURATION_MIN_MINUTES, durationError } from "@/components/forms/duration";
+import { SUPERVISION_SETTING_LABELS, SUPERVISION_SETTING_ORDER } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 export interface LinkOption {
@@ -20,6 +21,7 @@ export interface SupervisionFormValues {
   supervisorId: string;
   date: string;
   durationMinutes: number;
+  setting: SupervisionSetting;
   linkedIds: string[];
 }
 
@@ -33,7 +35,8 @@ interface SupervisionSessionEditFormProps {
   onCancel: () => void;
 }
 
-// Die Art (Einzel/Gruppe) ist nicht änderbar: sie bestimmt, welche Sitzungen verknüpfbar sind.
+// Die Art (Einzel-/Gruppentherapie) ist nicht änderbar: sie bestimmt, welche Sitzungen verknüpfbar sind. Das Setting
+// (Einzel/Gruppe) schon.
 // noValidate: Datum und Dauer prüfen dateError/durationError mit eigener Meldung am Feld (#28, #56).
 // Die Zuordnungen sind ein fieldset mit legend, damit Screenreader die Checkbox-Gruppe benennen (#43).
 export function SupervisionSessionEditForm({
@@ -45,6 +48,7 @@ export function SupervisionSessionEditForm({
   onCancel,
 }: SupervisionSessionEditFormProps) {
   const [supervisorId, setSupervisorId] = useState<string>(session.supervisorId);
+  const [setting, setSetting] = useState<SupervisionSetting>(session.setting);
   const [date, setDate] = useState(session.date);
   const [duration, setDuration] = useState(String(session.durationMinutes));
   const [linkedIds, setLinkedIds] = useState<string[]>(
@@ -72,7 +76,7 @@ export function SupervisionSessionEditForm({
       durationRef.current?.focus();
       return;
     }
-    void onSave({ supervisorId, date, durationMinutes: Number(duration), linkedIds });
+    void onSave({ supervisorId, date, durationMinutes: Number(duration), setting, linkedIds });
   }
 
   return (
@@ -93,6 +97,21 @@ export function SupervisionSessionEditForm({
           ))}
         </NativeSelect>
       </FormField>
+      <FormField label="Setting" htmlFor={idFor("setting")}>
+        <NativeSelect
+          id={idFor("setting")}
+          value={setting}
+          onChange={(e) => setSetting(e.target.value as SupervisionSetting)}
+          disabled={saving}
+          wrapperClassName="w-full"
+        >
+          {SUPERVISION_SETTING_ORDER.map((s) => (
+            <NativeSelectOption key={s} value={s}>
+              {SUPERVISION_SETTING_LABELS[s]}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </FormField>
       <FormField label="Datum" htmlFor={idFor("date")} error={dateMessage}>
         <Input
           ref={dateRef}
@@ -106,7 +125,7 @@ export function SupervisionSessionEditForm({
           required
         />
       </FormField>
-      <FormField label="Dauer (Minuten)" htmlFor={idFor("duration")} error={durationMessage}>
+      <FormField label="Dauer gesamt (Minuten)" htmlFor={idFor("duration")} error={durationMessage}>
         <Input
           ref={durationRef}
           id={idFor("duration")}

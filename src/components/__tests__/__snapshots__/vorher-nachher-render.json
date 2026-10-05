@@ -4,11 +4,11 @@
     "BehandlungsstundenBehandlungsstunden612,0 / 600(100%)Noch 0,0 Behandlungsstunden bis 6000,0Probatorik612,0Behandlung0,0Bezugsperson"
   ],
   "supervision": [
-    "SupervisionSV-Einheiten5,0 / 150(3%)Noch 145,0 SV-Einheiten bis 150Verhältnis: 1 : 8,0Supervision fehlt5,0 SV-Einheiten / 40,0 Behandlungsstunden (Soll: 1:4)Für 1:4 fehlen jetzt 5,0 SV-Einheiten.Offene Supervision: 7 Sitzungen noch nicht besprochenSupervision erfassen",
-    "SupervisionSV-Einheiten10,0 / 150(7%)Noch 140,0 SV-Einheiten bis 150Verhältnis: 1 : 4,0Passt10,0 SV-Einheiten / 40,0 Behandlungsstunden (Soll: 1:4)Verhältnis passt – im Soll von 1:4.Offene Supervision: 1 Sitzung noch nicht besprochenSupervision erfassen",
+    "SupervisionSV-Einheiten5,0 / 150(3%)Noch 145,0 SV-Einheiten bis 150Einzel 5,0 (100 %) · Gruppe 0,0 (0 %)Verhältnis: 1 : 8,0Supervision fehlt5,0 SV-Einheiten / 40,0 Behandlungsstunden (Soll: 1:4)Für 1:4 fehlen jetzt 5,0 SV-Einheiten.Offene Supervision: 7 Sitzungen noch nicht besprochenSupervision erfassen",
+    "SupervisionSV-Einheiten10,0 / 150(7%)Noch 140,0 SV-Einheiten bis 150Einzel 10,0 (100 %) · Gruppe 0,0 (0 %)Verhältnis: 1 : 4,0Passt10,0 SV-Einheiten / 40,0 Behandlungsstunden (Soll: 1:4)Verhältnis passt – im Soll von 1:4.Offene Supervision: 1 Sitzung noch nicht besprochenSupervision erfassen",
     "SupervisionSV-Einheiten0,0 / 150(0%)Noch 150,0 SV-Einheiten bis 150Verhältnis: 1 : ?Supervision fehlt0,0 SV-Einheiten / 0,0 Behandlungsstunden (Soll: 1:4)Noch keine Behandlungsstunden erfasst.Offene Supervision: 0 Sitzungen noch nicht besprochenSupervision erfassen",
-    "SupervisionSV-Einheiten2,5 / 150(2%)Noch 147,5 SV-Einheiten bis 150Verhältnis: 1 : 4,1Knapp2,5 SV-Einheiten / 10,0 Behandlungsstunden (Soll: 1:4)Für 1:4 fehlen jetzt 0,1 SV-Einheiten.Offene Supervision: 0 Sitzungen noch nicht besprochenSupervision erfassen",
-    "SupervisionSV-Einheiten40,0 / 150(27%)Noch 110,0 SV-Einheiten bis 150Verhältnis: 1 : 4,0Passt40,0 SV-Einheiten / 160,0 Behandlungsstunden (Soll: 1:4)Verhältnis passt – im Soll von 1:4.Offene Supervision: 3 Sitzungen noch nicht besprochenSupervision erfassen"
+    "SupervisionSV-Einheiten2,5 / 150(2%)Noch 147,5 SV-Einheiten bis 150Einzel 2,5 (100 %) · Gruppe 0,0 (0 %)Verhältnis: 1 : 4,1Knapp2,5 SV-Einheiten / 10,0 Behandlungsstunden (Soll: 1:4)Für 1:4 fehlen jetzt 0,1 SV-Einheiten.Offene Supervision: 0 Sitzungen noch nicht besprochenSupervision erfassen",
+    "SupervisionSV-Einheiten40,0 / 150(27%)Noch 110,0 SV-Einheiten bis 150Einzel 40,0 (100 %) · Gruppe 0,0 (0 %)Verhältnis: 1 : 4,0Passt40,0 SV-Einheiten / 160,0 Behandlungsstunden (Soll: 1:4)Verhältnis passt – im Soll von 1:4.Offene Supervision: 3 Sitzungen noch nicht besprochenSupervision erfassen"
   ],
   "verhaeltnis": [
     "Verhältnis: 1 : 4,0Passt10,0 SV-Einheiten / 40,0 Behandlungsstunden (Soll: 1:4)",

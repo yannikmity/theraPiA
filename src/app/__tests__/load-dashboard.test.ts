@@ -71,6 +71,15 @@ describe("loadDashboard", () => {
     ]);
     expect(d.patientRatios.map((r) => r.patient.chiffre)).toEqual(["A-1"]);
     expect(d.patientRatios[0].ratio).toEqual(calculatePatientRatio(data.patients[0] as Patient, [therapy], [supervision], standardRegelwerk().regeln));
+    expect(d.patientRatios[0].due).toBe(false);
+    expect(d.supervisionBySetting).toEqual({ einzel: 1, gruppe: 0 });
+  });
+
+  it("markiert eine Patient:in mit fünf Sitzungen ohne Supervision als „SV fällig“", async () => {
+    data.therapySessions = ["o-1", "o-2", "o-3", "o-4", "o-5"].map((id, i) => ({ ...therapy, id: newTherapySessionId(id), date: `2026-09-0${i + 1}` }));
+    data.supervisionSessions = [];
+    const d = await loadDashboard();
+    expect(d.patientRatios[0].due).toBe(true);
   });
 
   it("lässt einen Formatierungsfehler aus loadDashboard heraus fallen – die Seite fängt ihn im try", async () => {

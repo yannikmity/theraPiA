@@ -22,7 +22,7 @@ import { CATEGORY_LABELS, CATEGORY_ORDER, SUPERVISION_SETTING_LABELS, SUPERVISIO
 import type { CaptureType, LastWeekSuggestion } from "@/lib/quick-capture";
 import { FormField, SectionHeader, fieldErrorId } from "@/components/ui";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { SupervisionDueBadge } from "@/components/SupervisionDueBadge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -594,7 +594,7 @@ export function NewSessionClient({
                   <Checkbox checked={isChecked} onCheckedChange={() => toggleCase(c.patient.id)} disabled={isSaving} />
                   <span className="flex-1 font-mono text-sm font-medium text-foreground">{c.patient.chiffre}</span>
                   <span className="text-xs text-muted-foreground">{sitzungen(c.sessionIds.length)} offen</span>
-                  {c.due && <Badge variant="warning-soft">SV fällig</Badge>}
+                  {c.due && <SupervisionDueBadge />}
                 </label>
               );
             })}

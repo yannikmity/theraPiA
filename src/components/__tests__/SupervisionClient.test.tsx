@@ -97,4 +97,20 @@ describe("SupervisionClient", () => {
     expect(logged).toHaveBeenCalledWith("Server-Action fehlgeschlagen:", expect.any(TypeError));
     logged.mockRestore();
   });
+
+  it("speichert ein geändertes Setting mit", async () => {
+    vi.mocked(updateSupervisionSessionAction).mockResolvedValue({ success: true, data: data(["t-1"]) });
+    render(<SupervisionClient initialData={data(["t-1"])} />);
+    fireEvent.click(screen.getByRole("button", { name: "Supervision bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Setting"), { target: { value: "gruppe" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(updateSupervisionSessionAction).toHaveBeenCalledWith(expect.objectContaining({ id: "sv-1", kind: "individual", setting: "gruppe" }))
+    );
+  });
+
+  it("nennt in der Liste neben der Art das Setting", () => {
+    render(<SupervisionClient initialData={data(["t-1"])} />);
+    expect(screen.getByText(/Einzeltherapie · Einzel · 1 zugeordnet/)).toBeDefined();
+  });
 });

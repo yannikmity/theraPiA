@@ -4,11 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { Plus, ChevronRight, X } from "lucide-react";
-import { calculatePatientRatio, therapyHoursForPatient } from "@/lib/calculations";
+import { calculatePatientRatio, supervisionDuePatientIds, therapyHoursForPatient } from "@/lib/calculations";
 import { formatDecimal } from "@/lib/csv";
 import { Patient, TherapySession, SupervisionSession } from "@/types";
 import type { Ausbildungsregeln } from "@/lib/ausbildungsregeln/model";
 import RatioIndicator from "@/components/RatioIndicator";
+import { SupervisionDueBadge } from "@/components/SupervisionDueBadge";
 import { ActionError } from "@/components/ActionError";
 import { ActionResult } from "@/lib/action-result";
 import { runAction } from "@/lib/run-action";
@@ -62,6 +63,7 @@ export function PatientsClient({
 
   const active = patients.filter((p) => p.isActive);
   const completed = patients.filter((p) => !p.isActive);
+  const due = supervisionDuePatientIds(initialTherapySessions, initialSupervisionSessions, patients, regeln);
 
   return (
     <div className="space-y-4">
@@ -129,6 +131,7 @@ export function PatientsClient({
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-semibold text-foreground">{patient.chiffre}</span>
                         <Badge variant="primary-soft">{patient.therapyType === "kurzzeittherapie" ? "KZT" : "LZT"}</Badge>
+                        {due.has(patient.id) && <SupervisionDueBadge />}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         Seit {format(parseISO(patient.startDate), "dd.MM.yyyy")} · {formatDecimal(hours, 1)} Behandlungsstunden

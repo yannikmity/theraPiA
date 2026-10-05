@@ -7,6 +7,7 @@ import { BookOpen, Pencil, Trash2 } from "lucide-react";
 import { SupervisionSession } from "@/types";
 import { linkableTherapySessions, linkableGroupSessions, totalSupervisionHours } from "@/lib/calculations";
 import { formatDecimal } from "@/lib/csv";
+import { SUPERVISION_KIND_LABELS, SUPERVISION_SETTING_LABELS } from "@/lib/labels";
 import { ActionError, errorAt, type ScopedActionError } from "@/components/ActionError";
 import { runAction } from "@/lib/run-action";
 import { track, trackFailure } from "@/lib/analytics/track";
@@ -73,7 +74,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
         date: values.date,
         durationMinutes: values.durationMinutes,
         kind: sv.kind,
-        setting: sv.setting,
+        setting: values.setting,
         linkedTherapySessionIds: sv.kind === "group" ? [] : values.linkedIds,
         linkedGroupSessionIds: sv.kind === "group" ? values.linkedIds : [],
       })
@@ -140,7 +141,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
                     <span className="text-sm text-foreground">{format(parseISO(sv.date), "dd. MMM yyyy", { locale: de })}</span>
                     <span className="ml-2 text-xs text-muted-foreground">{supervisorName(sv.supervisorId)}</span>
                     <p className="text-xs text-muted-foreground">
-                      {sv.kind === "group" ? "Gruppe" : "Einzel"} · {linkCount(sv)} zugeordnet
+                      {SUPERVISION_KIND_LABELS[sv.kind]} · {SUPERVISION_SETTING_LABELS[sv.setting]} · {linkCount(sv)} zugeordnet
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground">{sv.durationMinutes} Min</span>
