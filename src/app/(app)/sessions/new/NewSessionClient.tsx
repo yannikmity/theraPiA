@@ -103,6 +103,8 @@ export function NewSessionClient({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<ScopedActionError | null>(null);
   const [durationMessage, setDurationMessage] = useState<string | undefined>();
+  // Supervision: Die Summe über alle gewählten Fälle darf das Maximum nicht überschreiten – der Server lehnt sie sonst ab.
+  const [totalMessage, setTotalMessage] = useState<string | undefined>();
   // „Wie letzte Woche“: null = zugeklappt, sonst die gewählten Vorschläge (Schlüssel: Quell-Sitzung).
   const [selected, setSelected] = useState<Set<string> | null>(null);
   const [batchResult, setBatchResult] = useState<BatchSaveResult | null>(null);
@@ -124,6 +126,7 @@ export function NewSessionClient({
   const selectedCases = cases.filter((c) => selectedPatientIds.includes(c.patient.id));
 
   function toggleCase(id: string) {
+    setTotalMessage(undefined);
     setChosenPatientIds(
       selectedPatientIds.includes(id) ? selectedPatientIds.filter((x) => x !== id) : [...selectedPatientIds, id]
     );
@@ -159,6 +162,15 @@ export function NewSessionClient({
       return;
     }
     const minutes = customDuration ? Number(customText) : duration;
+    // Die Dauer gilt je besprochenem Fall; gespeichert wird die Summe (ohne Fall: die Dauer einmal).
+    const supervisionTotal = minutes * Math.max(1, selectedCases.length);
+    const tooLong = type === "supervision" && supervisionTotal > DURATION_MAX_MINUTES;
+    setTotalMessage(
+      tooLong
+        ? `Gesamtdauer ${supervisionTotal} Min überschreitet das Maximum von ${DURATION_MAX_MINUTES} Min – weniger Patient:innen wählen oder die Dauer je Patient:in verringern.`
+        : undefined
+    );
+    if (tooLong) return;
     savingRef.current = true;
     setIsSaving(true);
     setError(null);
@@ -168,8 +180,7 @@ export function NewSessionClient({
         : addSupervisionSession({
             supervisorId,
             date,
-            // Die Dauer gilt je besprochenem Fall; gespeichert wird die Summe (ohne Fall: die Dauer einmal).
-            durationMinutes: minutes * Math.max(1, selectedCases.length),
+            durationMinutes: supervisionTotal,
             kind: "individual",
             setting,
             linkedTherapySessionIds: selectedCases.flatMap((c) => c.sessionIds),
@@ -198,6 +209,7 @@ export function NewSessionClient({
     setChosenPatientIds(null);
     setError(null);
     setDurationMessage(undefined);
+    setTotalMessage(undefined);
     setSelected(null);
     setBatchResult(null);
     router.refresh();
@@ -299,6 +311,7 @@ export function NewSessionClient({
           setDuration(value === "therapie" ? DEFAULT_THERAPY_SESSION_MINUTES : DEFAULT_SUPERVISION_MINUTES);
           setCustomDuration(false);
           setDurationMessage(undefined);
+          setTotalMessage(undefined);
         }}
         disabled={isSaving}
         spacing={1}
@@ -384,7 +397,16 @@ export function NewSessionClient({
       )}
 
       <FormField label="Datum" htmlFor="session-date">
-        <Input id="session-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={isSaving} />
+        <Input
+          id="session-date"
+          type="date"
+          value={date}
+          onChange={(e) => {
+            setDate(e.target.value);
+            setTotalMessage(undefined); // anderes Datum, andere Vorauswahl der Fälle
+          }}
+          disabled={isSaving}
+        />
       </FormField>
 
       {type === "therapie" ? (
@@ -472,6 +494,7 @@ export function NewSessionClient({
           onValueChange={(value) => {
             if (!value) return;
             setDurationMessage(undefined);
+            setTotalMessage(undefined);
             if (value === "andere") {
               setCustomText(String(duration));
               setCustomDuration(true);
@@ -506,6 +529,7 @@ export function NewSessionClient({
               onChange={(e) => {
                 setCustomText(e.target.value);
                 setDurationMessage(undefined);
+                setTotalMessage(undefined);
               }}
               placeholder="Minuten"
               min={DURATION_MIN_MINUTES}
@@ -550,7 +574,11 @@ export function NewSessionClient({
       )}
 
       {type === "supervision" && cases.length > 0 && (
-        <fieldset className="min-w-0">
+        <fieldset
+          className="min-w-0"
+          aria-invalid={totalMessage ? true : undefined}
+          aria-describedby={totalMessage ? fieldErrorId("session-cases") : undefined}
+        >
           <legend className="mb-2 text-sm leading-none font-medium">Besprochene Patient:innen</legend>
           <div className="max-h-64 space-y-1.5 overflow-y-auto">
             {cases.map((c) => {
@@ -574,6 +602,11 @@ export function NewSessionClient({
           {selectedCases.length > 1 && !customDuration && (
             <p className="mt-2 text-sm font-medium text-foreground">
               Gesamt: {selectedCases.length} × {duration} Min = {selectedCases.length * duration} Min
+            </p>
+          )}
+          {totalMessage && (
+            <p id={fieldErrorId("session-cases")} role="alert" className="mt-2 text-xs text-destructive">
+              {totalMessage}
             </p>
           )}
           <p className="mt-2 text-xs text-muted-foreground">

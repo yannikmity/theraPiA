@@ -19,6 +19,7 @@ import { addSupervisionSession, addTherapySession, addTherapySessions } from "..
 import { track } from "../../lib/analytics/track";
 import type { LastWeekSuggestion } from "../../lib/quick-capture";
 import { standardRegelwerk } from "../../lib/ausbildungsregeln/resolve";
+import { DURATION_MAX_MINUTES } from "../../components/forms/duration";
 import { newPatientId, newSupervisorId, newTherapySessionId, type Patient, type Supervisor, type TherapySession } from "@/types";
 
 const P1 = "550e8400-e29b-41d4-a716-446655440001";
@@ -68,7 +69,7 @@ const open = (id: string, patientId: string, date: string): TherapySession => ({
   notes: "",
   category: "behandlung",
 });
-const lastCall = () => vi.mocked(addSupervisionSession).mock.calls[0][0];
+const firstCall = () => vi.mocked(addSupervisionSession).mock.calls[0][0];
 
 // Radix rendert die Chips einer ToggleGroup type="single" als role="radio" mit aria-checked.
 const chip = (name: string) => screen.getByRole("radio", { name });
@@ -304,16 +305,16 @@ describe("NewSessionClient", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: /A-2/ }));
     expect(screen.getByText("Gesamt: 2 × 25 Min = 50 Min")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await waitFor(() => expect(lastCall().durationMinutes).toBe(50));
-    expect(lastCall().linkedTherapySessionIds).toEqual(["a", "b"]);
+    await waitFor(() => expect(firstCall().durationMinutes).toBe(50));
+    expect(firstCall().linkedTherapySessionIds).toEqual(["a", "b"]);
   });
 
   it("Supervision: ohne gewählten Fall zählt die gewählte Dauer einmal, ohne Zuordnung", async () => {
     vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
     render(<NewSessionClient {...props} initialType="supervision" />);
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await waitFor(() => expect(lastCall().durationMinutes).toBe(50));
-    expect(lastCall().linkedTherapySessionIds).toEqual([]);
+    await waitFor(() => expect(firstCall().durationMinutes).toBe(50));
+    expect(firstCall().linkedTherapySessionIds).toEqual([]);
   });
 
   it("Supervision: Gruppe wählbar, Vorgabe aus der letzten Supervision der Supervisor:in", async () => {
@@ -322,7 +323,7 @@ describe("NewSessionClient", () => {
     expect(checked("Gruppe")).toBe(true);
     fireEvent.click(chip("Einzel"));
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await waitFor(() => expect(lastCall().setting).toBe("einzel"));
+    await waitFor(() => expect(firstCall().setting).toBe("einzel"));
   });
 
   it("Supervision: Fälle ab der 5. Sitzung ohne Supervision sind markiert und vorausgewählt", async () => {
@@ -334,7 +335,7 @@ describe("NewSessionClient", () => {
     expect(screen.getByRole("checkbox", { name: /A-2/ }).getAttribute("aria-checked")).toBe("false");
     expect(screen.getAllByText("SV fällig")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await waitFor(() => expect(lastCall().linkedTherapySessionIds).toEqual(["e", "d", "c", "b", "a"]));
+    await waitFor(() => expect(firstCall().linkedTherapySessionIds).toEqual(["e", "d", "c", "b", "a"]));
   });
 
   it("Supervision: bietet nur Fälle mit Sitzungen bis zum Datum der Supervision an", async () => {
@@ -345,7 +346,53 @@ describe("NewSessionClient", () => {
     expect(screen.queryByRole("checkbox", { name: /A-2/ })).toBeNull();
     fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await waitFor(() => expect(lastCall().linkedTherapySessionIds).toEqual(["alt"]));
+    await waitFor(() => expect(firstCall().linkedTherapySessionIds).toEqual(["alt"]));
+  });
+
+  it("Supervision: „Andere“ gilt je Fall – 30 Min und zwei Fälle ergeben 60 Min, ohne Gesamt-Zeile", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    const sessions = [open("a", P1, "2026-09-10"), open("b", P2, "2026-09-11")];
+    render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={sessions} />);
+    fireEvent.click(chip("Andere"));
+    fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "30" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-2/ }));
+    expect(screen.queryByText(/^Gesamt:/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().durationMinutes).toBe(60));
+  });
+
+  it("Supervision: Gesamtdauer über dem Maximum (10 fällige Fälle × 50 Min) wird gemeldet, nicht gespeichert", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    const ids = Array.from({ length: 10 }, (_, i) => `550e8400-e29b-41d4-a716-4466554401${String(i).padStart(2, "0")}`);
+    const many = ids.map((id, i) => patient(id, `B-${i + 1}`));
+    const sessions = ids.flatMap((id, i) => [1, 2, 3, 4, 5].map((d) => open(`s-${i}-${d}`, id, `2026-09-0${d}`)));
+    render(
+      <NewSessionClient {...props} initialType="supervision" initialPatients={many} initialUnsupervisedSessions={sessions} />
+    );
+    expect(screen.getAllByText("SV fällig")).toHaveLength(10);
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    const message = screen.getByText(new RegExp(`Gesamtdauer 500 Min überschreitet das Maximum von ${DURATION_MAX_MINUTES} Min`));
+    expect(message.getAttribute("role")).toBe("alert");
+    expect(addSupervisionSession).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("checkbox", { name: /B-10/ }));
+    expect(screen.queryByText(/Gesamtdauer/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().durationMinutes).toBe(450));
+  });
+
+  it("Supervision: „Andere“ 250 Min bei zwei Fällen überschreitet das Maximum – keine Action, Meldung", () => {
+    const sessions = [open("a", P1, "2026-09-10"), open("b", P2, "2026-09-11")];
+    render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={sessions} />);
+    fireEvent.click(chip("Andere"));
+    fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "250" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-2/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(addSupervisionSession).not.toHaveBeenCalled();
+    expect(screen.getByText(/Gesamtdauer 500 Min überschreitet/)).toBeDefined();
+    fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "200" } });
+    expect(screen.queryByText(/Gesamtdauer/)).toBeNull();
   });
 
   it("meldet Dauer 0 bei „Andere“ am Feld und ruft die Action nicht auf", () => {
