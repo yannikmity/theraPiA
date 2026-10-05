@@ -20,7 +20,7 @@ const linkOptions = [
 ];
 const renderForm = (onSave = vi.fn(async () => {}), overrides: Partial<SupervisionSession> = {}) =>
   render(
-    <SupervisionSessionEditForm session={{ ...session, ...overrides }} supervisors={supervisors} linkOptions={linkOptions} saving={false} onSave={onSave} onCancel={() => {}} />
+    <SupervisionSessionEditForm session={{ ...session, ...overrides }} supervisors={supervisors} linkOptionsFor={() => linkOptions} saving={false} onSave={onSave} onCancel={() => {}} />
   );
 
 describe("SupervisionSessionEditForm", () => {
@@ -64,7 +64,7 @@ describe("SupervisionSessionEditForm", () => {
 
   it("ändert das Setting und gibt es beim Speichern mit", async () => {
     const onSave = vi.fn(async () => {});
-    render(<SupervisionSessionEditForm session={session} supervisors={supervisors} linkOptions={[]} saving={false} onSave={onSave} onCancel={() => {}} />);
+    render(<SupervisionSessionEditForm session={session} supervisors={supervisors} linkOptionsFor={() => []} saving={false} onSave={onSave} onCancel={() => {}} />);
     fireEvent.change(screen.getByLabelText("Setting"), { target: { value: "gruppe" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ setting: "gruppe" })));

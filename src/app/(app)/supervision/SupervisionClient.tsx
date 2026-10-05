@@ -46,8 +46,9 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
     return sv.kind === "group" ? sv.linkedGroupSessionIds.length : sv.linkedTherapySessionIds.length;
   }
 
-  // Angeboten werden Sitzungen, die keiner anderen Supervision zugeordnet sind – plus die eigenen.
-  function linkOptionsFor(sv: SupervisionSession): LinkOption[] {
+  // Angeboten werden Sitzungen, die keiner anderen Supervision zugeordnet sind – plus die eigenen. Therapiesitzungen
+  // nur bis zum Datum, das gerade im Formular steht.
+  function linkOptionsFor(sv: SupervisionSession, date: string): LinkOption[] {
     if (sv.kind === "group") {
       return linkableGroupSessions(data.groupSessions, data.supervisionSessions, sv.id)
         .sort((a, b) => b.date.localeCompare(a.date))
@@ -56,7 +57,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
           label: `${data.groups.find((g) => g.id === gs.groupId)?.name ?? "Gruppe"} · ${format(parseISO(gs.date), "dd.MM.yyyy")}${gs.status === "durchgefuehrt" ? "" : " (nicht durchgeführt)"}`,
         }));
     }
-    return linkableTherapySessions(data.therapySessions, data.supervisionSessions, sv.id, sv.date)
+    return linkableTherapySessions(data.therapySessions, data.supervisionSessions, sv.id, date)
       .sort((a, b) => b.date.localeCompare(a.date))
       .map((ts) => ({
         id: ts.id,
@@ -124,7 +125,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
                   <SupervisionSessionEditForm
                     session={sv}
                     supervisors={data.supervisors}
-                    linkOptions={linkOptionsFor(sv)}
+                    linkOptionsFor={(date) => linkOptionsFor(sv, date)}
                     saving={isSaving}
                     onSave={(values) => handleSave(sv, values)}
                     onCancel={() => {

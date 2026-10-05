@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { SupervisionSession, SupervisionSetting, Supervisor } from "@/types";
 import { FormField, fieldErrorId } from "@/components/ui";
 import { Button } from "@/components/ui/button";
@@ -28,8 +28,8 @@ export interface SupervisionFormValues {
 interface SupervisionSessionEditFormProps {
   session: SupervisionSession;
   supervisors: Supervisor[];
-  /** Zuordenbare Sitzungen – Therapiesitzungen oder Doppelstunden, je nach Art der Supervision */
-  linkOptions: LinkOption[];
+  /** Zuordenbare Sitzungen zum Datum im Formular – Therapiesitzungen oder Doppelstunden, je nach Art der Supervision */
+  linkOptionsFor: (date: string) => LinkOption[];
   saving: boolean;
   onSave: (values: SupervisionFormValues) => Promise<void>;
   onCancel: () => void;
@@ -42,7 +42,7 @@ interface SupervisionSessionEditFormProps {
 export function SupervisionSessionEditForm({
   session,
   supervisors,
-  linkOptions,
+  linkOptionsFor,
   saving,
   onSave,
   onCancel,
@@ -54,6 +54,8 @@ export function SupervisionSessionEditForm({
   const [linkedIds, setLinkedIds] = useState<string[]>(
     session.kind === "group" ? [...session.linkedGroupSessionIds] : [...session.linkedTherapySessionIds]
   );
+  // Die Auswahl folgt dem Datum im Formular, nicht dem gespeicherten.
+  const linkOptions = useMemo(() => linkOptionsFor(date), [linkOptionsFor, date]);
   const [submitted, setSubmitted] = useState(false);
   const durationRef = useRef<HTMLInputElement>(null);
   const dateRef = useRef<HTMLInputElement>(null);

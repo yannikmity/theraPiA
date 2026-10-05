@@ -109,6 +109,30 @@ describe("SupervisionClient", () => {
     );
   });
 
+  it("bietet beim Bearbeiten die Sitzungen bis zum eingegebenen Datum an, eigene Zuordnungen immer", () => {
+    const d = data(["t-1"]);
+    d.therapySessions.push({
+      id: newTherapySessionId("t-3"),
+      patientId: newPatientId("p-1"),
+      date: "2026-09-25",
+      durationMinutes: 50,
+      notes: "",
+      category: "behandlung",
+    });
+    render(<SupervisionClient initialData={d} />);
+    fireEvent.click(screen.getByRole("button", { name: "Supervision bearbeiten" }));
+    const labels = () =>
+      within(screen.getByRole("group", { name: "Besprochene Sitzungen" }))
+        .getAllByRole("checkbox")
+        .map((box) => box.parentElement?.textContent ?? "");
+    expect(labels()).toEqual(["A-1 · 11.09.2026 · 50 Min", "A-1 · 10.09.2026 · 50 Min"]);
+    const date = screen.getByLabelText("Datum");
+    fireEvent.change(date, { target: { value: "2026-09-10" } });
+    expect(labels()).toEqual(["A-1 · 10.09.2026 · 50 Min"]);
+    fireEvent.change(date, { target: { value: "2026-09-30" } });
+    expect(labels()).toEqual(["A-1 · 25.09.2026 · 50 Min", "A-1 · 11.09.2026 · 50 Min", "A-1 · 10.09.2026 · 50 Min"]);
+  });
+
   it("nennt in der Liste neben der Art das Setting", () => {
     render(<SupervisionClient initialData={data(["t-1"])} />);
     expect(screen.getByText(/Einzeltherapie · Einzel · 1 zugeordnet/)).toBeDefined();
