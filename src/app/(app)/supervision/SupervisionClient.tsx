@@ -55,7 +55,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
           label: `${data.groups.find((g) => g.id === gs.groupId)?.name ?? "Gruppe"} · ${format(parseISO(gs.date), "dd.MM.yyyy")}${gs.status === "durchgefuehrt" ? "" : " (nicht durchgeführt)"}`,
         }));
     }
-    return linkableTherapySessions(data.therapySessions, data.supervisionSessions, sv.id)
+    return linkableTherapySessions(data.therapySessions, data.supervisionSessions, sv.id, sv.date)
       .sort((a, b) => b.date.localeCompare(a.date))
       .map((ts) => ({
         id: ts.id,

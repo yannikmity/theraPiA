@@ -25,6 +25,8 @@ import {
   minutesToUnits,
   financeTotals,
   sessionHoursByCategory,
+  supervisionCases,
+  supervisionDuePatientIds,
 } from "../calculations";
 import { resolveRegelwerk, standardRegelwerk } from "../ausbildungsregeln/resolve";
 import type { Ausbildungsregeln } from "../ausbildungsregeln/model";
@@ -170,6 +172,21 @@ describe("therapyHoursForPatient", () => {
 });
 
 describe("supervisionHoursForPatient", () => {
+  it("verteilt die Dauer gleich auf die besprochenen Fälle, nicht nach Sitzungszahl", () => {
+    const ts1 = newTherapySessionId("ts-1");
+    const ts2 = newTherapySessionId("ts-2");
+    const ts3 = newTherapySessionId("ts-3");
+    const therapySessions = [
+      makeTherapySession({ id: ts1, patientId: newPatientId("p-1") }),
+      makeTherapySession({ id: ts2, patientId: newPatientId("p-1") }),
+      makeTherapySession({ id: ts3, patientId: newPatientId("p-2") }),
+    ];
+    const supervisionSessions = [makeSupervisionSession({ durationMinutes: 50, linkedTherapySessionIds: [ts1, ts2, ts3] })];
+    // Zwei Fälle in 50 Min → je 25 Min = 0,5 Einheiten, egal wie viele Sitzungen je Fall
+    expect(supervisionHoursForPatient(supervisionSessions, therapySessions, newPatientId("p-1"))).toBe(0.5);
+    expect(supervisionHoursForPatient(supervisionSessions, therapySessions, newPatientId("p-2"))).toBe(0.5);
+  });
+
   it("calculates proportional supervision hours", () => {
     const ts1 = newTherapySessionId("ts-1");
     const ts2 = newTherapySessionId("ts-2");
@@ -487,9 +504,17 @@ describe("linkableTherapySessions", () => {
     const mine = makeSupervisionSession({ id: newSupervisionSessionId("sv-1"), linkedTherapySessionIds: [s1.id] });
     const other = makeSupervisionSession({ id: newSupervisionSessionId("sv-2"), linkedTherapySessionIds: [s2.id] });
 
-    const result = linkableTherapySessions([s1, s2, s3], [mine, other], mine.id);
+    const result = linkableTherapySessions([s1, s2, s3], [mine, other], mine.id, "2024-06-01");
 
     expect(result.map((s) => s.id)).toEqual([s1.id, s3.id]);
+  });
+
+  it("bietet keine Sitzungen nach dem Datum der Supervision an – eigene Zuordnungen bleiben abwählbar", () => {
+    const before = makeTherapySession({ id: newTherapySessionId("ts-1"), date: "2026-07-20" });
+    const after = makeTherapySession({ id: newTherapySessionId("ts-2"), date: "2026-09-24" });
+    const ownLate = makeTherapySession({ id: newTherapySessionId("ts-3"), date: "2026-09-25" });
+    const mine = makeSupervisionSession({ id: newSupervisionSessionId("sv-1"), date: "2026-07-22", linkedTherapySessionIds: [ownLate.id] });
+    expect(linkableTherapySessions([before, after, ownLate], [mine], mine.id, "2026-07-22").map((s) => s.id)).toEqual([before.id, ownLate.id]);
   });
 });
 
@@ -607,5 +632,63 @@ describe("Regeln aus dem Regelwerk (#8)", () => {
     const costs = { [newSupervisorId("sup-1")]: 90 };
     expect(financeTotals(therapy, supervision, sessions, 100, costs, ZWEI_STAFFELN)).toEqual({ totalIncome: 235, totalCosts: 108 });
     expect(financeTotals(therapy, supervision, sessions, 100, costs, S)).toEqual({ totalIncome: 308.5, totalCosts: 108 });
+  });
+});
+
+describe("supervisionCases", () => {
+  const p1 = makePatient({ id: newPatientId("p-1"), chiffre: "B-1" });
+  const p2 = makePatient({ id: newPatientId("p-2"), chiffre: "A-2" });
+  const session = (id: string, patientId: string, date: string, durationMinutes = 50) =>
+    makeTherapySession({ id: newTherapySessionId(id), patientId: newPatientId(patientId), date, durationMinutes });
+  const series = (patientId: string, n: number) =>
+    Array.from({ length: n }, (_, i) => session(`${patientId}-${i}`, patientId, `2026-07-${String(i + 1).padStart(2, "0")}`));
+
+  it("gruppiert offene Sitzungen je Fall bis zum Datum der Supervision, neueste zuerst", () => {
+    const open = [
+      session("t-1", "p-1", "2026-07-01"),
+      session("t-2", "p-1", "2026-07-08"),
+      session("t-3", "p-2", "2026-07-02"),
+      session("t-4", "p-2", "2026-09-24"), // nach der Supervision – nie anbieten
+    ];
+    const cases = supervisionCases(open, [p1, p2], "2026-07-22", R);
+    expect(cases.map((c) => [c.patient.chiffre, c.sessionIds, c.openUnits])).toEqual([
+      ["B-1", ["t-2", "t-1"], 2],
+      ["A-2", ["t-3"], 1],
+    ]);
+  });
+
+  it("zählt den Tag der Supervision mit", () => {
+    expect(supervisionCases([session("t-1", "p-1", "2026-07-22")], [p1], "2026-07-22", R)).toHaveLength(1);
+  });
+
+  it("lässt Fälle ohne offene Sitzung und unbekannte Patient:innen weg", () => {
+    expect(supervisionCases([session("t-1", "p-9", "2026-07-01")], [p1, p2], "2026-07-22", R)).toEqual([]);
+  });
+
+  it("markiert ab der 5. Sitzung ohne Supervision (über dem Soll 1:4), nicht bei der 4.", () => {
+    expect(supervisionCases(series("p-1", 4), [p1], "2026-07-31", R)[0].due).toBe(false);
+    expect(supervisionCases(series("p-1", 5), [p1], "2026-07-31", R)[0].due).toBe(true);
+  });
+
+  it("rechnet in Einheiten à 50 Min und nutzt das Soll aus dem Regelwerk", () => {
+    expect(supervisionCases([session("t-1", "p-1", "2026-07-01", 25)], [p1], "2026-07-22", R)[0].openUnits).toBe(0.5);
+    expect(supervisionCases(series("p-1", 4), [p1], "2026-07-31", STRENG)[0].due).toBe(true); // Soll 1:3
+  });
+
+  it("sortiert nach offenen Einheiten, bei Gleichstand nach Chiffre", () => {
+    const open = [session("t-1", "p-1", "2026-07-01"), session("t-2", "p-2", "2026-07-01")];
+    expect(supervisionCases(open, [p1, p2], "2026-07-22", R).map((c) => c.patient.chiffre)).toEqual(["A-2", "B-1"]);
+  });
+});
+
+describe("supervisionDuePatientIds", () => {
+  it("liefert die Fälle über dem Soll, zugeordnete Sitzungen zählen nicht", () => {
+    const p1 = makePatient({ id: newPatientId("p-1") });
+    const p2 = makePatient({ id: newPatientId("p-2"), chiffre: "TEST-002" });
+    const s = (id: string, patientId: string) =>
+      makeTherapySession({ id: newTherapySessionId(id), patientId: newPatientId(patientId), durationMinutes: 50 });
+    const therapy = [...["a", "b", "c", "d", "e"].map((x) => s(x, "p-1")), ...["f", "g", "h", "i", "j"].map((x) => s(x, "p-2"))];
+    const sv = [makeSupervisionSession({ linkedTherapySessionIds: [newTherapySessionId("f")] })];
+    expect([...supervisionDuePatientIds(therapy, sv, [p1, p2], R)]).toEqual([p1.id]);
   });
 });
