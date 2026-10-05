@@ -1,15 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { format, parseISO } from "date-fns";
 import { Check, LayoutDashboard, PlusCircle, Repeat, StickyNote } from "lucide-react";
-import { Patient, Supervisor, TherapySession, SessionCategory } from "@/types";
+import { Patient, Supervisor, TherapySession, SessionCategory, SupervisionSetting } from "@/types";
 import { ActionError, errorAt, type ScopedActionError } from "@/components/ActionError";
 import { track, trackFailure } from "@/lib/analytics/track";
 import { runAction } from "@/lib/run-action";
 import { countNoun } from "@/lib/format";
+import { supervisionCases } from "@/lib/calculations";
+import type { Ausbildungsregeln } from "@/lib/ausbildungsregeln/model";
 import { DURATION_MAX_MINUTES, DURATION_MIN_MINUTES, durationError } from "@/components/forms/duration";
 import {
   DEFAULT_SUPERVISION_MINUTES,
@@ -17,10 +18,11 @@ import {
   durationPresetsFor,
 } from "@/lib/constants";
 import { formatWeekdayDateDe } from "@/lib/dates";
-import { CATEGORY_LABELS, CATEGORY_ORDER } from "@/lib/labels";
+import { CATEGORY_LABELS, CATEGORY_ORDER, SUPERVISION_SETTING_LABELS, SUPERVISION_SETTING_ORDER } from "@/lib/labels";
 import type { CaptureType, LastWeekSuggestion } from "@/lib/quick-capture";
 import { FormField, SectionHeader, fieldErrorId } from "@/components/ui";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -46,6 +48,10 @@ interface NewSessionClientProps {
   categoryByPatient: Record<string, SessionCategory>;
   /** „Wie letzte Woche“: Sitzungen der Vorwoche, um sieben Tage verschoben (siehe quick-capture.ts). */
   suggestions: LastWeekSuggestion[];
+  /** Regelwerk der Instanz – Soll-Verhältnis für die Markierung „SV fällig“. */
+  regeln: Ausbildungsregeln;
+  /** Setting der letzten Supervision je Supervisor:in – Vorgabe für Einzel/Gruppe. */
+  settingBySupervisor: Record<string, SupervisionSetting>;
 }
 
 const CATEGORY_OPTIONS = CATEGORY_ORDER.map((value) => ({ value, label: CATEGORY_LABELS[value] }));
@@ -70,6 +76,8 @@ export function NewSessionClient({
   initialPatientId,
   categoryByPatient,
   suggestions,
+  regeln,
+  settingBySupervisor,
 }: NewSessionClientProps) {
   const router = useRouter();
   const [type, setType] = useState<CaptureType>(initialType);
@@ -83,7 +91,11 @@ export function NewSessionClient({
   const [customText, setCustomText] = useState("");
   const [patientId, setPatientId] = useState(initialPatientId);
   const [supervisorId, setSupervisorId] = useState(initialSupervisors[0]?.id || "");
-  const [linkedSessionIds, setLinkedSessionIds] = useState<string[]>([]);
+  // Besprochene Fälle: null = Vorauswahl (alle als „SV fällig“ markierten Fälle zum Datum), sonst die eigene Auswahl.
+  const [chosenPatientIds, setChosenPatientIds] = useState<string[] | null>(null);
+  const [setting, setSetting] = useState<SupervisionSetting>(
+    settingBySupervisor[initialSupervisors[0]?.id ?? ""] ?? "einzel"
+  );
   const [category, setCategory] = useState<SessionCategory>(categoryByPatient[initialPatientId] ?? DEFAULT_CATEGORY);
   const [notes, setNotes] = useState("");
   const [showNotes, setShowNotes] = useState(false);
@@ -102,6 +114,25 @@ export function NewSessionClient({
   const presets = durationPresetsFor(type === "therapie" ? category : null);
   // Sechs Dauer-Chips (Gesprächsziffer) passen auf dem Handy nicht in eine Zeile: dort drei pro Zeile, ab sm eine Zeile.
   const durationChipWidth = presets.length > 4 ? "flex-[1_1_calc(33.333%-0.5rem)] sm:flex-1" : undefined;
+
+  // Fälle mit offenen Sitzungen bis zum Datum der Supervision – spätere können nicht besprochen worden sein.
+  const cases = useMemo(
+    () => supervisionCases(initialUnsupervisedSessions, initialPatients, date, regeln),
+    [initialUnsupervisedSessions, initialPatients, date, regeln]
+  );
+  const selectedPatientIds = chosenPatientIds ?? cases.filter((c) => c.due).map((c) => c.patient.id);
+  const selectedCases = cases.filter((c) => selectedPatientIds.includes(c.patient.id));
+
+  function toggleCase(id: string) {
+    setChosenPatientIds(
+      selectedPatientIds.includes(id) ? selectedPatientIds.filter((x) => x !== id) : [...selectedPatientIds, id]
+    );
+  }
+
+  function chooseSupervisor(id: string) {
+    setSupervisorId(id);
+    setSetting(settingBySupervisor[id] ?? "einzel");
+  }
 
   // Wechsel in die Gesprächsziffer beginnt bei deren Vorgabe (10 Min) – 50 Min lägen zwar im Raster, sind dort aber
   // die Ausnahme. Zurück springt eine Dauer außerhalb des 25er-Rasters auf 50 Min. Eine freie Dauer bleibt stehen.
@@ -137,10 +168,11 @@ export function NewSessionClient({
         : addSupervisionSession({
             supervisorId,
             date,
-            durationMinutes: minutes,
+            // Die Dauer gilt je besprochenem Fall; gespeichert wird die Summe (ohne Fall: die Dauer einmal).
+            durationMinutes: minutes * Math.max(1, selectedCases.length),
             kind: "individual",
-            setting: "einzel",
-            linkedTherapySessionIds: linkedSessionIds,
+            setting,
+            linkedTherapySessionIds: selectedCases.flatMap((c) => c.sessionIds),
             linkedGroupSessionIds: [],
           })
     );
@@ -163,7 +195,7 @@ export function NewSessionClient({
     setSaved(false);
     setNotes("");
     setShowNotes(false);
-    setLinkedSessionIds([]);
+    setChosenPatientIds(null);
     setError(null);
     setDurationMessage(undefined);
     setSelected(null);
@@ -385,7 +417,7 @@ export function NewSessionClient({
           <NativeSelect
             id="session-supervisor"
             value={supervisorId}
-            onChange={(e) => setSupervisorId(e.target.value)}
+            onChange={(e) => chooseSupervisor(e.target.value)}
             disabled={isSaving}
             wrapperClassName="w-full"
           >
@@ -411,8 +443,29 @@ export function NewSessionClient({
         </FormField>
       )}
 
+      {type === "supervision" && (
+        <div className="space-y-2">
+          <Label>Setting</Label>
+          <ToggleGroup
+            type="single"
+            value={setting}
+            onValueChange={(value) => value && setSetting(value as SupervisionSetting)}
+            disabled={isSaving}
+            spacing={2}
+            aria-label="Setting"
+            className="w-full"
+          >
+            {SUPERVISION_SETTING_ORDER.map((s) => (
+              <ToggleGroupItem key={s} value={s} className={CHIP_OUTLINE}>
+                {SUPERVISION_SETTING_LABELS[s]}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+      )}
+
       <div className="space-y-2">
-        <Label>Dauer</Label>
+        <Label>{type === "supervision" ? "Dauer je Patient:in" : "Dauer"}</Label>
         <ToggleGroup
           type="single"
           value={customDuration ? "andere" : String(duration)}
@@ -496,42 +549,41 @@ export function NewSessionClient({
         </div>
       )}
 
-      {type === "supervision" && initialUnsupervisedSessions.length > 0 && (
+      {type === "supervision" && cases.length > 0 && (
         <fieldset className="min-w-0">
-          <legend className="mb-2 text-sm leading-none font-medium">Besprochene Sitzungen zuordnen</legend>
-          <div className="max-h-48 space-y-1.5 overflow-y-auto">
-            {[...initialUnsupervisedSessions]
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .map((session) => {
-                const patient = initialPatients.find((p) => p.id === session.patientId);
-                const isChecked = linkedSessionIds.includes(session.id);
-                return (
-                  <label
-                    key={session.id}
-                    className={cn(
-                      "flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors",
-                      isChecked ? "border-primary/40 bg-primary-soft" : "border-border hover:border-input"
-                    )}
-                  >
-                    <Checkbox
-                      checked={isChecked}
-                      onCheckedChange={() =>
-                        setLinkedSessionIds((prev) =>
-                          isChecked ? prev.filter((id) => id !== session.id) : [...prev, session.id]
-                        )
-                      }
-                      disabled={isSaving}
-                    />
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-foreground">{patient?.chiffre || "?"}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {format(parseISO(session.date), "dd.MM.yyyy")} · {session.durationMinutes} Min
-                      </span>
-                    </div>
-                  </label>
-                );
-              })}
+          <legend className="mb-2 text-sm leading-none font-medium">Besprochene Patient:innen</legend>
+          <div className="max-h-64 space-y-1.5 overflow-y-auto">
+            {cases.map((c) => {
+              const isChecked = selectedPatientIds.includes(c.patient.id);
+              return (
+                <label
+                  key={c.patient.id}
+                  className={cn(
+                    "flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors",
+                    isChecked ? "border-primary/40 bg-primary-soft" : "border-border hover:border-input"
+                  )}
+                >
+                  <Checkbox checked={isChecked} onCheckedChange={() => toggleCase(c.patient.id)} disabled={isSaving} />
+                  <span className="flex-1 font-mono text-sm font-medium text-foreground">{c.patient.chiffre}</span>
+                  <span className="text-xs text-muted-foreground">{sitzungen(c.sessionIds.length)} offen</span>
+                  {c.due && <Badge variant="warning-soft">SV fällig</Badge>}
+                </label>
+              );
+            })}
           </div>
+          {selectedCases.length > 1 && !customDuration && (
+            <p className="mt-2 text-sm font-medium text-foreground">
+              Gesamt: {selectedCases.length} × {duration} Min = {selectedCases.length * duration} Min
+            </p>
+          )}
+          <p className="mt-2 text-xs text-muted-foreground">
+            Die Dauer gilt je Patient:in. Zugeordnet werden alle offenen Sitzungen der gewählten Patient:innen bis zum
+            Datum der Supervision; einzelne Sitzungen lassen sich unter{" "}
+            <Link href="/supervision" className="font-medium underline">
+              Supervision
+            </Link>{" "}
+            korrigieren.
+          </p>
         </fieldset>
       )}
 

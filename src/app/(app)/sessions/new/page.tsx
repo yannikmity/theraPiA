@@ -32,6 +32,8 @@ export default async function NewSessionPage({ searchParams }: { searchParams: P
         initialPatientId={resolveInitialPatientId(params.patient, data.patients, data.lastUsedPatientId)}
         categoryByPatient={data.categoryByPatient}
         suggestions={data.suggestions}
+        regeln={data.regeln}
+        settingBySupervisor={data.settingBySupervisor}
       />
     </ErrorBoundary>
   );

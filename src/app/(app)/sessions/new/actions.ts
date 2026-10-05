@@ -12,7 +12,9 @@ import {
   insertTherapySession,
   therapySessionExists,
 } from "@/lib/db/index";
-import { getUnsupervisedSessions } from "@/lib/calculations";
+import { getUnsupervisedSessions, lastSettingBySupervisor } from "@/lib/calculations";
+import { getCurrentRegelwerk } from "@/lib/db/regelwerk";
+import type { Ausbildungsregeln } from "@/lib/ausbildungsregeln/model";
 import {
   lastCategoryByPatient,
   lastUsedPatientId,
@@ -25,6 +27,7 @@ import {
   TherapySession,
   SupervisionSession,
   SessionCategory,
+  SupervisionSetting,
   newTherapySessionId,
   newSupervisionSessionId,
   PatientId,
@@ -44,16 +47,19 @@ export interface SessionsData {
   lastUsedPatientId: PatientId | null;
   categoryByPatient: Record<string, SessionCategory>;
   suggestions: LastWeekSuggestion[];
+  regeln: Ausbildungsregeln;
+  settingBySupervisor: Record<string, SupervisionSetting>;
 }
 
 // Alles für die Erfassen-Seite aus einem Ladevorgang. `today` (YYYY-MM-DD, Europe/Berlin) kommt von der Seite,
 // damit Vorschläge und Datumsvorgabe denselben Kalendertag nutzen.
 export async function loadSessionsData(today: string): Promise<SessionsData> {
-  const [patients, supervisors, therapySessions, supervisionSessions] = await Promise.all([
+  const [patients, supervisors, therapySessions, supervisionSessions, regelwerk] = await Promise.all([
     getPatients(),
     getSupervisors(),
     getTherapySessions(),
     getSupervisionSessions(),
+    getCurrentRegelwerk(),
   ]);
 
   return {
@@ -63,6 +69,8 @@ export async function loadSessionsData(today: string): Promise<SessionsData> {
     lastUsedPatientId: lastUsedPatientId(therapySessions, patients),
     categoryByPatient: lastCategoryByPatient(therapySessions),
     suggestions: lastWeekSuggestions(therapySessions, patients, today),
+    regeln: regelwerk.regeln,
+    settingBySupervisor: lastSettingBySupervisor(supervisionSessions),
   };
 }
 
