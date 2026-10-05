@@ -4,6 +4,7 @@ import {
   TherapySessionId,
   SupervisionSession,
   SupervisionSessionId,
+  SupervisionSetting,
   Patient,
   PatientId,
   SupervisorId,
@@ -55,6 +56,21 @@ export function totalTherapyHours(sessions: TherapySession[]): number {
 
 export function totalSupervisionHours(sessions: SupervisionSession[]): number {
   return minutesToUnits(sessions.reduce((sum, s) => sum + s.durationMinutes, 0));
+}
+
+// SV-Einheiten getrennt nach Setting – für Einzel und Gruppe gelten eigene Mindestanteile.
+export function supervisionHoursBySetting(sessions: SupervisionSession[]): Record<SupervisionSetting, number> {
+  return {
+    einzel: totalSupervisionHours(sessions.filter((s) => s.setting === "einzel")),
+    gruppe: totalSupervisionHours(sessions.filter((s) => s.setting === "gruppe")),
+  };
+}
+
+// Vorgabe beim Erfassen: das Setting der letzten Supervision bei derselben Supervisor:in.
+export function lastSettingBySupervisor(sessions: SupervisionSession[]): Record<string, SupervisionSetting> {
+  const result: Record<string, SupervisionSetting> = {};
+  for (const sv of [...sessions].sort((a, b) => a.date.localeCompare(b.date))) result[sv.supervisorId] = sv.setting;
+  return result;
 }
 
 export function therapyHoursForPatient(

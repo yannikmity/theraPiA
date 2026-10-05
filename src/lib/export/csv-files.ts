@@ -7,6 +7,7 @@ import {
   CATEGORY_LABELS,
   GROUP_SESSION_STATUS_LABELS,
   SUPERVISION_KIND_LABELS,
+  SUPERVISION_SETTING_LABELS,
   THERAPY_TYPE_LABELS,
 } from "../labels";
 import { supervisionLookup, type SupervisionRef } from "../supervision-lookup";
@@ -84,6 +85,7 @@ export function supervisionsCsv(data: UserData): string {
       sv.date,
       supervisorNameOf.get(sv.supervisorId) ?? "",
       SUPERVISION_KIND_LABELS[sv.kind],
+      SUPERVISION_SETTING_LABELS[sv.setting],
       sv.durationMinutes,
       formatHours(sv.durationMinutes),
       describe(therapy),
@@ -91,7 +93,7 @@ export function supervisionsCsv(data: UserData): string {
     ];
   });
   return toCsv(
-    ["Datum", "Supervisor:in", "Art", "Dauer (Minuten)", "Dauer (Stunden)", "Besprochene Sitzungen", "Besprochene Doppelstunden"],
+    ["Datum", "Supervisor:in", "Art", "Setting", "Dauer (Minuten)", "Dauer (Stunden)", "Besprochene Sitzungen", "Besprochene Doppelstunden"],
     rows
   );
 }
@@ -188,19 +190,21 @@ export function expensesCsv(data: UserData, options: CsvExportOptions = {}): str
       quarterOf(sv.date),
       supervisor?.name ?? "",
       SUPERVISION_KIND_LABELS[sv.kind],
+      SUPERVISION_SETTING_LABELS[sv.setting],
       sv.durationMinutes,
       formatDecimal(units),
       euro(costPerUnit),
       euro(cents / 100),
     ];
   });
-  rows.push(["Summe", "", "", "", "", "", "", euro(totalCents / 100)]);
+  rows.push(["Summe", "", "", "", "", "", "", "", euro(totalCents / 100)]);
   return toCsv(
     [
       "Datum",
       "Quartal",
       "Supervisor:in",
       "Art",
+      "Setting",
       "Dauer (Minuten)",
       "SV-Einheiten",
       "Kosten je SV-Einheit (EUR)",

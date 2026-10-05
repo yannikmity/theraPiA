@@ -262,6 +262,7 @@ describe("NewSessionClient", () => {
         date: "2026-09-27",
         durationMinutes: 50,
         kind: "individual",
+        setting: "einzel",
         linkedTherapySessionIds: ["t-9"],
         linkedGroupSessionIds: [],
       })

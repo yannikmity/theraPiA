@@ -57,6 +57,7 @@ export interface SupervisionSessionRow {
   date: string;
   duration_minutes: number;
   kind: string;
+  setting: string;
 }
 
 export interface GroupRow {
@@ -128,6 +129,7 @@ export function mapSupervisionSessionRow(
     date: row.date,
     durationMinutes: row.duration_minutes,
     kind: row.kind as SupervisionSession["kind"],
+    setting: row.setting as SupervisionSession["setting"],
     linkedTherapySessionIds,
     linkedGroupSessionIds,
   };

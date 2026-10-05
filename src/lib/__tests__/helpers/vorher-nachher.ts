@@ -48,6 +48,7 @@ const sv = (id: string, supervisor: string, date: string, durationMinutes: numbe
   date,
   durationMinutes,
   kind: groups.length > 0 ? "group" : "individual",
+  setting: "einzel",
   linkedTherapySessionIds: therapy.map(newTherapySessionId),
   linkedGroupSessionIds: groups.map(newGroupSessionId),
 });

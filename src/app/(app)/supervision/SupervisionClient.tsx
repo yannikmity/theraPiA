@@ -73,6 +73,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
         date: values.date,
         durationMinutes: values.durationMinutes,
         kind: sv.kind,
+        setting: sv.setting,
         linkedTherapySessionIds: sv.kind === "group" ? [] : values.linkedIds,
         linkedGroupSessionIds: sv.kind === "group" ? values.linkedIds : [],
       })

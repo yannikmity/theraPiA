@@ -27,6 +27,8 @@ import {
   sessionHoursByCategory,
   supervisionCases,
   supervisionDuePatientIds,
+  supervisionHoursBySetting,
+  lastSettingBySupervisor,
 } from "../calculations";
 import { resolveRegelwerk, standardRegelwerk } from "../ausbildungsregeln/resolve";
 import type { Ausbildungsregeln } from "../ausbildungsregeln/model";
@@ -78,6 +80,7 @@ function makeSupervisionSession(
     date: "2024-06-01",
     durationMinutes: 60,
     kind: "individual",
+    setting: "einzel",
     linkedTherapySessionIds: [],
     linkedGroupSessionIds: [],
     ...overrides,
@@ -690,5 +693,27 @@ describe("supervisionDuePatientIds", () => {
     const therapy = [...["a", "b", "c", "d", "e"].map((x) => s(x, "p-1")), ...["f", "g", "h", "i", "j"].map((x) => s(x, "p-2"))];
     const sv = [makeSupervisionSession({ linkedTherapySessionIds: [newTherapySessionId("f")] })];
     expect([...supervisionDuePatientIds(therapy, sv, [p1, p2], R)]).toEqual([p1.id]);
+  });
+});
+
+describe("supervisionHoursBySetting", () => {
+  it("summiert SV-Einheiten je Setting", () => {
+    const sessions = [
+      makeSupervisionSession({ durationMinutes: 50, setting: "einzel" }),
+      makeSupervisionSession({ durationMinutes: 100, setting: "gruppe" }),
+      makeSupervisionSession({ durationMinutes: 25, setting: "einzel" }),
+    ];
+    expect(supervisionHoursBySetting(sessions)).toEqual({ einzel: 1.5, gruppe: 2 });
+  });
+});
+
+describe("lastSettingBySupervisor", () => {
+  it("nimmt je Supervisor:in das Setting der jüngsten Supervision", () => {
+    const sup = newSupervisorId("sup-1");
+    const sessions = [
+      makeSupervisionSession({ supervisorId: sup, date: "2026-07-01", setting: "einzel" }),
+      makeSupervisionSession({ supervisorId: sup, date: "2026-08-01", setting: "gruppe" }),
+    ];
+    expect(lastSettingBySupervisor(sessions)).toEqual({ "sup-1": "gruppe" });
   });
 });

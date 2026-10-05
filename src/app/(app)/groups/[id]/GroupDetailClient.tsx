@@ -121,6 +121,7 @@ export function GroupDetailClient({
         date: svDate,
         durationMinutes: Number(svDuration),
         kind: "group",
+        setting: "einzel",
         linkedTherapySessionIds: [],
         linkedGroupSessionIds: linkedSessionIds,
       })

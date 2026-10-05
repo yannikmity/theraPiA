@@ -14,6 +14,7 @@ const durationMinutes = z
 const notes = z.string().max(2000);
 const sessionCategory = z.enum(["sprechstunde", "probatorik", "behandlung", "bezugsperson", "gespraechsziffer"]);
 const supervisionKind = z.enum(["individual", "group"]);
+const supervisionSetting = z.enum(["einzel", "gruppe"]);
 
 // Patient schemas
 export const addPatientSchema = z.object({
@@ -87,6 +88,7 @@ export const addSupervisionSessionSchema = z
     date: isoDate,
     durationMinutes,
     kind: supervisionKind.default("individual"),
+    setting: supervisionSetting.default("einzel"),
     linkedTherapySessionIds: uniqueUuids,
     linkedGroupSessionIds: uniqueUuids,
   })
@@ -100,6 +102,7 @@ export const updateSupervisionSessionSchema = z
     date: isoDate,
     durationMinutes,
     kind: supervisionKind,
+    setting: supervisionSetting,
     linkedTherapySessionIds: uniqueUuidsRequired,
     linkedGroupSessionIds: uniqueUuidsRequired,
   })

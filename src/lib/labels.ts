@@ -1,4 +1,4 @@
-import type { SessionCategory, SupervisionKind, GroupSessionStatus, TherapyType } from "@/types";
+import type { SessionCategory, SupervisionKind, SupervisionSetting, GroupSessionStatus, TherapyType } from "@/types";
 
 // Deutsche Bezeichnungen der Enum-Werte für Exporte und Nachweise. Die Record-Typen erzwingen
 // Vollständigkeit: ein neuer Enum-Wert ohne Bezeichnung bricht den Typcheck.
@@ -22,9 +22,17 @@ export function sichtbareKategorien(hours: Record<SessionCategory, number>): Ses
   return CATEGORY_ORDER.filter((c) => CATEGORIES_IMMER_SICHTBAR.includes(c) || hours[c] > 0);
 }
 
+// Was die Supervision bespricht: Sitzungen der Einzeltherapie oder Doppelstunden der Gruppentherapie.
 export const SUPERVISION_KIND_LABELS: Record<SupervisionKind, string> = {
-  individual: "Einzel",
-  group: "Gruppe",
+  individual: "Einzeltherapie",
+  group: "Gruppentherapie",
+};
+
+// Wie die Supervision wahrgenommen wurde: einzeln oder in einer Gruppe von Teilnehmenden.
+export const SUPERVISION_SETTING_ORDER: SupervisionSetting[] = ["einzel", "gruppe"];
+export const SUPERVISION_SETTING_LABELS: Record<SupervisionSetting, string> = {
+  einzel: "Einzel",
+  gruppe: "Gruppe",
 };
 
 export const GROUP_SESSION_STATUS_LABELS: Record<GroupSessionStatus, string> = {

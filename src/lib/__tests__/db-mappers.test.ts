@@ -127,6 +127,7 @@ describe("mapSupervisionSessionRow", () => {
       date: "2024-06-01",
       duration_minutes: 60,
       kind: "individual",
+      setting: "gruppe",
     };
 
     const linkedIds = ["ts-1", "ts-2"] as TherapySessionId[];
@@ -137,6 +138,7 @@ describe("mapSupervisionSessionRow", () => {
     expect(session.date).toBe("2024-06-01");
     expect(session.durationMinutes).toBe(60);
     expect(session.kind).toBe("individual");
+    expect(session.setting).toBe("gruppe");
     expect(session.linkedTherapySessionIds).toEqual(["ts-1", "ts-2"]);
     expect(session.linkedGroupSessionIds).toEqual([]);
   });
@@ -148,6 +150,7 @@ describe("mapSupervisionSessionRow", () => {
       date: "2024-06-02",
       duration_minutes: 45,
       kind: "group",
+      setting: "einzel",
     };
 
     const session = mapSupervisionSessionRow(row, []);

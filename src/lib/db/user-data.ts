@@ -89,7 +89,7 @@ export async function loadUserData(db: Db, userId: string): Promise<UserData> {
   // fremde Ziele werden NULL und fallen aus dem FILTER. Verknüpfungen entstehen zwar nur über
   // assertSupervisionOwnership – der Export prüft trotzdem selbst (Defense in Depth, #41).
   const supervisionSessions = await db.query(
-    `SELECT ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind,
+    `SELECT ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.setting,
             COALESCE(array_agg(DISTINCT ts.id) FILTER (WHERE ts.id IS NOT NULL), '{}') AS linked_therapy_session_ids,
             COALESCE(array_agg(DISTINCT gs.id) FILTER (WHERE gs.id IS NOT NULL), '{}') AS linked_group_session_ids
      FROM supervision_sessions ss
@@ -98,7 +98,7 @@ export async function loadUserData(db: Db, userId: string): Promise<UserData> {
      LEFT JOIN supervision_group_session_links sgsl ON sgsl.supervision_id = ss.id
      LEFT JOIN group_sessions gs ON gs.id = sgsl.group_session_id AND gs.user_id = $1
      WHERE ss.user_id = $1
-     GROUP BY ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.created_at
+     GROUP BY ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.setting, ss.created_at
      ORDER BY ss.date, ss.created_at`,
     [userId]
   );

@@ -34,6 +34,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervisionen ändern und löschen", () => 
       date: "2026-01-20",
       durationMinutes: 90,
       kind: "individual",
+      setting: "gruppe",
       linkedTherapySessionIds: linkedTherapySessionIds.map(newTherapySessionId),
       linkedGroupSessionIds: [],
     };
@@ -59,10 +60,10 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervisionen ändern und löschen", () => 
     await updateSupervisionSession(db, f.a.userId, ownSupervision(f, [second.id]));
 
     const { rows } = await db.query(
-      "SELECT to_char(date, 'YYYY-MM-DD') AS date, duration_minutes FROM supervision_sessions WHERE id = $1",
+      "SELECT to_char(date, 'YYYY-MM-DD') AS date, duration_minutes, setting FROM supervision_sessions WHERE id = $1",
       [f.a.supervisionId]
     );
-    expect(rows[0]).toEqual({ date: "2026-01-20", duration_minutes: 90 });
+    expect(rows[0]).toEqual({ date: "2026-01-20", duration_minutes: 90, setting: "gruppe" });
     expect(await linkedIds(db, f.a.supervisionId)).toEqual([second.id]);
   });
 
@@ -89,6 +90,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervisionen ändern und löschen", () => 
       date: "2026-01-20",
       durationMinutes: 90,
       kind: "group",
+      setting: "einzel",
       linkedTherapySessionIds: [],
       linkedGroupSessionIds: [newGroupSessionId(secondGroupSession.id)],
     });

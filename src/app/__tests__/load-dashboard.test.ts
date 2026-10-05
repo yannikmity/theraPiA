@@ -51,6 +51,7 @@ const supervision: SupervisionSession = {
   date: "2026-03-02",
   durationMinutes: 50,
   kind: "individual",
+  setting: "einzel",
   linkedTherapySessionIds: [therapy.id],
   linkedGroupSessionIds: [],
 };

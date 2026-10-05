@@ -56,6 +56,7 @@ function alsDomaene(data: DemoData) {
     date: s.date,
     durationMinutes: s.durationMinutes,
     kind: s.kind,
+    setting: "einzel",
     linkedTherapySessionIds: s.therapySessions as TherapySessionId[],
     linkedGroupSessionIds: s.groupSessions as GroupSessionId[],
   }));

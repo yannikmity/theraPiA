@@ -23,6 +23,7 @@ const data = (linked: string[]): SupervisionData => ({
       date: "2026-09-20",
       durationMinutes: 60,
       kind: "individual",
+      setting: "einzel",
       linkedTherapySessionIds: linked.map(newTherapySessionId),
       linkedGroupSessionIds: [],
     },

@@ -139,6 +139,7 @@ export function NewSessionClient({
             date,
             durationMinutes: minutes,
             kind: "individual",
+            setting: "einzel",
             linkedTherapySessionIds: linkedSessionIds,
             linkedGroupSessionIds: [],
           })

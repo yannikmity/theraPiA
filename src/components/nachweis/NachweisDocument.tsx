@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { Nachweis, NachweisTotals } from "@/lib/nachweis";
-import { CATEGORY_LABELS, SUPERVISION_KIND_LABELS, sichtbareKategorien } from "@/lib/labels";
+import { CATEGORY_LABELS, SUPERVISION_KIND_LABELS, SUPERVISION_SETTING_LABELS, sichtbareKategorien } from "@/lib/labels";
 import { formatDecimal } from "@/lib/csv";
 import { UNIT_MINUTES } from "@/lib/constants";
 import { REGEL_LABELS, formatRegelwert, type Ausbildungsregeln, type RegelFeld } from "@/lib/ausbildungsregeln/model";
@@ -209,7 +209,7 @@ export function NachweisDocument({ nachweis }: { nachweis: Nachweis }) {
         {nachweis.supervisionSessions.length === 0 ? (
           <Empty>Keine Supervisionen im Zeitraum.</Empty>
         ) : (
-          <Table label="Supervisionen" head={["Datum", "Supervisor:in", "Art", "Dauer", "Besprochene Sitzungen"]}>
+          <Table label="Supervisionen" head={["Datum", "Supervisor:in", "Art", "Setting", "Dauer", "Besprochene Sitzungen"]}>
             {nachweis.supervisionSessions.map((sv) => {
               const discussed = [
                 ...sv.linkedTherapySessions.map((t) => `${t.chiffre} (${formatDateDe(t.date)})`),
@@ -220,6 +220,7 @@ export function NachweisDocument({ nachweis }: { nachweis: Nachweis }) {
                   <td className={cn(TD, "whitespace-nowrap")}>{formatDateDe(sv.date)}</td>
                   <td className={cn(TD, "whitespace-nowrap")}>{sv.supervisorName}</td>
                   <td className={TD}>{SUPERVISION_KIND_LABELS[sv.kind]}</td>
+                  <td className={TD}>{SUPERVISION_SETTING_LABELS[sv.setting]}</td>
                   <td className={cn(TD, "text-right whitespace-nowrap tabular-nums")}>{minutes(sv.durationMinutes)}</td>
                   <td className={TD}>{discussed.length === 0 ? "–" : discussed.join(", ")}</td>
                 </tr>
