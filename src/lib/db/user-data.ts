@@ -14,6 +14,7 @@ import {
   mapSupervisorRow,
   mapTherapySessionRow,
   mapSupervisionSessionRow,
+  CASE_SHARES_SQL,
   mapGroupRow,
   mapGroupSessionRow,
   type PatientRow,
@@ -90,7 +91,8 @@ export async function loadUserData(db: Db, userId: string): Promise<UserData> {
   const supervisionSessions = await db.query(
     `SELECT ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.setting,
             COALESCE(array_agg(DISTINCT ts.id) FILTER (WHERE ts.id IS NOT NULL), '{}') AS linked_therapy_session_ids,
-            COALESCE(array_agg(DISTINCT gs.id) FILTER (WHERE gs.id IS NOT NULL), '{}') AS linked_group_session_ids
+            COALESCE(array_agg(DISTINCT gs.id) FILTER (WHERE gs.id IS NOT NULL), '{}') AS linked_group_session_ids,
+            ${CASE_SHARES_SQL} AS case_shares
      FROM supervision_sessions ss
      LEFT JOIN supervision_therapy_links stl ON stl.supervision_id = ss.id
      LEFT JOIN therapy_sessions ts ON ts.id = stl.therapy_session_id AND ts.user_id = $1

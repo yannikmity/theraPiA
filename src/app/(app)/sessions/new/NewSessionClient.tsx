@@ -176,7 +176,8 @@ export function NewSessionClient({
       return;
     }
     const minutes = customDuration ? Number(customText) : duration;
-    // Die Dauer gilt je besprochenem Fall; gespeichert wird die Summe (ohne Fall: die Dauer einmal).
+    // Die Dauer gilt je besprochenem Fall; gespeichert werden die Anteile je Fall und ihre Summe (#40), ohne Fall
+    // nur die Dauer einmal.
     const supervisionTotal = minutes * Math.max(1, selectedCases.length);
     const tooLong = type === "supervision" && supervisionTotal > DURATION_MAX_MINUTES;
     setTotalMessage(
@@ -199,6 +200,7 @@ export function NewSessionClient({
             setting,
             linkedTherapySessionIds: selectedCases.flatMap((c) => c.sessionIds),
             linkedGroupSessionIds: [],
+            caseShares: selectedCases.map((c) => ({ patientId: c.patient.id, minutes })),
           })
     );
     savingRef.current = false;

@@ -68,12 +68,12 @@ Eine Datei `therapia-datenexport-JJJJ-MM-TT.json`, UTF-8. Feldnamen wie in der A
 
 | Feld | Inhalt |
 |---|---|
-| `format`, `version`, `exportedAt` | `"therapia-datenexport"`, `5`, Zeitstempel des Exports (ISO 8601, UTC) |
+| `format`, `version`, `exportedAt` | `"therapia-datenexport"`, `6`, Zeitstempel des Exports (ISO 8601, UTC) |
 | `account` | `id`, `email`, `name`, `role` (`admin` oder `pia`), `createdAt` – kein Passwort-Hash |
 | `patients` | je `id`, `chiffre`, `therapyType`, `startDate`, `endDate`, `isActive`, `createdAt`, `antragsdatum`, `genehmigungsdatum`, `beantragteStunden`, `sprechstundenAmbulanz` |
 | `supervisors` | je `id`, `name`, `costPerHour`, `isActive` |
 | `therapySessions` | je `id`, `patientId`, `date`, `durationMinutes`, `notes`, `category` |
-| `supervisionSessions` | je `id`, `supervisorId`, `date`, `durationMinutes`, `kind` (`individual` oder `group`), `setting` (`einzel` oder `gruppe`), `linkedTherapySessionIds`, `linkedGroupSessionIds` |
+| `supervisionSessions` | je `id`, `supervisorId`, `date`, `durationMinutes`, `kind` (`individual` oder `group`), `setting` (`einzel` oder `gruppe`), `linkedTherapySessionIds`, `linkedGroupSessionIds`, `caseShares` (Dauer je besprochener Patient:in: je `patientId`, `minutes`; Summe = `durationMinutes`) |
 | `groups` | je `id`, `name`, `startDate`, `plannedSessionCount`, `avgKids`, `isActive`, `createdAt` |
 | `groupSessions` | je `id`, `groupId`, `date`, `status`, `childCount`, `countsTowardAmbulanzzeit`, `durationMinutes`, `notes` |
 | `financialSettings` | `incomePerHour`, `plannedSessionsPerWeek` (geplante Sitzungen pro Woche für die Prognose; `null` = automatisch) |
@@ -89,7 +89,7 @@ Eine Datei je Datenart: Semikolon-getrennt, UTF-8 mit BOM, Zeilenende CRLF, Datu
 | Datei | Spalten |
 |---|---|
 | `therapia-therapiesitzungen-….csv` | Datum; Chiffre; Kategorie; Dauer (Minuten); Dauer (Stunden); Notiz; Supervision am; Supervisor:in |
-| `therapia-supervisionen-….csv` | Datum; Supervisor:in; Art; Setting; Dauer (Minuten); Dauer (Stunden); Besprochene Sitzungen; Besprochene Doppelstunden |
+| `therapia-supervisionen-….csv` | Datum; Supervisor:in; Art; Setting; Dauer (Minuten); Dauer (Stunden); Besprochene Sitzungen; Besprochene Doppelstunden; Dauer je Patient:in |
 | `therapia-doppelstunden-….csv` | Datum; Gruppe; Status; Teilnehmende; Zählt zur Ambulanzzeit; Dauer (Minuten); Dauer (Stunden); Notiz; Supervision am; Supervisor:in |
 | `therapia-patientinnen-….csv` | Chiffre; Therapieart; Beginn; Ende; Aktiv; Antragsdatum; Genehmigungsdatum; Beantragte Behandlungsstunden; Sprechstunden durch Ambulanzleitung; Sitzungen (Anzahl); Sitzungen (Stunden) |
 | `therapia-ausgaben-….csv`, mit Jahr `therapia-ausgaben-JJJJ-stand-….csv` | Datum; Quartal; Supervisor:in; Art; Setting; Dauer (Minuten); SV-Einheiten; Kosten je SV-Einheit (EUR); Betrag (EUR) – letzte Zeile „Summe“ |

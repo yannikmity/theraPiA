@@ -63,6 +63,14 @@ export interface SupervisionSession {
   setting: SupervisionSetting; // einzeln oder in der Gruppe wahrgenommen
   linkedTherapySessionIds: TherapySessionId[];
   linkedGroupSessionIds: GroupSessionId[];
+  // Anteil je besprochenem Fall (#40), nur bei Supervisionen von Einzeltherapien. Gibt es Anteile, ist
+  // durationMinutes ihre Summe; die Links auf Therapiesitzungen ändern daran nichts.
+  caseShares: SupervisionCaseShare[];
+}
+
+export interface SupervisionCaseShare {
+  patientId: PatientId;
+  minutes: number;
 }
 
 export interface Group {

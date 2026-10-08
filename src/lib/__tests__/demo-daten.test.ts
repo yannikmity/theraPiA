@@ -59,6 +59,7 @@ function alsDomaene(data: DemoData) {
     setting: "einzel",
     linkedTherapySessionIds: s.therapySessions as TherapySessionId[],
     linkedGroupSessionIds: s.groupSessions as GroupSessionId[],
+    caseShares: s.cases.map((c) => ({ patientId: c.patient as PatientId, minutes: c.minutes })),
   }));
   const groupSessions: GroupSession[] = data.groupSessions.map((g) => ({
     id: g.key as GroupSessionId,

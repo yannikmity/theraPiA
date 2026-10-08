@@ -20,6 +20,7 @@ import {
   GroupSession,
   SupervisionSessionId,
   SupervisorId,
+  PatientId,
   TherapySessionId,
   GroupSessionId,
 } from "@/types";
@@ -63,6 +64,7 @@ export const updateSupervisionSessionAction: (
       setting: input.setting,
       linkedTherapySessionIds: input.linkedTherapySessionIds as TherapySessionId[],
       linkedGroupSessionIds: input.linkedGroupSessionIds as GroupSessionId[],
+      caseShares: input.caseShares.map((c) => ({ patientId: c.patientId as PatientId, minutes: c.minutes })),
     };
     // Stammdaten und Verknüpfungen in einer Transaktion ersetzen.
     await withTransaction((tx) => updateSupervisionSessionDB(tx, userId, session));

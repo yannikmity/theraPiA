@@ -63,6 +63,10 @@ export function sampleUserData(): UserData {
         setting: "einzel",
         linkedTherapySessionIds: [newTherapySessionId("t-2"), newTherapySessionId("t-1")],
         linkedGroupSessionIds: [],
+        caseShares: [
+          { patientId: newPatientId("p-1"), minutes: 30 },
+          { patientId: newPatientId("p-2"), minutes: 30 },
+        ],
       },
       {
         id: newSupervisionSessionId("sv-2"),
@@ -73,6 +77,7 @@ export function sampleUserData(): UserData {
         setting: "gruppe",
         linkedTherapySessionIds: [newTherapySessionId("t-3")],
         linkedGroupSessionIds: [],
+        caseShares: [{ patientId: newPatientId("p-1"), minutes: 90 }],
       },
       {
         id: newSupervisionSessionId("sv-3"),
@@ -83,6 +88,7 @@ export function sampleUserData(): UserData {
         setting: "einzel",
         linkedTherapySessionIds: [],
         linkedGroupSessionIds: [newGroupSessionId("gs-1")],
+        caseShares: [],
       },
     ],
     groups: [

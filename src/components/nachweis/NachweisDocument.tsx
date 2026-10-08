@@ -221,7 +221,16 @@ export function NachweisDocument({ nachweis }: { nachweis: Nachweis }) {
                   <td className={cn(TD, "whitespace-nowrap")}>{sv.supervisorName}</td>
                   <td className={TD}>{SUPERVISION_KIND_LABELS[sv.kind]}</td>
                   <td className={TD}>{SUPERVISION_SETTING_LABELS[sv.setting]}</td>
-                  <td className={cn(TD, "text-right whitespace-nowrap tabular-nums")}>{minutes(sv.durationMinutes)}</td>
+                  <td className={cn(TD, "text-right whitespace-nowrap tabular-nums")}>
+                    {minutes(sv.durationMinutes)}
+                    {/* Aufteilung nur bei mehreren Fällen (#40) – bei einem Fall ist sie die Gesamtdauer. */}
+                    {sv.caseShares.length > 1 &&
+                      sv.caseShares.map((c) => (
+                        <span key={c.chiffre} className="block text-xs text-muted-foreground print:text-[9pt] print:text-foreground">
+                          {c.chiffre}: {minutes(c.minutes)}
+                        </span>
+                      ))}
+                  </td>
                   <td className={TD}>{discussed.length === 0 ? "–" : discussed.join(", ")}</td>
                 </tr>
               );

@@ -31,6 +31,7 @@ export interface NachweisSupervisionRow {
   durationMinutes: number;
   linkedTherapySessions: { date: string; chiffre: string }[];
   linkedGroupSessions: { date: string; groupName: string }[];
+  caseShares: { chiffre: string; minutes: number }[]; // Dauer je Fall (#40), nach Chiffre
 }
 
 export interface NachweisGroupSessionRow {
@@ -152,6 +153,9 @@ export function buildNachweis(data: UserData, filter: NachweisFilter, regelwerk:
         .filter((s) => s.status === "durchgefuehrt")
         .map((s) => ({ date: s.date, groupName: groupNameOf.get(s.groupId) ?? "" }))
         .sort(byDateThen((r) => r.groupName)),
+      caseShares: sv.caseShares
+        .map((c) => ({ chiffre: chiffreOf.get(c.patientId) ?? "", minutes: c.minutes }))
+        .sort((a, b) => compareNatural(a.chiffre, b.chiffre)),
     }))
     .sort(byDateThen((r) => r.supervisorName));
 

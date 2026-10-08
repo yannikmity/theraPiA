@@ -20,7 +20,8 @@ describe.skipIf(!TEST_DATABASE_URL)("Patient:innen löschen", () => {
     return { db: t.client, f };
   }
 
-  it("löscht Patient:in samt Sitzungen und Verknüpfungen, die Supervision bleibt", async () => {
+  // Die Supervision der Fixture bespricht nur diese Patient:in: ohne ihren Anteil bliebe sie bei 0 Minuten (#40).
+  it("löscht Patient:in samt Sitzungen, Verknüpfungen und Anteil; eine Supervision nur zu ihr entfällt mit", async () => {
     const { db, f } = await setup();
 
     await deletePatient(db, f.a.userId, f.a.patientId);
@@ -28,9 +29,11 @@ describe.skipIf(!TEST_DATABASE_URL)("Patient:innen löschen", () => {
     expect(await countRows(db, "patients", "WHERE id = $1", [f.a.patientId])).toBe(0);
     expect(await countRows(db, "therapy_sessions", "WHERE patient_id = $1", [f.a.patientId])).toBe(0);
     expect(await countRows(db, "supervision_therapy_links", "WHERE supervision_id = $1", [f.a.supervisionId])).toBe(0);
-    expect(await countRows(db, "supervision_sessions", "WHERE id = $1", [f.a.supervisionId])).toBe(1);
+    expect(await countRows(db, "supervision_cases", "WHERE patient_id = $1", [f.a.patientId])).toBe(0);
+    expect(await countRows(db, "supervision_sessions", "WHERE id = $1", [f.a.supervisionId])).toBe(0);
     // Der andere Account ist unberührt.
     expect(await countRows(db, "therapy_sessions", "WHERE patient_id = $1", [f.b.patientId])).toBe(1);
+    expect(await countRows(db, "supervision_sessions", "WHERE id = $1", [f.b.supervisionId])).toBe(1);
   });
 
   it("weist fremde Patient:innen zurück und löscht nichts", async () => {
@@ -40,5 +43,6 @@ describe.skipIf(!TEST_DATABASE_URL)("Patient:innen löschen", () => {
 
     expect(await countRows(db, "patients", "WHERE id = $1", [f.b.patientId])).toBe(1);
     expect(await countRows(db, "therapy_sessions", "WHERE patient_id = $1", [f.b.patientId])).toBe(1);
+    expect(await countRows(db, "supervision_cases", "WHERE patient_id = $1", [f.b.patientId])).toBe(1);
   });
 });

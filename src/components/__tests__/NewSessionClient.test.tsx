@@ -281,6 +281,7 @@ describe("NewSessionClient", () => {
         setting: "einzel",
         linkedTherapySessionIds: ["t-9"],
         linkedGroupSessionIds: [],
+        caseShares: [{ patientId: P1, minutes: 50 }],
       })
     );
     expect((await screen.findByRole("status")).textContent).toContain("Gespeichert!");
@@ -308,6 +309,11 @@ describe("NewSessionClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(firstCall().durationMinutes).toBe(50));
     expect(firstCall().linkedTherapySessionIds).toEqual(["a", "b"]);
+    // #40: gespeichert wird die Dauer je Fall, nicht nur die Summe
+    expect(firstCall().caseShares).toEqual([
+      { patientId: P1, minutes: 25 },
+      { patientId: P2, minutes: 25 },
+    ]);
   });
 
   it("Supervision: ohne gewählten Fall zählt die gewählte Dauer einmal, ohne Zuordnung", async () => {
@@ -316,6 +322,7 @@ describe("NewSessionClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(firstCall().durationMinutes).toBe(50));
     expect(firstCall().linkedTherapySessionIds).toEqual([]);
+    expect(firstCall().caseShares).toEqual([]);
   });
 
   it("Supervision: Gruppe wählbar, Vorgabe aus der letzten Supervision der Supervisor:in", async () => {

@@ -11,7 +11,8 @@ export const DATA_EXPORT_FORMAT = "therapia-datenexport";
 // Version 3 (#66): Patient:innen mit genehmigungsdatum und sprechstundenAmbulanz.
 // Version 4: Supervisionen mit setting (einzel/gruppe).
 // Version 5 (#42): financialSettings mit plannedSessionsPerWeek (null = automatisch).
-export const DATA_EXPORT_VERSION = 5;
+// Version 6 (#40): Supervisionen mit caseShares (Anteil je Fall: patientId, minutes).
+export const DATA_EXPORT_VERSION = 6;
 
 export interface DataExport {
   format: typeof DATA_EXPORT_FORMAT;

@@ -83,6 +83,7 @@ function makeSupervisionSession(
     setting: "einzel",
     linkedTherapySessionIds: [],
     linkedGroupSessionIds: [],
+    caseShares: [],
     ...overrides,
   };
 }
@@ -175,44 +176,53 @@ describe("therapyHoursForPatient", () => {
 });
 
 describe("supervisionHoursForPatient", () => {
-  it("verteilt die Dauer gleich auf die besprochenen Fälle, nicht nach Sitzungszahl", () => {
-    const ts1 = newTherapySessionId("ts-1");
-    const ts2 = newTherapySessionId("ts-2");
-    const ts3 = newTherapySessionId("ts-3");
-    const therapySessions = [
-      makeTherapySession({ id: ts1, patientId: newPatientId("p-1") }),
-      makeTherapySession({ id: ts2, patientId: newPatientId("p-1") }),
-      makeTherapySession({ id: ts3, patientId: newPatientId("p-2") }),
-    ];
-    const supervisionSessions = [makeSupervisionSession({ durationMinutes: 50, linkedTherapySessionIds: [ts1, ts2, ts3] })];
-    // Zwei Fälle in 50 Min → je 25 Min = 0,5 Einheiten, egal wie viele Sitzungen je Fall
-    expect(supervisionHoursForPatient(supervisionSessions, therapySessions, newPatientId("p-1"))).toBe(0.5);
-    expect(supervisionHoursForPatient(supervisionSessions, therapySessions, newPatientId("p-2"))).toBe(0.5);
-  });
+  const p1 = newPatientId("p-1");
+  const p2 = newPatientId("p-2");
 
-  it("teilt eine Supervision mit je einem Fall pro Patient:in hälftig auf", () => {
-    const ts1 = newTherapySessionId("ts-1");
-    const ts2 = newTherapySessionId("ts-2");
-
-    const therapySessions = [
-      makeTherapySession({ id: ts1, patientId: newPatientId("p-1") }),
-      makeTherapySession({ id: ts2, patientId: newPatientId("p-2") }),
-    ];
-
+  it("rechnet den gespeicherten Anteil je Fall an, nicht nach Sitzungszahl", () => {
     const supervisionSessions = [
       makeSupervisionSession({
-        durationMinutes: 60,
-        linkedTherapySessionIds: [ts1, ts2], // 50% for each patient
+        durationMinutes: 50,
+        linkedTherapySessionIds: [newTherapySessionId("ts-1"), newTherapySessionId("ts-2"), newTherapySessionId("ts-3")],
+        caseShares: [
+          { patientId: p1, minutes: 25 },
+          { patientId: p2, minutes: 25 },
+        ],
       }),
     ];
-
-    // p-1 has 1 of 2 linked → 50% of 60min = 30min = 0,6 Einheiten
-    expect(supervisionHoursForPatient(supervisionSessions, therapySessions, newPatientId("p-1"))).toBe(0.6);
+    // Zwei Fälle zu je 25 Min = 0,5 Einheiten, egal wie viele Sitzungen je Fall
+    expect(supervisionHoursForPatient(supervisionSessions, p1)).toBe(0.5);
+    expect(supervisionHoursForPatient(supervisionSessions, p2)).toBe(0.5);
   });
 
-  it("returns 0 when no linked sessions", () => {
-    const sessions = [makeSupervisionSession({ linkedTherapySessionIds: [] })];
-    expect(supervisionHoursForPatient(sessions, [], newPatientId("p-1"))).toBe(0);
+  it("übernimmt ungleiche Anteile und summiert über Supervisionen", () => {
+    const supervisionSessions = [
+      makeSupervisionSession({ durationMinutes: 75, caseShares: [{ patientId: p1, minutes: 50 }, { patientId: p2, minutes: 25 }] }),
+      makeSupervisionSession({ id: newSupervisionSessionId("sv-2"), durationMinutes: 50, caseShares: [{ patientId: p1, minutes: 50 }] }),
+    ];
+    expect(supervisionHoursForPatient(supervisionSessions, p1)).toBe(2);
+    expect(supervisionHoursForPatient(supervisionSessions, p2)).toBe(0.5);
+  });
+
+  // #40: Früher wurde die Dauer zur Laufzeit durch die Fälle der verknüpften Sitzungen geteilt – fiel die letzte
+  // Sitzung von A weg, bekam B die ganze Supervision.
+  it("ändert Bs Anrechnung nicht, wenn die letzte verknüpfte Sitzung von A wegfällt", () => {
+    const ts1 = newTherapySessionId("ts-1");
+    const ts2 = newTherapySessionId("ts-2");
+    const caseShares = [
+      { patientId: p1, minutes: 25 },
+      { patientId: p2, minutes: 25 },
+    ];
+    const vorher = [makeSupervisionSession({ durationMinutes: 50, linkedTherapySessionIds: [ts1, ts2], caseShares })];
+    const nachher = [makeSupervisionSession({ durationMinutes: 50, linkedTherapySessionIds: [ts2], caseShares })];
+    expect(supervisionHoursForPatient(vorher, p2)).toBe(0.5);
+    expect(supervisionHoursForPatient(nachher, p2)).toBe(0.5);
+    expect(supervisionHoursForPatient(nachher, p1)).toBe(0.5);
+  });
+
+  it("returns 0 when no case shares", () => {
+    const sessions = [makeSupervisionSession({ linkedTherapySessionIds: [newTherapySessionId("ts-1")] })];
+    expect(supervisionHoursForPatient(sessions, p1)).toBe(0);
   });
 });
 
@@ -280,7 +290,7 @@ describe("calculatePatientRatio", () => {
       makeTherapySession({ id: ts1, patientId: patient.id, durationMinutes: 240 }),
     ];
     const supervision = [
-      makeSupervisionSession({ durationMinutes: 60, linkedTherapySessionIds: [ts1] }),
+      makeSupervisionSession({ durationMinutes: 60, linkedTherapySessionIds: [ts1], caseShares: [{ patientId: patient.id, minutes: 60 }] }),
     ];
     const result = calculatePatientRatio(patient, therapy, supervision, R);
     expect(result.ratio).toBe(4);

@@ -82,21 +82,12 @@ export function therapyHoursForPatient(
   return totalTherapyHours(sessions.filter((s) => s.patientId === patientId));
 }
 
-// SV-Anrechnung je Fall: die Dauer einer Supervision verteilt sich gleich auf die besprochenen Fälle – 50 Min mit zwei
-// Fällen ergeben je 25 Min, unabhängig davon, wie viele Sitzungen eines Falls zugeordnet sind. Erfasst wird die Dauer je
-// Fall; gespeichert ist die Summe, die Teilung ergibt also wieder die Dauer je Fall.
-export function supervisionHoursForPatient(
-  supervisionSessions: SupervisionSession[],
-  therapySessions: TherapySession[],
-  patientId: PatientId
-): number {
-  const patientOf = new Map(therapySessions.map((s) => [s.id, s.patientId]));
+// SV-Anrechnung je Fall: der gespeicherte Anteil der Patient:in an jeder Supervision (#40). Erfasst wird die Dauer je
+// Fall; die Links auf Therapiesitzungen spielen keine Rolle – das Löschen einer Sitzung verteilt nichts um.
+export function supervisionHoursForPatient(supervisionSessions: SupervisionSession[], patientId: PatientId): number {
   let totalMinutes = 0;
   for (const sv of supervisionSessions) {
-    const cases = new Set(
-      sv.linkedTherapySessionIds.map((id) => patientOf.get(id)).filter((p): p is PatientId => p !== undefined)
-    );
-    if (cases.has(patientId)) totalMinutes += sv.durationMinutes / cases.size;
+    for (const share of sv.caseShares) if (share.patientId === patientId) totalMinutes += share.minutes;
   }
   return minutesToUnits(totalMinutes);
 }
@@ -142,7 +133,7 @@ export function calculatePatientRatio(
 ): RatioResult {
   return calculateRatio(
     therapyHoursForPatient(therapySessions, patient.id),
-    supervisionHoursForPatient(supervisionSessions, therapySessions, patient.id),
+    supervisionHoursForPatient(supervisionSessions, patient.id),
     regeln
   );
 }

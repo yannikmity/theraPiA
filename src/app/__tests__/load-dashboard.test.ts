@@ -54,6 +54,7 @@ const supervision: SupervisionSession = {
   setting: "einzel",
   linkedTherapySessionIds: [therapy.id],
   linkedGroupSessionIds: [],
+  caseShares: [{ patientId: P1, minutes: 50 }],
 };
 
 describe("loadDashboard", () => {

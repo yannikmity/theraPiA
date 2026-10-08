@@ -76,6 +76,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Server Actions Ändern/Löschen", () => {
     setting: "einzel" as const,
     linkedTherapySessionIds: [f.a.therapySessionId],
     linkedGroupSessionIds: [] as string[],
+    caseShares: [{ patientId: f.a.patientId, minutes: 90 }],
     ...overrides,
   });
 

@@ -370,9 +370,10 @@ describe("updateSupervisionSessionSchema", () => {
       setting: "einzel",
       linkedTherapySessionIds: [],
       linkedGroupSessionIds: [],
+      caseShares: [],
     };
     expect(updateSupervisionSessionSchema.safeParse(full).success).toBe(true);
-    for (const missing of ["id", "kind", "setting", "linkedTherapySessionIds", "linkedGroupSessionIds"] as const) {
+    for (const missing of ["id", "kind", "setting", "linkedTherapySessionIds", "linkedGroupSessionIds", "caseShares"] as const) {
       const { [missing]: _weg, ...rest } = full;
       void _weg;
       const result = updateSupervisionSessionSchema.safeParse(rest);
@@ -382,7 +383,7 @@ describe("updateSupervisionSessionSchema", () => {
   });
 
   it("lehnt Verknüpfungen ab, die nicht zur Art passen", () => {
-    const base = { id: UUID_B, supervisorId: UUID_A, date: "2026-02-10", durationMinutes: 60, setting: "einzel" };
+    const base = { id: UUID_B, supervisorId: UUID_A, date: "2026-02-10", durationMinutes: 60, setting: "einzel", caseShares: [] };
     const einzel = updateSupervisionSessionSchema.safeParse({
       ...base,
       kind: "individual",
@@ -406,7 +407,7 @@ describe("updateSupervisionSessionSchema", () => {
   });
 
   it("fasst doppelte Verknüpfungs-IDs zusammen", () => {
-    const base = { id: UUID_B, supervisorId: UUID_A, date: "2026-02-10", durationMinutes: 60, setting: "einzel" };
+    const base = { id: UUID_B, supervisorId: UUID_A, date: "2026-02-10", durationMinutes: 60, setting: "einzel", caseShares: [] };
     const einzel = updateSupervisionSessionSchema.safeParse({
       ...base,
       kind: "individual",
@@ -423,6 +424,38 @@ describe("updateSupervisionSessionSchema", () => {
     });
     expect(gruppe.success).toBe(true);
     if (gruppe.success) expect(gruppe.data.linkedGroupSessionIds).toEqual([UUID_B]);
+  });
+});
+
+describe("Supervision: Dauer je Patient:in (#40)", () => {
+  const base = { supervisorId: UUID_A, date: "2026-02-10", durationMinutes: 60, kind: "individual", setting: "einzel" };
+  const UUID_C = "550e8400-e29b-41d4-a716-446655440003";
+
+  it("nimmt Anteile an, deren Summe die Gesamtdauer ist", () => {
+    const shares = [
+      { patientId: UUID_A, minutes: 35 },
+      { patientId: UUID_C, minutes: 25 },
+    ];
+    const result = addSupervisionSessionSchema.safeParse({ ...base, caseShares: shares });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.caseShares).toEqual(shares);
+    const ohne = addSupervisionSessionSchema.safeParse(base);
+    expect(ohne.success && ohne.data.caseShares).toEqual([]);
+  });
+
+  it("lehnt eine abweichende Summe, doppelte Patient:innen, Anteile von 0 und Anteile bei Gruppensupervision ab", () => {
+    const path = (input: object) => {
+      const r = addSupervisionSessionSchema.safeParse({ ...base, ...input });
+      return r.success ? null : r.error.issues[0].path;
+    };
+    expect(path({ caseShares: [{ patientId: UUID_A, minutes: 50 }] })).toEqual(["durationMinutes"]);
+    expect(path({ caseShares: [{ patientId: UUID_A, minutes: 30 }, { patientId: UUID_A, minutes: 30 }] })).toEqual(["caseShares"]);
+    expect(path({ durationMinutes: 60, caseShares: [{ patientId: UUID_A, minutes: 60 }, { patientId: UUID_C, minutes: 0 }] })).toEqual([
+      "caseShares",
+      1,
+      "minutes",
+    ]);
+    expect(path({ kind: "group", caseShares: [{ patientId: UUID_A, minutes: 60 }] })).toEqual(["caseShares"]);
   });
 });
 

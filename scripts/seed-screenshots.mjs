@@ -25,6 +25,7 @@ const one = async (sql, params = []) => (await client.query(sql, params)).rows[0
 // Beispieldaten ersetzen. Form: DemoData aus src/lib/demo/demo-daten.mjs (Verweise über Schlüssel).
 function bilddaten() {
   const sitzung = (key, patient, date, category, notes = "") => ({ key, patient, date, durationMinutes: 50, notes, category });
+  // Einzeltherapie-Supervisionen besprechen je einen Fall (Schlüssel vor dem Bindestrich), der die ganze Dauer trägt.
   const supervision = (key, supervisor, date, kind, therapySessions, groupSessions = []) => ({
     key,
     supervisor,
@@ -33,6 +34,7 @@ function bilddaten() {
     kind,
     therapySessions,
     groupSessions,
+    cases: [...new Set(therapySessions.map((s) => s.split("-")[0]))].map((patient) => ({ patient, minutes: 60 })),
   });
   const doppelstunde = (key, date, status, childCount) => ({
     key,
@@ -93,7 +95,7 @@ try {
   await client.query("BEGIN");
   await client.query(
     `TRUNCATE users, invitations, password_reset_tokens, patients, supervisors, therapy_sessions,
-     supervision_sessions, supervision_therapy_links, supervision_group_session_links,
+     supervision_sessions, supervision_therapy_links, supervision_group_session_links, supervision_cases,
      financial_settings, groups, group_sessions, ausbildungsregeln_abweichungen, ausbildungsprofil,
      ebm_staffel_stufen, ebm_staffeln RESTART IDENTITY CASCADE`
   );

@@ -49,6 +49,10 @@ describe("buildNachweis ohne Supervisor:in", () => {
         { date: "2026-02-14", chiffre: "A-02" },
       ],
       linkedGroupSessions: [],
+      caseShares: [
+        { chiffre: "A-01", minutes: 30 },
+        { chiffre: "A-02", minutes: 30 },
+      ],
     });
   });
 

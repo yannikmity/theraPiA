@@ -124,6 +124,7 @@ export function GroupDetailClient({
         setting: "einzel",
         linkedTherapySessionIds: [],
         linkedGroupSessionIds: linkedSessionIds,
+        caseShares: [],
       })
     );
     setIsSaving(false);

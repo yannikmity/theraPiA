@@ -51,6 +51,14 @@ export interface TherapySessionRow {
   category: string;
 }
 
+// Anteile je Fall als jsonb-Liste (#40), nach patient_id sortiert – für Abfragen mit dem Alias ss auf
+// supervision_sessions. Unterabfrage statt Join, weil die Link-Joins die Zeilen vervielfachen. Nur Patient:innen des
+// Supervisions-Accounts (Defense in Depth wie im Export).
+export const CASE_SHARES_SQL = `COALESCE((
+              SELECT jsonb_agg(jsonb_build_object('patientId', sc.patient_id, 'minutes', sc.minutes) ORDER BY sc.patient_id)
+              FROM supervision_cases sc JOIN patients p ON p.id = sc.patient_id AND p.user_id = ss.user_id
+              WHERE sc.supervision_id = ss.id), '[]'::jsonb)`;
+
 export interface SupervisionSessionRow {
   id: string;
   supervisor_id: string;
@@ -58,6 +66,8 @@ export interface SupervisionSessionRow {
   duration_minutes: number;
   kind: string;
   setting: string;
+  // jsonb_agg aus supervision_cases (#40); fehlt bei Abfragen ohne Anteile
+  case_shares?: { patientId: string; minutes: number }[];
 }
 
 export interface GroupRow {
@@ -132,6 +142,7 @@ export function mapSupervisionSessionRow(
     setting: row.setting as SupervisionSession["setting"],
     linkedTherapySessionIds,
     linkedGroupSessionIds,
+    caseShares: (row.case_shares ?? []).map((c) => ({ patientId: c.patientId as PatientId, minutes: c.minutes })),
   };
 }
 

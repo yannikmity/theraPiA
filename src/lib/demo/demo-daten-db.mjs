@@ -49,6 +49,10 @@ export function checkDemoReferences(data) {
     verweis(supervisors, "Supervisor:in", sv.supervisor, `Supervision „${sv.key}“`);
     for (const key of sv.therapySessions) verweis(sessions, "Sitzung", key, `Supervision „${sv.key}“`);
     for (const key of sv.groupSessions) verweis(groupSessions, "Doppelstunde", key, `Supervision „${sv.key}“`);
+    for (const c of sv.cases) verweis(patients, "Patient:in", c.patient, `Supervision „${sv.key}“`);
+    if (sv.cases.length > 0 && sv.cases.reduce((sum, c) => sum + c.minutes, 0) !== sv.durationMinutes) {
+      throw new Error(`Beispieldaten: Supervision „${sv.key}“: Dauer je Patient:in ergibt nicht die Gesamtdauer`);
+    }
   }
 }
 
@@ -197,6 +201,14 @@ export async function insertDemoData(db, userId, data) {
     `INSERT INTO supervision_group_session_links (supervision_id, group_session_id)
      SELECT * FROM unnest($1::uuid[], $2::uuid[])`,
     [gruppenLinks.map((l) => l[0]), gruppenLinks.map((l) => l[1])]
+  );
+  const anteile = data.supervisionSessions.flatMap((sv) =>
+    sv.cases.map((c) => /** @type {const} */ ([idVon(supervisionIds, sv.key), idVon(patientIds, c.patient), c.minutes]))
+  );
+  await db.query(
+    `INSERT INTO supervision_cases (supervision_id, patient_id, minutes)
+     SELECT * FROM unnest($1::uuid[], $2::uuid[], $3::int[])`,
+    [anteile.map((a) => a[0]), anteile.map((a) => a[1]), anteile.map((a) => a[2])]
   );
   if (data.financialSettings) {
     await db.query(

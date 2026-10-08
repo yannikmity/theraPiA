@@ -183,8 +183,10 @@ export function PatientDetailClient({
     .sort((a, b) => b.date.localeCompare(a.date));
 
   const patientSessionIds = new Set(patientTherapySessions.map((s) => s.id));
+  // Supervisionen mit Anteil dieser Patient:in (#40) oder mit verknüpfter Sitzung; angezeigt wird der Anteil.
+  const shareOf = (sv: SupervisionSession) => sv.caseShares.find((c) => c.patientId === patient.id)?.minutes;
   const linkedSupervisions = supervisionSessions
-    .filter((sv) => sv.linkedTherapySessionIds.some((id) => patientSessionIds.has(id)))
+    .filter((sv) => shareOf(sv) !== undefined || sv.linkedTherapySessionIds.some((id) => patientSessionIds.has(id)))
     .sort((a, b) => b.date.localeCompare(a.date));
 
   const supervisedIds = new Set(
@@ -408,7 +410,7 @@ export function PatientDetailClient({
                       <span className="ml-2 text-xs text-muted-foreground">{supervisor?.name}</span>
                     </div>
                   </div>
-                  <span className="text-sm text-muted-foreground">{sv.durationMinutes} Min</span>
+                  <span className="text-sm text-muted-foreground">{shareOf(sv) ?? sv.durationMinutes} Min</span>
                 </div>
               );
             })}
@@ -419,8 +421,8 @@ export function PatientDetailClient({
       <Card>
         <SectionHeader>Patient:in löschen</SectionHeader>
         <p className="text-xs text-muted-foreground">
-          Entfernt die Patient:in dauerhaft. {mitgeloescht(patientTherapySessions.length)}; zugeordnete Supervisionen bleiben
-          bestehen, verlieren aber die Zuordnung.
+          Entfernt die Patient:in dauerhaft. {mitgeloescht(patientTherapySessions.length)}; ihre Dauer in Supervisionen mit
+          weiteren Patient:innen entfällt, Supervisionen nur zu dieser Patient:in werden mitgelöscht.
         </p>
         <ActionError result={errorAt(error, "delete")} />
         <ConfirmButton
