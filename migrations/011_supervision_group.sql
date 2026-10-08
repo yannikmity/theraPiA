@@ -4,14 +4,28 @@
 -- ON DELETE SET NULL: Die App löscht Gruppen bisher nur mit dem Account (dann fällt die Supervision ohnehin weg). Wird
 -- eine Gruppe künftig einzeln gelöscht, bleibt die Supervisionszeit erhalten (wie bei #40), nur ohne Gruppenbezug.
 -- Wie bei den Link-Tabellen prüft die Anwendung den Besitz der Gruppe vor dem Schreiben.
-ALTER TABLE supervision_sessions ADD COLUMN group_id UUID REFERENCES groups(id) ON DELETE SET NULL;
-ALTER TABLE supervision_sessions ADD CONSTRAINT supervision_sessions_group_kind_check
-  CHECK (group_id IS NULL OR kind = 'group');
-CREATE INDEX idx_supervision_sessions_group_id ON supervision_sessions(group_id);
+--
+-- Spalte, Constraint, Index und Befüllung legt seit #59 schon 010 an, vor der Bereinigung doppelter Links – sonst
+-- verlöre eine Supervision, deren letzter Link dort wegfällt, ihren Gruppenbezug. Diese Datei ist deshalb idempotent:
+-- Nach dem aktuellen 010 ändert sie nichts. Datenbanken, die 010 noch ohne diesen Teil angewendet haben, bekommen hier
+-- Spalte und Befüllung aus den verbliebenen Links; was 010 dort schon entfernt hat, lässt sich nicht rekonstruieren.
+ALTER TABLE supervision_sessions ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES groups(id) ON DELETE SET NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'supervision_sessions_group_kind_check' AND conrelid = 'supervision_sessions'::regclass
+  ) THEN
+    ALTER TABLE supervision_sessions ADD CONSTRAINT supervision_sessions_group_kind_check
+      CHECK (group_id IS NULL OR kind = 'group');
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_supervision_sessions_group_id ON supervision_sessions(group_id);
 
 -- Bestand: die Gruppe der verknüpften Doppelstunden (nur eigene Zeilen). Verweisen die Links auf mehrere Gruppen
 -- (über die Supervisionsseite möglich), gewinnt die Gruppe mit den meisten verknüpften Doppelstunden, bei Gleichstand
--- die mit dem frühesten Beginn, dann die ID – so bleibt die Supervision in einer Gruppe sichtbar. Ohne Links bleibt NULL.
+-- die mit dem frühesten Beginn, dann die ID – so bleibt die Supervision in einer Gruppe sichtbar. Ohne Links bleibt NULL;
+-- eine schon gesetzte Gruppe (aus 010) bleibt unverändert.
 UPDATE supervision_sessions ss
 SET group_id = pick.group_id
 FROM (
@@ -24,4 +38,4 @@ FROM (
   GROUP BY ss.id, g.id, g.start_date
   ORDER BY ss.id, count(*) DESC, g.start_date, g.id
 ) pick
-WHERE ss.id = pick.supervision_id;
+WHERE ss.id = pick.supervision_id AND ss.group_id IS NULL;
