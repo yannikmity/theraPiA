@@ -26,6 +26,7 @@ describe("GroupsClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Erste Gruppe anlegen" }));
     const name = screen.getByLabelText("Gruppenname") as HTMLInputElement;
     expect(submitButtons(name.form!).map((b) => b.textContent)).toEqual(["Anlegen"]);
+    expect(screen.getByRole("form", { name: "Neue Gruppe" })).toBe(name.form);
     fireEvent.change(name, { target: { value: "Kindergruppe 1" } });
     pressEnter(screen.getByLabelText("Kinder (Ø)"));
     act(() => name.form!.requestSubmit());

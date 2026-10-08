@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 
 vi.mock("../../lib/analytics/track", () => ({ track: vi.fn(), trackFailure: vi.fn() }));
 vi.mock("../../app/(app)/groups/[id]/actions", () => ({
@@ -10,7 +10,8 @@ vi.mock("../../app/(app)/groups/[id]/actions", () => ({
 }));
 
 import { GroupDetailClient } from "../../app/(app)/groups/[id]/GroupDetailClient";
-import { addGroupSupervisionSession, updateGroupSession } from "../../app/(app)/groups/[id]/actions";
+import { addGroupSession, addGroupSupervisionSession, updateGroupSession } from "../../app/(app)/groups/[id]/actions";
+import { pressEnter, submitButtons } from "../../lib/__tests__/helpers/form-submit";
 import { newGroupId, newGroupSessionId, newSupervisorId, type Group, type GroupSession, type Supervisor } from "@/types";
 import { resolveRegelwerk, standardRegelwerk } from "../../lib/ausbildungsregeln/resolve";
 
@@ -49,6 +50,7 @@ describe("GroupDetailClient", () => {
   beforeEach(() => {
     vi.mocked(updateGroupSession).mockReset();
     vi.mocked(addGroupSupervisionSession).mockReset();
+    vi.mocked(addGroupSession).mockReset();
   });
 
   it("beschriftet die Doppelstunden-Zuordnung der Gruppen-Supervision als Gruppe (fieldset/legend)", () => {
@@ -154,5 +156,47 @@ describe("GroupDetailClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(addGroupSupervisionSession).not.toHaveBeenCalled();
     expect(duration.getAttribute("aria-describedby")).toBe(screen.getByText("Bitte eine Dauer angeben").id);
+  });
+
+  describe("Enter im Feld (#51)", () => {
+    const data = { group, groupSessions: props.initialGroupSessions, supervisionSessions: [], supervisedGroupSessionIds: [], supervisors };
+
+    it("legt die Doppelstunde mit Enter an, die Checkbox sendet nicht ab, ein zweites Enter während des Speicherns nicht", async () => {
+      let resolve!: (r: Awaited<ReturnType<typeof addGroupSession>>) => void;
+      vi.mocked(addGroupSession).mockReturnValue(new Promise((r) => (resolve = r)));
+      render(<GroupDetailClient {...props} />);
+      fireEvent.click(screen.getAllByRole("button", { name: "Neu" })[0]);
+      const form = screen.getByRole("form", { name: "Neue Doppelstunde" }) as HTMLFormElement;
+      expect(submitButtons(form).map((b) => b.textContent)).toEqual(["Speichern"]);
+      fireEvent.click(within(form).getByRole("checkbox"));
+      expect(addGroupSession).not.toHaveBeenCalled();
+      const kids = screen.getByLabelText("Anwesende Kinder");
+      fireEvent.change(kids, { target: { value: "7" } });
+      pressEnter(kids);
+      act(() => form.requestSubmit());
+      expect(addGroupSession).toHaveBeenCalledTimes(1);
+      expect(addGroupSession).toHaveBeenCalledWith(expect.objectContaining({ childCount: 7, countsTowardAmbulanzzeit: false }));
+      await act(async () => resolve({ success: true, data }));
+      expect(screen.queryByRole("form", { name: "Neue Doppelstunde" })).toBeNull();
+    });
+
+    it("legt die Gruppen-Supervision mit Enter in der Dauer an, mit der gewählten Doppelstunde", async () => {
+      vi.mocked(addGroupSupervisionSession).mockResolvedValue({ success: true, data: { ...data, supervisedGroupSessionIds: ["gs-2"] } });
+      render(<GroupDetailClient {...props} />);
+      openSupervisionForm();
+      const form = screen.getByRole("form", { name: "Neue Gruppen-Supervision" }) as HTMLFormElement;
+      expect(submitButtons(form).map((b) => b.textContent)).toEqual(["Speichern"]);
+      fireEvent.click(within(within(form).getByText("14.09.2026").closest("label")!).getByRole("checkbox"));
+      expect(addGroupSupervisionSession).not.toHaveBeenCalled();
+      const duration = screen.getByLabelText("Dauer (Min)");
+      fireEvent.change(duration, { target: { value: "45" } });
+      pressEnter(duration);
+      await waitFor(() =>
+        expect(addGroupSupervisionSession).toHaveBeenCalledWith(
+          expect.objectContaining({ supervisorId: "s-1", durationMinutes: 45, linkedGroupSessionIds: ["gs-2"] })
+        )
+      );
+      expect(addGroupSupervisionSession).toHaveBeenCalledTimes(1);
+    });
   });
 });

@@ -55,6 +55,8 @@ export function GroupDetailClient({
   const [showSessionForm, setShowSessionForm] = useState(false);
   const [showSupervisionForm, setShowSupervisionForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Sperre gegen doppeltes Absenden: greift sofort, noch bevor isSaving neu gerendert ist.
+  const savingRef = useRef(false);
   const [error, setError] = useState<ScopedActionError | null>(null);
 
   // New session form state
@@ -78,7 +80,10 @@ export function GroupDetailClient({
   const svHours = totalSupervisionHours(supervisionSessions);
   const unlinkedSessions = sessions.filter((s) => s.status === "durchgefuehrt" && !supervisedIds.includes(s.id));
 
-  async function handleAddSession() {
+  async function handleAddSession(e: React.FormEvent) {
+    e.preventDefault();
+    if (savingRef.current) return;
+    savingRef.current = true;
     setIsSaving(true);
     setError(null);
     const result = await runAction(() =>
@@ -92,6 +97,7 @@ export function GroupDetailClient({
         notes: "",
       })
     );
+    savingRef.current = false;
     setIsSaving(false);
     if (result.success) {
       setSessions(result.data.groupSessions);
@@ -102,8 +108,9 @@ export function GroupDetailClient({
     }
   }
 
-  async function handleAddSupervision() {
-    if (!supervisorId) return;
+  async function handleAddSupervision(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supervisorId || savingRef.current) return;
     // Dauer mit eigener Meldung am Feld statt Feldfehler vom Server (#28).
     const invalid = durationError(svDuration);
     setSvDurationMessage(invalid);
@@ -111,6 +118,7 @@ export function GroupDetailClient({
       svDurationRef.current?.focus();
       return;
     }
+    savingRef.current = true;
     setIsSaving(true);
     setError(null);
     const result = await runAction(() =>
@@ -126,6 +134,7 @@ export function GroupDetailClient({
         caseShares: [],
       })
     );
+    savingRef.current = false;
     setIsSaving(false);
     if (result.success) {
       track("supervision_saved", { mode: "new", kind: "group" });
@@ -216,8 +225,9 @@ export function GroupDetailClient({
           </Button>
         </div>
 
+        {/* Formular: Enter im Feld speichert (#51). */}
         {showSessionForm && (
-          <div className="space-y-3 border-b border-border pb-4">
+          <form noValidate aria-label="Neue Doppelstunde" onSubmit={handleAddSession} className="space-y-3 border-b border-border pb-4">
             <FormField label="Datum" htmlFor="gs-date">
               <Input id="gs-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={isSaving} />
             </FormField>
@@ -255,17 +265,17 @@ export function GroupDetailClient({
               Zählt zur Ambulanzzeit ({regelwerk.regeln.gruppeAmbulanzzeitZiel}h)
             </label>
             <ActionError result={errorAt(error, "session-form")} />
-            <Button onClick={handleAddSession} loading={isSaving} className="w-full">
+            <Button type="submit" loading={isSaving} className="w-full">
               Speichern
             </Button>
-          </div>
+          </form>
         )}
 
         {sessions.length === 0 ? (
           <p className="py-3 text-center text-sm text-muted-foreground">Noch keine Doppelstunden</p>
         ) : (
           <div className="divide-y divide-border">
-            {sessions
+            {[...sessions]
               .sort((a, b) => b.date.localeCompare(a.date))
               .map((session) => {
                 const isSupervised = supervisedIds.includes(session.id);
@@ -324,7 +334,12 @@ export function GroupDetailClient({
         </div>
 
         {showSupervisionForm && (
-          <div className="space-y-3 border-b border-border pb-4">
+          <form
+            noValidate
+            aria-label="Neue Gruppen-Supervision"
+            onSubmit={handleAddSupervision}
+            className="space-y-3 border-b border-border pb-4"
+          >
             <FormField label="Supervisor:in" htmlFor="gsv-supervisor">
               <NativeSelect
                 id="gsv-supervisor"
@@ -390,17 +405,17 @@ export function GroupDetailClient({
               </fieldset>
             )}
             <ActionError result={errorAt(error, "supervision-form")} />
-            <Button onClick={handleAddSupervision} loading={isSaving} className="w-full" disabled={!supervisorId}>
+            <Button type="submit" loading={isSaving} className="w-full" disabled={!supervisorId}>
               Speichern
             </Button>
-          </div>
+          </form>
         )}
 
         {supervisionSessions.length === 0 ? (
           <p className="py-3 text-center text-sm text-muted-foreground">Noch keine Gruppen-Supervision</p>
         ) : (
           <div className="divide-y divide-border">
-            {supervisionSessions
+            {[...supervisionSessions]
               .sort((a, b) => b.date.localeCompare(a.date))
               .map((sv) => {
                 const supervisor = initialSupervisors.find((s) => s.id === sv.supervisorId);

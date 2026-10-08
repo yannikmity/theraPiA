@@ -61,6 +61,7 @@ describe("SupervisorsClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Neu" }));
     const name = screen.getByLabelText("Name") as HTMLInputElement;
     expect(submitButtons(name.form!).map((b) => b.textContent)).toEqual(["Anlegen"]);
+    expect(screen.getByRole("form", { name: "Neue:r Supervisor:in" })).toBe(name.form);
     fireEvent.change(name, { target: { value: "Supervision Drei" } });
     fireEvent.change(screen.getByLabelText(/Kosten je SV-Einheit/), { target: { value: "90" } });
     pressEnter(screen.getByLabelText(/Kosten je SV-Einheit/));
@@ -70,6 +71,7 @@ describe("SupervisorsClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Formular schließen" }));
     expect(updateSupervisorAction).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Supervision Eins bearbeiten" }));
+    expect(screen.getByRole("form", { name: "Supervisor:in bearbeiten" })).toBeDefined();
     pressEnter(screen.getByLabelText("Name"));
     await waitFor(() =>
       expect(updateSupervisorAction).toHaveBeenCalledWith({ id: "s-1", name: "Supervision Eins", costPerHour: 80, isActive: true })

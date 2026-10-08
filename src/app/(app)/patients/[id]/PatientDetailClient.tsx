@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
@@ -66,6 +66,8 @@ export function PatientDetailClient({
   const [supervisionSessions, setSupervisionSessions] = useState(initialSupervisionSessions);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Sperre gegen doppeltes Absenden: greift sofort, noch bevor isSaving neu gerendert ist.
+  const savingRef = useRef(false);
   const [error, setError] = useState<ScopedActionError | null>(null);
   const [antragsdatum, setAntragsdatum] = useState(initialPatient?.antragsdatum ?? "");
   const [beantragteStunden, setBeantragteStunden] = useState(
@@ -93,7 +95,8 @@ export function PatientDetailClient({
       Pick<Patient, "endDate" | "isActive" | "antragsdatum" | "beantragteStunden" | "genehmigungsdatum" | "sprechstundenAmbulanz">
     >
   ) {
-    if (!patient) return;
+    if (!patient || savingRef.current) return;
+    savingRef.current = true;
     setIsSaving(true);
     setError(null);
     const result = await runAction(() =>
@@ -111,6 +114,7 @@ export function PatientDetailClient({
         ...changes,
       })
     );
+    savingRef.current = false;
     setIsSaving(false);
     if (result.success) {
       applyData(result.data);
@@ -124,7 +128,6 @@ export function PatientDetailClient({
   const handleReopen = () => savePatient("status", { endDate: null, isActive: true });
   const handleSaveAntrag = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSaving) return;
     void savePatient("antrag", {
       antragsdatum: antragsdatum || null,
       beantragteStunden: beantragteStunden ? Number(beantragteStunden) : null,
@@ -245,7 +248,7 @@ export function PatientDetailClient({
 
       {/* Formular: Enter im Feld speichert den Antrag (#51). */}
       <Card asChild>
-        <form noValidate onSubmit={handleSaveAntrag}>
+        <form noValidate aria-label="Antrag" onSubmit={handleSaveAntrag}>
           <SectionHeader>Antrag</SectionHeader>
           <FormField label="Antragsdatum" htmlFor="antragsdatum">
             <Input

@@ -65,6 +65,7 @@ describe("FinancesClient – geplante Sitzungen pro Woche", () => {
     render(<FinancesClient {...props} />);
     const field = screen.getByLabelText("Geplante Sitzungen pro Woche (optional)") as HTMLInputElement;
     expect(submitButtons(field.form!).map((b) => b.textContent)).toEqual(["Einstellungen speichern"]);
+    expect(screen.getByRole("form", { name: "Einstellungen" })).toBe(field.form);
     fireEvent.change(field, { target: { value: "4" } });
     pressEnter(field);
     act(() => field.form!.requestSubmit());

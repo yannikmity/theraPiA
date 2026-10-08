@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { Plus, ChevronRight, X } from "lucide-react";
@@ -42,14 +42,18 @@ export function PatientsClient({
   const [newType, setNewType] = useState<"kurzzeittherapie" | "langzeittherapie">("langzeittherapie");
   const [newStartDate, setNewStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isSaving, setIsSaving] = useState(false);
+  // Sperre gegen doppeltes Absenden: greift sofort, noch bevor isSaving neu gerendert ist.
+  const savingRef = useRef(false);
   const [error, setError] = useState<ActionResult<unknown> | null>(null);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (isSaving || !newChiffre.trim()) return;
+    if (savingRef.current || !newChiffre.trim()) return;
+    savingRef.current = true;
     setIsSaving(true);
     setError(null);
     const result = await runAction(() => addPatient({ chiffre: newChiffre.trim(), therapyType: newType, startDate: newStartDate }));
+    savingRef.current = false;
     setIsSaving(false);
     if (result.success) {
       track("patient_created");
@@ -80,7 +84,7 @@ export function PatientsClient({
       {showForm && (
         // Formular: Enter im Feld legt an (#51).
         <Card asChild className="border-primary/40">
-          <form noValidate onSubmit={handleAdd}>
+          <form noValidate aria-label="Neue:r Patient:in" onSubmit={handleAdd}>
             <div className="flex items-center justify-between">
               <h2 className="font-medium text-foreground">Neue:r Patient:in</h2>
               <Button type="button" variant="ghost" size="icon-sm" aria-label="Formular schließen" onClick={() => setShowForm(false)}>

@@ -310,7 +310,7 @@ export function NewSessionClient({
 
   // Ein Formular um die ganze Erfassung: Enter im Feld speichert (#51). Alle anderen Knöpfe sind type="button".
   return (
-    <form noValidate onSubmit={handleSave} className="mx-auto max-w-xl space-y-4">
+    <form noValidate aria-label="Stunde erfassen" onSubmit={handleSave} className="mx-auto max-w-xl space-y-4">
       <PageHeader title="Stunde erfassen" backHref="/" backLabel="Zum Dashboard" />
 
       {batchResult && (

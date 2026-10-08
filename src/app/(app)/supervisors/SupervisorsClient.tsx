@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Plus, X, Pencil } from "lucide-react";
 import { Supervisor } from "@/types";
 import { ActionError, errorAt, type ScopedActionError } from "@/components/ActionError";
@@ -24,6 +24,8 @@ export function SupervisorsClient({ initialSupervisors }: SupervisorsClientProps
   const [name, setName] = useState("");
   const [costPerHour, setCostPerHour] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  // Sperre gegen doppeltes Absenden: greift sofort, noch bevor isSaving neu gerendert ist.
+  const savingRef = useRef(false);
   const [error, setError] = useState<ScopedActionError | null>(null);
 
   function openAddForm() {
@@ -54,9 +56,12 @@ export function SupervisorsClient({ initialSupervisors }: SupervisorsClientProps
     input: Parameters<typeof updateSupervisorAction>[0] | Parameters<typeof addSupervisor>[0],
     scope: string
   ) {
+    if (savingRef.current) return false;
+    savingRef.current = true;
     setIsSaving(true);
     setError(null);
     const result = await runAction(() => ("id" in input ? updateSupervisorAction(input) : addSupervisor(input)));
+    savingRef.current = false;
     setIsSaving(false);
     if (result.success) {
       setSupervisors(result.data.supervisors);
@@ -81,7 +86,6 @@ export function SupervisorsClient({ initialSupervisors }: SupervisorsClientProps
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (isSaving) return;
     void (editingId ? handleUpdate() : handleAdd());
   }
 
@@ -110,7 +114,7 @@ export function SupervisorsClient({ initialSupervisors }: SupervisorsClientProps
       {showForm && (
         // Formular: Enter im Feld speichert (#51).
         <Card asChild className="border-primary/40">
-          <form noValidate onSubmit={handleSubmit}>
+          <form noValidate aria-label={editingId ? "Supervisor:in bearbeiten" : "Neue:r Supervisor:in"} onSubmit={handleSubmit}>
             <div className="flex items-center justify-between">
               <h2 className="font-medium text-foreground">{editingId ? "Supervisor:in bearbeiten" : "Neue:r Supervisor:in"}</h2>
               <Button type="button" variant="ghost" size="icon-sm" aria-label="Formular schließen" onClick={closeForm}>

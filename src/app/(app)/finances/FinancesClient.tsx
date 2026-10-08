@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Save } from "lucide-react";
 import { FinancialSettings, Supervisor, SupervisorId } from "@/types";
 import { ActionError } from "@/components/ActionError";
@@ -38,14 +38,18 @@ export function FinancesClient({
   const [totalCosts, setTotalCosts] = useState(initialTotalCosts);
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Sperre gegen doppeltes Absenden: greift sofort, noch bevor isSaving neu gerendert ist.
+  const savingRef = useRef(false);
   const [error, setError] = useState<ActionResult<unknown> | null>(null);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!settings || isSaving) return;
+    if (!settings || savingRef.current) return;
+    savingRef.current = true;
     setIsSaving(true);
     setError(null);
     const result = await runAction(() => saveFinancialSettings(settings));
+    savingRef.current = false;
     setIsSaving(false);
     if (result.success) {
       setQuarters(result.data.quarters);
@@ -133,7 +137,7 @@ export function FinancesClient({
 
         {/* Formular: Enter im Feld speichert (#51). */}
         <Card asChild>
-          <form noValidate onSubmit={handleSave}>
+          <form noValidate aria-label="Einstellungen" onSubmit={handleSave}>
             <SectionHeader>Einstellungen</SectionHeader>
             <FormField label="Einnahme je Behandlungsstunde (50 Min, EUR)" htmlFor="income-per-hour">
               <Input

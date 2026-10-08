@@ -139,6 +139,7 @@ describe("PatientDetailClient", () => {
     render(<PatientDetailClient {...props} />);
     const field = screen.getByLabelText("Beantragte Behandlungsstunden") as HTMLInputElement;
     expect(submitButtons(field.form!).map((b) => b.textContent)).toEqual(["Antrag speichern"]);
+    expect(screen.getByRole("form", { name: "Antrag" })).toBe(field.form);
     fireEvent.change(field, { target: { value: "60" } });
     pressEnter(field);
     await waitFor(() => expect(updatePatient).toHaveBeenCalledWith(expect.objectContaining({ beantragteStunden: 60 })));

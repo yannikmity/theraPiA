@@ -701,6 +701,7 @@ describe("NewSessionClient", () => {
       const form = (screen.getByLabelText("Datum") as HTMLInputElement).form!;
       fireEvent.click(screen.getByRole("button", { name: "Wie letzte Woche: 2 Sitzungen übernehmen" }));
       expect(submitButtons(form).map((b) => b.textContent)).toEqual(["Speichern"]);
+      expect(screen.getByRole("form", { name: "Stunde erfassen" })).toBe(form);
       expect(addTherapySession).not.toHaveBeenCalled();
       expect(addTherapySessions).not.toHaveBeenCalled();
       expect(addSupervisionSession).not.toHaveBeenCalled();
