@@ -24,6 +24,7 @@ export default async function GroupDetailPage({
         initialGroup={data.group}
         initialGroupSessions={data.groupSessions}
         initialSupervisionSessions={data.supervisionSessions}
+        initialSupervisedGroupSessionIds={data.supervisedGroupSessionIds}
         initialSupervisors={data.supervisors}
         regelwerk={regelwerk}
       />

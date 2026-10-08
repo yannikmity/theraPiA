@@ -37,6 +37,8 @@ interface GroupDetailData {
   group: Group | undefined;
   groupSessions: GroupSession[];
   supervisionSessions: SupervisionSession[];
+  // Doppelstunden dieser Gruppe, die irgendeine Supervision bespricht – auch eine mit anderer Gruppe (#47)
+  supervisedGroupSessionIds: string[];
   supervisors: Supervisor[];
 }
 
@@ -49,11 +51,18 @@ export async function loadGroupDetailData(groupId: string): Promise<GroupDetailD
   ]);
 
   // Nur Supervisionen dieser Gruppe (#47) – über den gespeicherten Gruppenbezug, nicht über die Links: Sie bleiben in
-  // der Gruppe, auch ohne verknüpfte oder nach gelöschten Doppelstunden.
+  // der Gruppe, auch ohne verknüpfte oder nach gelöschten Doppelstunden. Ob eine Doppelstunde supervidiert ist,
+  // ergibt sich dagegen aus allen Supervisionen: Über die Supervisionsseite (oder aus dem Bestand vor Migration 011)
+  // kann eine Supervision einer anderen Gruppe sie verknüpfen.
+  const ownSessionIds = new Set<string>(groupSessions.map((s) => s.id));
+  const supervisedGroupSessionIds = [
+    ...new Set(supervisionSessions.flatMap((s) => s.linkedGroupSessionIds).filter((id) => ownSessionIds.has(id))),
+  ];
   return {
     group,
     groupSessions,
     supervisionSessions: supervisionSessions.filter((s) => s.kind === "group" && s.groupId === groupId),
+    supervisedGroupSessionIds,
     supervisors,
   };
 }

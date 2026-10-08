@@ -58,6 +58,7 @@ const ui = {
       initialGroup={data.groups[0]}
       initialGroupSessions={data.groupSessions}
       initialSupervisionSessions={data.supervisionSessions.filter((s) => s.kind === "group")}
+      initialSupervisedGroupSessionIds={data.supervisionSessions.flatMap((s) => s.linkedGroupSessionIds)}
       initialSupervisors={data.supervisors}
       regelwerk={regelwerk}
     />

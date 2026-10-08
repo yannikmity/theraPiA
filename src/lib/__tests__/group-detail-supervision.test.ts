@@ -134,6 +134,24 @@ describe.skipIf(!TEST_DATABASE_URL)("Gruppendetail: Gruppen-Supervisionen je Gru
     expect(await idsOf(groupB)).toEqual([]);
   });
 
+  it("markiert eine Doppelstunde von B als supervidiert, wenn eine Supervision von A sie bespricht", async () => {
+    const { f, groupA, sessionA, groupB, sessionB } = await setup();
+    const svA = await addSupervision(f.a.supervisorId, groupA, [sessionA]);
+    // Über die Supervisionsseite lässt sich eine Doppelstunde einer anderen Gruppe verknüpfen; die Gruppe bleibt A.
+    const result = await updateSupervisionSessionAction({
+      ...supervisionInput(f.a.supervisorId, groupA, [sessionA, sessionB]),
+      id: svA,
+    });
+    expect(result.success).toBe(true);
+
+    const b = await loadGroupDetailData(groupB);
+    expect(b.supervisionSessions).toEqual([]);
+    expect(b.supervisedGroupSessionIds).toEqual([sessionB]);
+    const a = await loadGroupDetailData(groupA);
+    expect(a.supervisionSessions.map((s) => s.id)).toEqual([svA]);
+    expect(a.supervisedGroupSessionIds).toEqual([sessionA]);
+  });
+
   it("nimmt der Supervision die Gruppe, wenn sie zur Einzelsupervision wird", async () => {
     const { f, groupA, sessionA } = await setup();
     const svA = await addSupervision(f.a.supervisorId, groupA, [sessionA]);
