@@ -100,6 +100,11 @@ describe.skipIf(!TEST_DATABASE_URL)("Migration 010 (Sitzung höchstens einer Sup
     expect(await links("supervision_therapy_links", "therapy_session_id", zweite)).toEqual([spaeter]);
     expect(await links("supervision_therapy_links", "therapy_session_id", dritte)).toEqual([gleichFrueh]);
     expect(await links("supervision_group_session_links", "group_session_id", f.a.groupSessionId)).toEqual([gruppeFrueh]);
+    // Gruppenbezug vor der Bereinigung festgehalten (#59): auch die spätere Supervision ohne verbliebenen Link
+    const gruppenbezug = async (id: string) =>
+      (await one(c, "SELECT group_id FROM supervision_sessions WHERE id = $1", [id])).group_id;
+    expect(await gruppenbezug(gruppeFrueh)).toBe(f.a.groupId);
+    expect(await gruppenbezug(gruppeSpaet)).toBe(f.a.groupId);
     // Account B unberührt
     expect(await links("supervision_therapy_links", "therapy_session_id", f.b.therapySessionId)).toEqual([f.b.supervisionId]);
 
@@ -118,6 +123,60 @@ describe.skipIf(!TEST_DATABASE_URL)("Migration 010 (Sitzung höchstens einer Sup
         f.a.groupSessionId,
       ])
     ).rejects.toThrow(/supervision_group_session_links_group_session_id_key/);
+  });
+
+  it("Upgrade 009 → 010 → 011: zwei Gruppensupervisionen auf derselben Doppelstunde behalten ihre Gruppe (#59)", async () => {
+    const t = await createTestDb({ migrate: false });
+    cleanup = t.cleanup;
+    const c = t.client;
+    await migrateBis(c, "009_supervision_cases.sql");
+    const f = await seedOwnershipFixture(c);
+    const gruppensupervision = async (date: string) => {
+      const sv = await one(
+        c,
+        `INSERT INTO supervision_sessions (user_id, supervisor_id, date, duration_minutes, kind)
+         VALUES ($1, $2, $3, 50, 'group') RETURNING id`,
+        [f.a.userId, f.a.supervisorId, date]
+      );
+      await c.query("INSERT INTO supervision_group_session_links (supervision_id, group_session_id) VALUES ($1, $2)", [
+        sv.id,
+        f.a.groupSessionId,
+      ]);
+      return sv.id as string;
+    };
+    const frueher = await gruppensupervision("2026-01-10");
+    const spaeter = await gruppensupervision("2026-01-17");
+
+    expect(await migrateBis(c, "011_supervision_group.sql")).toEqual([
+      "010_supervision_links_unique.sql",
+      "011_supervision_group.sql",
+    ]);
+
+    const links = (
+      await c.query("SELECT supervision_id FROM supervision_group_session_links WHERE group_session_id = $1", [
+        f.a.groupSessionId,
+      ])
+    ).rows.map((r) => r.supervision_id);
+    expect(links).toEqual([frueher]);
+    const gruppen = (
+      await c.query("SELECT id, group_id FROM supervision_sessions WHERE id = ANY($1::uuid[]) ORDER BY date", [
+        [frueher, spaeter],
+      ])
+    ).rows;
+    expect(gruppen).toEqual([
+      { id: frueher, group_id: f.a.groupId },
+      { id: spaeter, group_id: f.a.groupId },
+    ]);
+    const minuten = async (sql: string, params: unknown[]) => (await one(c, sql, params)).minuten as number;
+    expect(
+      await minuten("SELECT sum(duration_minutes)::int AS minuten FROM supervision_sessions WHERE group_id = $1", [f.a.groupId])
+    ).toBe(100);
+    expect(
+      await minuten(
+        "SELECT sum(duration_minutes)::int AS minuten FROM supervision_sessions WHERE user_id = $1 AND kind = 'group'",
+        [f.a.userId]
+      )
+    ).toBe(100);
   });
 
   it("meldet ohne Doppelzuordnungen nichts", async () => {

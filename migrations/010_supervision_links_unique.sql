@@ -7,9 +7,35 @@
 -- beim Update stehen, bis jemand von Hand in der Datenbank aufräumt. Den Link behält bevorzugt eine Supervision desselben
 -- Accounts wie die Sitzung (fremde Links gibt es nur über direktes SQL), dann die mit dem frühesten Datum (ab dann gilt
 -- die Sitzung als supervidiert), bei gleichem Datum der zuerst gespeicherte Link, danach die kleinere supervision_id.
--- Die übrigen Links fallen weg, ihre Anzahl meldet RAISE NOTICE. Supervisionen bleiben mit Dauer und Anteilen je Fall
--- (supervision_cases) unverändert: ein Anteil ohne verknüpfte Sitzung ist erlaubt und lässt sich beim Bearbeiten
--- entfernen. So geht keine erfasste Supervisionszeit verloren.
+-- Die übrigen Links fallen weg, ihre Anzahl meldet RAISE NOTICE. Supervisionen bleiben mit Dauer, Gruppenbezug und
+-- Anteilen je Fall (supervision_cases) unverändert: ein Anteil ohne verknüpfte Sitzung ist erlaubt und lässt sich beim
+-- Bearbeiten entfernen. So geht keine erfasste Supervisionszeit verloren.
+
+-- Gruppenbezug einer Gruppensupervision (#47, #59): steht hier und nicht erst in 011, weil er vor der Bereinigung
+-- festgehalten werden muss. Verliert eine Gruppensupervision unten ihren letzten Link auf eine Doppelstunde, ließe sich
+-- ihre Gruppe danach nicht mehr aus den Links ableiten und sie fiele aus dem Gruppendetail. Begründung zu Spalte,
+-- Constraint und Befüllung in 011_supervision_group.sql; 011 holt das idempotent für Datenbanken nach, die 010 noch
+-- ohne diesen Teil angewendet haben. Namen von Constraint und Index müssen in beiden Dateien gleich bleiben.
+ALTER TABLE supervision_sessions ADD COLUMN group_id UUID REFERENCES groups(id) ON DELETE SET NULL;
+ALTER TABLE supervision_sessions ADD CONSTRAINT supervision_sessions_group_kind_check
+  CHECK (group_id IS NULL OR kind = 'group');
+CREATE INDEX idx_supervision_sessions_group_id ON supervision_sessions(group_id);
+
+-- Befüllung wie in 011, aber aus allen Links vor der Bereinigung (auch denen, die gleich wegfallen).
+UPDATE supervision_sessions ss
+SET group_id = pick.group_id
+FROM (
+  SELECT DISTINCT ON (ss.id) ss.id AS supervision_id, g.id AS group_id
+  FROM supervision_sessions ss
+  JOIN supervision_group_session_links sgsl ON sgsl.supervision_id = ss.id
+  JOIN group_sessions gs ON gs.id = sgsl.group_session_id AND gs.user_id = ss.user_id
+  JOIN groups g ON g.id = gs.group_id AND g.user_id = ss.user_id
+  WHERE ss.kind = 'group'
+  GROUP BY ss.id, g.id, g.start_date
+  ORDER BY ss.id, count(*) DESC, g.start_date, g.id
+) pick
+WHERE ss.id = pick.supervision_id;
+
 DO $$
 DECLARE
   therapie INTEGER;
