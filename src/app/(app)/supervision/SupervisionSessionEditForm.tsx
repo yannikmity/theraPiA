@@ -62,7 +62,7 @@ export function SupervisionSessionEditForm({
   const [setting, setSetting] = useState<SupervisionSetting>(session.setting);
   const [date, setDate] = useState(session.date);
   const [duration, setDuration] = useState(String(session.durationMinutes));
-  const [linkedIds, setLinkedIds] = useState<string[]>(
+  const [linkedIdsAll, setLinkedIds] = useState<string[]>(
     session.kind === "group" ? [...session.linkedGroupSessionIds] : [...session.linkedTherapySessionIds]
   );
   // Die Auswahl folgt dem Datum im Formular, nicht dem gespeicherten.
@@ -79,7 +79,7 @@ export function SupervisionSessionEditForm({
   });
   const caseRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const patientOf = new Map(linkOptions.map((o) => [o.id, o.patientId]));
-  const linkedCases = linkedIds.map((id) => patientOf.get(id)).filter((p): p is string => p !== undefined);
+  const linkedCases = linkedIdsAll.map((id) => patientOf.get(id)).filter((p): p is string => p !== undefined);
   const caseIds =
     session.kind === "group"
       ? []
@@ -97,23 +97,6 @@ export function SupervisionSessionEditForm({
   const durationMessage = submitted && caseIds.length === 0 ? durationError(duration) : undefined;
   const dateMessage = submitted ? dateError(date) : undefined;
 
-  // Datumswechsel (#37): Sitzungen, die zum neuen Datum nicht mehr angeboten werden, abwählen – sonst würden sie
-  // unsichtbar mitgespeichert. Ihre Fälle verschwinden damit aus der Dauer je Patient:in; ein dort schon eingetragener,
-  // nicht gespeicherter Anteil wird verworfen. Gespeicherte Zuordnungen stehen unabhängig vom Datum in den Optionen.
-  function changeDate(next: string) {
-    setDate(next);
-    const offered = new Set(linkOptionsFor(next).map((o) => o.id));
-    const kept = linkedIds.filter((id) => offered.has(id));
-    if (kept.length === linkedIds.length) return;
-    setLinkedIds(kept);
-    const stillLinked = new Set(kept.map((id) => patientOf.get(id)));
-    const stored = new Set<string>(session.caseShares.map((c) => c.patientId));
-    const dropped = linkedCases.filter((p) => !stillLinked.has(p) && !stored.has(p));
-    if (dropped.length > 0) {
-      setCaseMinutes((prev) => Object.fromEntries(Object.entries(prev).filter(([p]) => !dropped.includes(p))));
-    }
-  }
-
   function toggle(id: string) {
     setLinkedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
@@ -121,6 +104,11 @@ export function SupervisionSessionEditForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitted(true);
+    // Nur Sitzungen speichern, die zum Datum im Formular angeboten werden (#37). Eine durch ein früheres Datum
+    // ausgeblendete Auswahl bleibt im Zustand – Zurückstellen des Datums bringt sie samt Minuten wieder –, wird aber
+    // nicht unsichtbar mitgespeichert. Ihre Fälle fehlen schon in caseIds (patientOf kennt nur angebotene Sitzungen).
+    // Gespeicherte Zuordnungen stehen unabhängig vom Datum in den Optionen.
+    const linkedIds = linkedIdsAll.filter((id) => patientOf.has(id));
     if (dateError(date)) {
       dateRef.current?.focus();
       return;
@@ -183,7 +171,7 @@ export function SupervisionSessionEditForm({
           id={idFor("date")}
           type="date"
           value={date}
-          onChange={(e) => changeDate(e.target.value)}
+          onChange={(e) => setDate(e.target.value)}
           aria-invalid={dateMessage ? true : undefined}
           aria-describedby={dateMessage ? fieldErrorId(idFor("date")) : undefined}
           disabled={saving}
@@ -217,7 +205,7 @@ export function SupervisionSessionEditForm({
         ) : (
           <div className="max-h-48 space-y-1.5 overflow-y-auto">
             {linkOptions.map((o) => {
-              const checked = linkedIds.includes(o.id);
+              const checked = linkedIdsAll.includes(o.id);
               return (
                 <label
                   key={o.id}
