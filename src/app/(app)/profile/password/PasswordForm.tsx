@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/input";
-import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_LONG_MESSAGE, exceedsPasswordBytes } from "@/lib/constants";
 
 export function PasswordForm() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -28,6 +28,11 @@ export function PasswordForm() {
 
     if (newPassword.length < MIN_PASSWORD_LENGTH) {
       setError(`Neues Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein`);
+      return;
+    }
+
+    if (exceedsPasswordBytes(newPassword)) {
+      setError(PASSWORD_TOO_LONG_MESSAGE);
       return;
     }
 

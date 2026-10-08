@@ -8,6 +8,13 @@ export const UNIT_MINUTES = 50;
 
 // Auth
 export const MIN_PASSWORD_LENGTH = 10;
+// bcrypt wertet nur die ersten 72 Byte aus; alles dahinter würde stillschweigend ignoriert. Gilt nur beim Setzen,
+// die Anmeldung bleibt unbegrenzt, damit ältere, längere Passwörter weiter funktionieren.
+export const MAX_PASSWORD_BYTES = 72;
+export const PASSWORD_TOO_LONG_MESSAGE = `Passwort darf höchstens ${MAX_PASSWORD_BYTES} Byte lang sein – Umlaute und Sonderzeichen zählen doppelt`;
+export function exceedsPasswordBytes(password: string): boolean {
+  return new TextEncoder().encode(password).length > MAX_PASSWORD_BYTES;
+}
 export const BCRYPT_SALT_ROUNDS = 12;
 export const INVITATION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 // Adresse einer nie eingelösten Einladung: 30 Tage nach Ablauf entfernen (Person ohne Account, kein Zweck mehr).

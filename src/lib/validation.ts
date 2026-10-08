@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { MAX_SESSIONS_PER_BATCH, MIN_PASSWORD_LENGTH, PLANNED_SESSIONS_PER_WEEK_MAX } from "./constants";
+import {
+  MAX_SESSIONS_PER_BATCH,
+  MIN_PASSWORD_LENGTH,
+  PASSWORD_TOO_LONG_MESSAGE,
+  PLANNED_SESSIONS_PER_WEEK_MAX,
+  exceedsPasswordBytes,
+} from "./constants";
 
 // Gemeinsame Bausteine. Die Meldungen sind wortgleich mit den Formular-Prüfungen (components/forms/duration.ts,
 // date.ts): direkte Aufrufe bekommen dieselben deutschen Texte wie die Oberfläche statt Zods englischer Standardtexte (#57).
@@ -211,9 +217,16 @@ export const updateFinancialSettingsSchema = z.object({
 });
 
 // Auth schemas
+// Neues Passwort: Mindestlänge in Zeichen, Obergrenze in UTF-8-Byte (bcrypt). Die Anmeldung prüft keine Obergrenze.
+const passwordToSet = (minMessage: string) =>
+  z
+    .string()
+    .min(MIN_PASSWORD_LENGTH, minMessage)
+    .refine((pw) => !exceedsPasswordBytes(pw), PASSWORD_TOO_LONG_MESSAGE);
+
 export const registerSchema = z.object({
   email: z.string().trim().email("Ungültige E-Mail-Adresse"),
-  password: z.string().min(MIN_PASSWORD_LENGTH, `Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein`),
+  password: passwordToSet(`Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein`),
   name: z.string().min(1, "Name ist erforderlich").max(100),
   invite: z.string().max(100).optional(),
   setupToken: z.string().max(200).optional(),
@@ -234,7 +247,7 @@ export const createInvitationSchema = z
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1).max(100),
-  password: z.string().min(MIN_PASSWORD_LENGTH, `Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein`),
+  password: passwordToSet(`Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein`),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -244,7 +257,7 @@ export const forgotPasswordSchema = z.object({
 // Password change schema
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Aktuelles Passwort ist erforderlich"),
-  newPassword: z.string().min(MIN_PASSWORD_LENGTH, `Neues Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein`),
+  newPassword: passwordToSet(`Neues Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein`),
 });
 
 // Nachweis: Zeitraum mit beiden Grenzen inklusive, optional auf eine Supervisor:in beschränkt.
