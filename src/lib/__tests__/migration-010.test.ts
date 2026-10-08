@@ -13,7 +13,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Migration 010 (Sitzung höchstens einer Sup
 
   const one = async (client: Client, sql: string, params: unknown[] = []) => (await client.query(sql, params)).rows[0];
 
-  it("bereinigt doppelte Zuordnungen: die früheste Supervision behält den Link, Dauer und Anteile bleiben", async () => {
+  it("bereinigt doppelte Zuordnungen: eigener Account vor fremdem, dann die früheste Supervision; Dauer und Anteile bleiben", async () => {
     const t = await createTestDb({ migrate: false });
     cleanup = t.cleanup;
     const c = t.client;
@@ -71,11 +71,28 @@ describe.skipIf(!TEST_DATABASE_URL)("Migration 010 (Sitzung höchstens einer Sup
       ]);
     }
 
+    // Fremder Link (nur über direktes SQL möglich): Supervision von B mit früherem Datum auf die Sitzung von A. Der Link
+    // des eigenen Accounts gewinnt trotzdem.
+    const fremd = (
+      await one(
+        c,
+        `INSERT INTO supervision_sessions (user_id, supervisor_id, date, duration_minutes, kind)
+         VALUES ($1, $2, '2025-12-01', 50, 'individual') RETURNING id`,
+        [f.b.userId, f.b.supervisorId]
+      )
+    ).id as string;
+    await link(fremd, f.a.therapySessionId, "2025-12-01T10:00:00Z");
+
     const zahl = async (sql: string) => (await one(c, sql)).n as number;
     const supervisionenVorher = await zahl("SELECT count(*)::int AS n FROM supervision_sessions");
     const anteileVorher = (await c.query("SELECT supervision_id, patient_id, minutes FROM supervision_cases ORDER BY 1, 2")).rows;
 
+    const hinweise: string[] = [];
+    c.on("notice", (n) => { if (n.message?.startsWith("Migration 010")) hinweise.push(n.message); });
     expect(await migrateBis(c, "010_supervision_links_unique.sql")).toEqual(["010_supervision_links_unique.sql"]);
+    expect(hinweise).toEqual([
+      "Migration 010: 3 doppelte Zuordnungen von Therapiesitzungen und 1 von Doppelstunden entfernt",
+    ]);
 
     const links = async (table: string, column: string, id: string) =>
       (await c.query(`SELECT supervision_id FROM ${table} WHERE ${column} = $1`, [id])).rows.map((r) => r.supervision_id);
@@ -86,6 +103,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Migration 010 (Sitzung höchstens einer Sup
     // Account B unberührt
     expect(await links("supervision_therapy_links", "therapy_session_id", f.b.therapySessionId)).toEqual([f.b.supervisionId]);
 
+    expect(await links("supervision_therapy_links", "supervision_id", fremd)).toEqual([]);
     expect(await zahl("SELECT count(*)::int AS n FROM supervision_sessions")).toBe(supervisionenVorher);
     expect((await c.query("SELECT supervision_id, patient_id, minutes FROM supervision_cases ORDER BY 1, 2")).rows).toEqual(
       anteileVorher
@@ -100,5 +118,16 @@ describe.skipIf(!TEST_DATABASE_URL)("Migration 010 (Sitzung höchstens einer Sup
         f.a.groupSessionId,
       ])
     ).rejects.toThrow(/supervision_group_session_links_group_session_id_key/);
+  });
+
+  it("meldet ohne Doppelzuordnungen nichts", async () => {
+    const t = await createTestDb({ migrate: false });
+    cleanup = t.cleanup;
+    await migrateBis(t.client, "009_supervision_cases.sql");
+    await seedOwnershipFixture(t.client);
+    const hinweise: string[] = [];
+    t.client.on("notice", (n) => { if (n.message?.startsWith("Migration 010")) hinweise.push(n.message); });
+    expect(await migrateBis(t.client, "010_supervision_links_unique.sql")).toEqual(["010_supervision_links_unique.sql"]);
+    expect(hinweise).toEqual([]);
   });
 });
