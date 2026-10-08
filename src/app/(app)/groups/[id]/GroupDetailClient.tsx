@@ -28,6 +28,7 @@ interface GroupDetailClientProps {
   initialGroup: Group;
   initialGroupSessions: GroupSession[];
   initialSupervisionSessions: SupervisionSession[];
+  initialSupervisedGroupSessionIds: string[];
   initialSupervisors: Supervisor[];
   regelwerk: Regelwerk;
 }
@@ -43,12 +44,14 @@ export function GroupDetailClient({
   initialGroup,
   initialGroupSessions,
   initialSupervisionSessions,
+  initialSupervisedGroupSessionIds,
   initialSupervisors,
   regelwerk,
 }: GroupDetailClientProps) {
   const [group] = useState(initialGroup);
   const [sessions, setSessions] = useState(initialGroupSessions);
   const [supervisionSessions, setSupervisionSessions] = useState(initialSupervisionSessions);
+  const [supervisedIds, setSupervisedIds] = useState(initialSupervisedGroupSessionIds);
   const [showSessionForm, setShowSessionForm] = useState(false);
   const [showSupervisionForm, setShowSupervisionForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -73,11 +76,7 @@ export function GroupDetailClient({
   const income = groupIncomeTotal(sessions, regelwerk.ebmStaffeln);
   const feeVorschau = getEbmFee(childCount, date, regelwerk.ebmStaffeln);
   const svHours = totalSupervisionHours(supervisionSessions);
-  const unlinkedSessions = sessions.filter(
-    (s) =>
-      s.status === "durchgefuehrt" &&
-      !supervisionSessions.some((sv) => sv.linkedGroupSessionIds.includes(s.id))
-  );
+  const unlinkedSessions = sessions.filter((s) => s.status === "durchgefuehrt" && !supervisedIds.includes(s.id));
 
   async function handleAddSession() {
     setIsSaving(true);
@@ -131,6 +130,7 @@ export function GroupDetailClient({
     if (result.success) {
       track("supervision_saved", { mode: "new", kind: "group" });
       setSupervisionSessions(result.data.supervisionSessions);
+      setSupervisedIds(result.data.supervisedGroupSessionIds);
       setLinkedSessionIds([]);
       setShowSupervisionForm(false);
     } else {
@@ -172,6 +172,7 @@ export function GroupDetailClient({
       track("entry_deleted", { entity: "group_session" });
       setSessions(result.data.groupSessions);
       setSupervisionSessions(result.data.supervisionSessions);
+      setSupervisedIds(result.data.supervisedGroupSessionIds);
     } else {
       trackFailure("group_session", "delete", result);
       setError({ scope: `session:${session.id}`, result });
@@ -267,7 +268,7 @@ export function GroupDetailClient({
             {sessions
               .sort((a, b) => b.date.localeCompare(a.date))
               .map((session) => {
-                const isSupervised = supervisionSessions.some((sv) => sv.linkedGroupSessionIds.includes(session.id));
+                const isSupervised = supervisedIds.includes(session.id);
                 return (
                   <div key={session.id} className="flex flex-wrap items-center gap-x-2 gap-y-2 py-2">
                     <div className="min-w-0 flex-1">

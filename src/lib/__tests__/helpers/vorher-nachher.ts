@@ -52,6 +52,7 @@ const sv = (id: string, supervisor: string, date: string, durationMinutes: numbe
   setting: "einzel",
   linkedTherapySessionIds: therapy.map(newTherapySessionId),
   linkedGroupSessionIds: groups.map(newGroupSessionId),
+  groupId: null,
   caseShares: patient ? [{ patientId: newPatientId(patient), minutes: durationMinutes }] : [],
 });
 const g = (id: string, date: string, status: GroupSessionStatus, childCount: number | null, countsTowardAmbulanzzeit = true): GroupSession => ({

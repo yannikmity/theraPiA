@@ -63,7 +63,8 @@ describe("GET /api/account/export", () => {
       ["abweichungen", 1],
     ]);
     const json = JSON.parse(await res.text());
-    expect(json.version).toBe(6);
+    expect(json.version).toBe(7);
+    expect(json.supervisionSessions.map((s: { groupId: unknown }) => s.groupId)).toEqual([null, null, "g-1"]);
     expect(json.financialSettings).toEqual({ incomePerHour: 40, plannedSessionsPerWeek: null });
     expect(json.ausbildungsregelnAbweichungen.behandlungsstundenZiel).toBe(450);
   });

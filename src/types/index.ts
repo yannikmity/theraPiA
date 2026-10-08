@@ -67,6 +67,9 @@ export interface SupervisionSession {
   // wird mit Summe = Gesamtdauer, der Anteil einer gelöschten Patient:in fällt weg, ohne die Gesamtdauer zu ändern.
   // Die Links auf Therapiesitzungen ändern an den Anteilen nichts.
   caseShares: SupervisionCaseShare[];
+  // Gruppe, für die eine Gruppensupervision erfasst wurde (#47); null bei Einzelsupervisionen und ohne Gruppenbezug.
+  // Geschrieben wird es nur beim Anlegen; Bearbeiten lässt die Gruppe unverändert.
+  groupId: GroupId | null;
 }
 
 export interface SupervisionCaseShare {

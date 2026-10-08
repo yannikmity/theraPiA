@@ -34,6 +34,7 @@ function bilddaten() {
     kind,
     therapySessions,
     groupSessions,
+    group: kind === "group" ? "gruppe" : null,
     cases: [...new Set(therapySessions.map((s) => s.split("-")[0]))].map((patient) => ({ patient, minutes: 60 })),
   });
   const doppelstunde = (key, date, status, childCount) => ({

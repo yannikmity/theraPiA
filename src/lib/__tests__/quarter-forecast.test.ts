@@ -42,6 +42,7 @@ const supervision = (date: string, durationMinutes = 60): SupervisionSession => 
   setting: "einzel",
   linkedTherapySessionIds: [],
   linkedGroupSessionIds: [],
+  groupId: null,
   caseShares: [],
 });
 const groupSession = (date: string, childCount = 6): GroupSession => ({

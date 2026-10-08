@@ -51,6 +51,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
  * @property {"individual" | "group"} kind
  * @property {string[]} therapySessions Schlüssel der besprochenen Sitzungen
  * @property {string[]} groupSessions Schlüssel der besprochenen Doppelstunden
+ * @property {string | null} group Schlüssel der Gruppe einer Gruppensupervision (#47), sonst null
  * @property {{ patient: string, minutes: number }[]} cases Dauer je besprochener Patient:in (#40), Summe = durationMinutes
  */
 /**
@@ -250,6 +251,7 @@ export function generateDemoData(today) {
       kind: "individual",
       therapySessions: besprochen.map((s) => s.key),
       groupSessions: [],
+      group: null,
       cases: anteile(durationMinutes, personen),
     });
   }
@@ -266,6 +268,7 @@ export function generateDemoData(today) {
       kind: "group",
       therapySessions: [],
       groupSessions: besprochen.map((g) => g.key),
+      group: GRUPPE.key,
       cases: [],
     });
   }

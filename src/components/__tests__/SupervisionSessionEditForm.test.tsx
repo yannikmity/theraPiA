@@ -13,6 +13,7 @@ const session: SupervisionSession = {
   setting: "einzel",
   linkedTherapySessionIds: [newTherapySessionId("t-1")],
   linkedGroupSessionIds: [],
+  groupId: null,
   caseShares: [{ patientId: newPatientId("p-1"), minutes: 60 }],
 };
 const linkOptions = [

@@ -26,6 +26,7 @@ const data = (linked: string[]): SupervisionData => ({
       setting: "einzel",
       linkedTherapySessionIds: linked.map(newTherapySessionId),
       linkedGroupSessionIds: [],
+      groupId: null,
       caseShares: linked.length > 0 ? [{ patientId: newPatientId("p-1"), minutes: 60 }] : [],
     },
   ],

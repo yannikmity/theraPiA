@@ -72,6 +72,8 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 if (isMain) {
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
+  // RAISE NOTICE aus Migrationen (z. B. 010: entfernte doppelte Zuordnungen) im Log ausgeben.
+  client.on("notice", (notice) => console.log(notice.message));
   try {
     const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../migrations");
     const applied = await runMigrations(client, dir);

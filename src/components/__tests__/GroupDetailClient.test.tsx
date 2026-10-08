@@ -38,6 +38,7 @@ const props = {
   initialGroup: group,
   initialGroupSessions: [groupSession("gs-1", "2026-09-07"), groupSession("gs-2", "2026-09-14")],
   initialSupervisionSessions: [],
+  initialSupervisedGroupSessionIds: [] as string[],
   initialSupervisors: supervisors,
   regelwerk: standardRegelwerk(),
 };
@@ -55,6 +56,16 @@ describe("GroupDetailClient", () => {
     openSupervisionForm();
     const fieldset = screen.getByRole("group", { name: "Besprochene Doppelstunden" });
     expect(within(fieldset).getAllByRole("checkbox")).toHaveLength(2);
+  });
+
+  it("bietet eine Doppelstunde, die eine Supervision einer anderen Gruppe bespricht, nicht erneut an (#47)", () => {
+    render(<GroupDetailClient {...props} initialSupervisedGroupSessionIds={["gs-1"]} />);
+    openSupervisionForm();
+    const fieldset = screen.getByRole("group", { name: "Besprochene Doppelstunden" });
+    const angeboten = within(fieldset).getAllByRole("checkbox");
+    expect(angeboten).toHaveLength(1);
+    expect(within(fieldset).getByText("14.09.2026")).toBeTruthy();
+    expect(within(fieldset).queryByText("07.09.2026")).toBeNull();
   });
 
   it("zeigt einen abgelehnten Statuswechsel (Netz weg) in der Zeile der Doppelstunde", async () => {
