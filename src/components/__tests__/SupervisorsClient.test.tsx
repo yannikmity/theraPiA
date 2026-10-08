@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 
 vi.mock("../../app/(app)/supervisors/actions", () => ({ addSupervisor: vi.fn(), updateSupervisorAction: vi.fn() }));
 
 import { SupervisorsClient } from "../../app/(app)/supervisors/SupervisorsClient";
+import { pressEnter, submitButtons } from "../../lib/__tests__/helpers/form-submit";
 import { addSupervisor, updateSupervisorAction } from "../../app/(app)/supervisors/actions";
 import { newSupervisorId, type Supervisor } from "@/types";
 
@@ -51,5 +52,28 @@ describe("SupervisorsClient", () => {
     expect(cardOf("Neue:r Supervisor:in").contains(alert)).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Formular schließen" }));
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("legt mit Enter im Feld an und speichert eine Bearbeitung mit Enter; Schließen sendet nicht ab (#51)", async () => {
+    vi.mocked(addSupervisor).mockResolvedValue({ success: true, data: { supervisors } });
+    vi.mocked(updateSupervisorAction).mockResolvedValue({ success: true, data: { supervisors } });
+    render(<SupervisorsClient initialSupervisors={supervisors} />);
+    fireEvent.click(screen.getByRole("button", { name: "Neu" }));
+    const name = screen.getByLabelText("Name") as HTMLInputElement;
+    expect(submitButtons(name.form!).map((b) => b.textContent)).toEqual(["Anlegen"]);
+    fireEvent.change(name, { target: { value: "Supervision Drei" } });
+    fireEvent.change(screen.getByLabelText(/Kosten je SV-Einheit/), { target: { value: "90" } });
+    pressEnter(screen.getByLabelText(/Kosten je SV-Einheit/));
+    await waitFor(() => expect(addSupervisor).toHaveBeenCalledWith({ name: "Supervision Drei", costPerHour: 90 }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Supervision Eins bearbeiten" }));
+    fireEvent.click(screen.getByRole("button", { name: "Formular schließen" }));
+    expect(updateSupervisorAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Supervision Eins bearbeiten" }));
+    pressEnter(screen.getByLabelText("Name"));
+    await waitFor(() =>
+      expect(updateSupervisorAction).toHaveBeenCalledWith({ id: "s-1", name: "Supervision Eins", costPerHour: 80, isActive: true })
+    );
+    expect(addSupervisor).toHaveBeenCalledTimes(1);
   });
 });

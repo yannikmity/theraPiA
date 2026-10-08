@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("../../app/(app)/finances/actions", () => ({ saveFinancialSettings: vi.fn() }));
 
 import { FinancesClient } from "../../app/(app)/finances/FinancesClient";
+import { pressEnter, submitButtons } from "../../lib/__tests__/helpers/form-submit";
 import { saveFinancialSettings } from "../../app/(app)/finances/actions";
 import type { FinancialSettings } from "@/types";
 
@@ -56,5 +57,20 @@ describe("FinancesClient – geplante Sitzungen pro Woche", () => {
     expect(alert.nextElementSibling).toBe(button);
     expect(logged).toHaveBeenCalledWith("Server-Action fehlgeschlagen:", expect.any(TypeError));
     logged.mockRestore();
+  });
+
+  it("speichert mit Enter im Feld, nur einmal während des Speicherns (#51)", async () => {
+    let resolve!: (r: ReturnType<typeof saved>) => void;
+    vi.mocked(saveFinancialSettings).mockReturnValue(new Promise((r) => (resolve = r)));
+    render(<FinancesClient {...props} />);
+    const field = screen.getByLabelText("Geplante Sitzungen pro Woche (optional)") as HTMLInputElement;
+    expect(submitButtons(field.form!).map((b) => b.textContent)).toEqual(["Einstellungen speichern"]);
+    fireEvent.change(field, { target: { value: "4" } });
+    pressEnter(field);
+    act(() => field.form!.requestSubmit());
+    expect(saveFinancialSettings).toHaveBeenCalledTimes(1);
+    expect(saveFinancialSettings).toHaveBeenCalledWith({ incomePerHour: 85, supervisionCosts: {}, plannedSessionsPerWeek: 4 });
+    await act(async () => resolve(saved({ ...settings, plannedSessionsPerWeek: 4 })));
+    expect(screen.getByRole("button", { name: "Gespeichert!" })).toBeDefined();
   });
 });

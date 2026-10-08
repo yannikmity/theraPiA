@@ -16,6 +16,7 @@ vi.mock("../../app/(app)/patients/[id]/actions", () => ({
 }));
 
 import { PatientDetailClient } from "../../app/(app)/patients/[id]/PatientDetailClient";
+import { pressEnter, submitButtons } from "../../lib/__tests__/helpers/form-submit";
 import { deletePatient, deleteTherapySession, updatePatient, updateTherapySession } from "../../app/(app)/patients/[id]/actions";
 import { newPatientId, newTherapySessionId, type Patient, type TherapySession } from "@/types";
 import { standardRegelwerk } from "../../lib/ausbildungsregeln/resolve";
@@ -131,5 +132,16 @@ describe("PatientDetailClient", () => {
     render(<PatientDetailClient {...props} initialTherapySessions={[]} />);
     expect(card("Patient:in löschen").textContent).toContain("Es sind keine Therapiesitzungen erfasst");
     expect(card("Patient:in löschen").textContent).not.toContain("Alle 0");
+  });
+
+  it("speichert den Antrag mit Enter im Feld; das Formular hat nur „Antrag speichern“ als Submit-Knopf (#51)", async () => {
+    vi.mocked(updatePatient).mockResolvedValue({ success: false, error: "egal" });
+    render(<PatientDetailClient {...props} />);
+    const field = screen.getByLabelText("Beantragte Behandlungsstunden") as HTMLInputElement;
+    expect(submitButtons(field.form!).map((b) => b.textContent)).toEqual(["Antrag speichern"]);
+    fireEvent.change(field, { target: { value: "60" } });
+    pressEnter(field);
+    await waitFor(() => expect(updatePatient).toHaveBeenCalledWith(expect.objectContaining({ beantragteStunden: 60 })));
+    expect(updatePatient).toHaveBeenCalledTimes(1);
   });
 });

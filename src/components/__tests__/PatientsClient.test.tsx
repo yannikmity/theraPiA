@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 
 // Echtes next/navigation (runAction nutzt unstable_rethrow), nur der Router ist gemockt.
 vi.mock("next/navigation", async (importOriginal) => ({
@@ -10,6 +10,8 @@ vi.mock("../../lib/analytics/track", () => ({ track: vi.fn(), trackFailure: vi.f
 vi.mock("../../app/(app)/patients/actions", () => ({ addPatient: vi.fn() }));
 
 import { PatientsClient } from "../../app/(app)/patients/PatientsClient";
+import { addPatient } from "../../app/(app)/patients/actions";
+import { pressEnter, submitButtons } from "../../lib/__tests__/helpers/form-submit";
 import { standardRegelwerk } from "../../lib/ausbildungsregeln/resolve";
 import { newPatientId, newTherapySessionId, type Patient, type TherapySession } from "@/types";
 
@@ -50,5 +52,23 @@ describe("PatientsClient", () => {
     const row = (chiffre: string) => screen.getByText(chiffre).closest("a")!;
     expect(within(row("A-1")).getByText("SV fällig")).toBeDefined();
     expect(within(row("A-2")).queryByText("SV fällig")).toBeNull();
+  });
+
+  it("legt mit Enter im Feld an, nur „Anlegen“ sendet ab und ein zweites Enter während des Speicherns nicht (#51)", async () => {
+    let resolve!: (r: Awaited<ReturnType<typeof addPatient>>) => void;
+    vi.mocked(addPatient).mockReturnValue(new Promise((r) => (resolve = r)));
+    render(<PatientsClient initialPatients={[]} initialTherapySessions={[]} initialSupervisionSessions={[]} regeln={R} />);
+    fireEvent.click(screen.getByRole("button", { name: "Erste:n Patient:in anlegen" }));
+    const field = screen.getByLabelText("Chiffre") as HTMLInputElement;
+    expect(submitButtons(field.form!).map((b) => b.textContent)).toEqual(["Anlegen"]);
+    fireEvent.change(field, { target: { value: "B-2" } });
+    pressEnter(field);
+    act(() => field.form!.requestSubmit());
+    expect(addPatient).toHaveBeenCalledTimes(1);
+    expect(addPatient).toHaveBeenCalledWith(expect.objectContaining({ chiffre: "B-2" }));
+    await act(async () => resolve({ success: true, data: { patients: [a1], therapySessions: [], supervisionSessions: [] } }));
+    fireEvent.click(screen.getByRole("button", { name: "Neu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Formular schließen" }));
+    expect(addPatient).toHaveBeenCalledTimes(1);
   });
 });

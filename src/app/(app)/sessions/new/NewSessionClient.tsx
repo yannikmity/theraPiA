@@ -166,8 +166,11 @@ export function NewSessionClient({
     changeCategory(categoryByPatient[id] ?? DEFAULT_CATEGORY);
   }
 
-  async function handleSave() {
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
     if (savingRef.current) return;
+    // Enter speichert auch, wenn der Knopf mangels Patient:in bzw. Supervisor:in gesperrt ist – hier ebenso abbrechen.
+    if (type === "therapie" ? !patientId : !supervisorId) return;
     // Freie Dauer („Andere“): eigene Meldung am Feld statt Browser-Tooltip oder Feldfehler vom Server (#28).
     const invalid = customDuration ? durationError(customText) : undefined;
     setDurationMessage(invalid);
@@ -291,7 +294,7 @@ export function NewSessionClient({
         <p className="text-lg font-medium text-success" role="status">
           Gespeichert!
         </p>
-        <Button variant="success" size="lg" onClick={handleAnother} className="w-full">
+        <Button type="button" variant="success" size="lg" onClick={handleAnother} className="w-full">
           <PlusCircle />
           Weitere Stunde erfassen
         </Button>
@@ -305,8 +308,9 @@ export function NewSessionClient({
     );
   }
 
+  // Ein Formular um die ganze Erfassung: Enter im Feld speichert (#51). Alle anderen Knöpfe sind type="button".
   return (
-    <div className="mx-auto max-w-xl space-y-4">
+    <form noValidate onSubmit={handleSave} className="mx-auto max-w-xl space-y-4">
       <PageHeader title="Stunde erfassen" backHref="/" backLabel="Zum Dashboard" />
 
       {batchResult && (
@@ -661,9 +665,9 @@ export function NewSessionClient({
 
       <ActionError result={errorAt(error, "save")} />
       <Button
+        type="submit"
         variant="success"
         size="lg"
-        onClick={handleSave}
         loading={isSaving}
         disabled={(type === "therapie" && !patientId) || (type === "supervision" && !supervisorId)}
         className="w-full"
@@ -671,6 +675,6 @@ export function NewSessionClient({
         <Check />
         Speichern
       </Button>
-    </div>
+    </form>
   );
 }

@@ -40,8 +40,9 @@ export function FinancesClient({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<ActionResult<unknown> | null>(null);
 
-  async function handleSave() {
-    if (!settings) return;
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!settings || isSaving) return;
     setIsSaving(true);
     setError(null);
     const result = await runAction(() => saveFinancialSettings(settings));
@@ -130,67 +131,70 @@ export function FinancesClient({
           </div>
         )}
 
-        <Card>
-          <SectionHeader>Einstellungen</SectionHeader>
-          <FormField label="Einnahme je Behandlungsstunde (50 Min, EUR)" htmlFor="income-per-hour">
-            <Input
-              id="income-per-hour"
-              type="number"
-              value={settings.incomePerHour || ""}
-              onChange={(e) => setSettings({ ...settings, incomePerHour: Number(e.target.value) })}
-              step="0.01"
-              min="0"
-              disabled={isSaving}
-            />
-          </FormField>
-          <FormField label="Geplante Sitzungen pro Woche (optional)" htmlFor="planned-sessions">
-            <Input
-              id="planned-sessions"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={PLANNED_SESSIONS_PER_WEEK_MAX}
-              step={1}
-              value={settings.plannedSessionsPerWeek ?? ""}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  plannedSessionsPerWeek: e.target.value === "" ? null : Number(e.target.value),
-                })
-              }
-              placeholder={`leer = Schnitt der letzten ${FORECAST_LOOKBACK_WEEKS} Wochen`}
-              disabled={isSaving}
-            />
-          </FormField>
-          <p className="text-xs text-muted-foreground">
-            Das Dashboard rechnet die Quartalsprognose mit dieser Zahl; ohne Angabe mit dem Schnitt der letzten{" "}
-            {FORECAST_LOOKBACK_WEEKS} Wochen.
-          </p>
-
-          {initialSupervisors.map((sv) => (
-            <FormField key={sv.id} label={`Kosten je SV-Einheit – ${sv.name} (EUR)`} htmlFor={`cost-${sv.id}`}>
+        {/* Formular: Enter im Feld speichert (#51). */}
+        <Card asChild>
+          <form noValidate onSubmit={handleSave}>
+            <SectionHeader>Einstellungen</SectionHeader>
+            <FormField label="Einnahme je Behandlungsstunde (50 Min, EUR)" htmlFor="income-per-hour">
               <Input
-                id={`cost-${sv.id}`}
+                id="income-per-hour"
                 type="number"
-                value={settings.supervisionCosts[sv.id as SupervisorId] || ""}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    supervisionCosts: { ...settings.supervisionCosts, [sv.id]: Number(e.target.value) },
-                  })
-                }
+                value={settings.incomePerHour || ""}
+                onChange={(e) => setSettings({ ...settings, incomePerHour: Number(e.target.value) })}
                 step="0.01"
                 min="0"
                 disabled={isSaving}
               />
             </FormField>
-          ))}
+            <FormField label="Geplante Sitzungen pro Woche (optional)" htmlFor="planned-sessions">
+              <Input
+                id="planned-sessions"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={PLANNED_SESSIONS_PER_WEEK_MAX}
+                step={1}
+                value={settings.plannedSessionsPerWeek ?? ""}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    plannedSessionsPerWeek: e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
+                placeholder={`leer = Schnitt der letzten ${FORECAST_LOOKBACK_WEEKS} Wochen`}
+                disabled={isSaving}
+              />
+            </FormField>
+            <p className="text-xs text-muted-foreground">
+              Das Dashboard rechnet die Quartalsprognose mit dieser Zahl; ohne Angabe mit dem Schnitt der letzten{" "}
+              {FORECAST_LOOKBACK_WEEKS} Wochen.
+            </p>
 
-          <ActionError result={error} />
-          <Button variant={saved ? "success" : "default"} onClick={handleSave} loading={isSaving} className="w-full">
-            <Save />
-            {saved ? "Gespeichert!" : "Einstellungen speichern"}
-          </Button>
+            {initialSupervisors.map((sv) => (
+              <FormField key={sv.id} label={`Kosten je SV-Einheit – ${sv.name} (EUR)`} htmlFor={`cost-${sv.id}`}>
+                <Input
+                  id={`cost-${sv.id}`}
+                  type="number"
+                  value={settings.supervisionCosts[sv.id as SupervisorId] || ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      supervisionCosts: { ...settings.supervisionCosts, [sv.id]: Number(e.target.value) },
+                    })
+                  }
+                  step="0.01"
+                  min="0"
+                  disabled={isSaving}
+                />
+              </FormField>
+            ))}
+
+            <ActionError result={error} />
+            <Button type="submit" variant={saved ? "success" : "default"} loading={isSaving} className="w-full">
+              <Save />
+              {saved ? "Gespeichert!" : "Einstellungen speichern"}
+            </Button>
+          </form>
         </Card>
       </div>
     </div>

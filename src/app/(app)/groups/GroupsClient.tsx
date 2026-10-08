@@ -35,8 +35,9 @@ export function GroupsClient({ initialGroups, initialGroupSessions, ebmStaffeln 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<ActionResult<unknown> | null>(null);
 
-  async function handleAdd() {
-    if (!name.trim()) return;
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (isSaving || !name.trim()) return;
     setIsSaving(true);
     setError(null);
     const result = await runAction(() => addGroup({ name: name.trim(), startDate, plannedSessionCount, avgKids }));
@@ -63,29 +64,32 @@ export function GroupsClient({ initialGroups, initialGroupSessions, ebmStaffeln 
       />
 
       {showForm && (
-        <Card className="border-primary/40">
-          <div className="flex items-center justify-between">
-            <h2 className="font-medium text-foreground">Neue Gruppe</h2>
-            <Button variant="ghost" size="icon-sm" aria-label="Formular schließen" onClick={() => setShowForm(false)}>
-              <X />
+        // Formular: Enter im Feld legt an (#51).
+        <Card asChild className="border-primary/40">
+          <form noValidate onSubmit={handleAdd}>
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium text-foreground">Neue Gruppe</h2>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label="Formular schließen" onClick={() => setShowForm(false)}>
+                <X />
+              </Button>
+            </div>
+            <ActionError result={error} />
+            <FormField label="Gruppenname" htmlFor="group-name">
+              <Input id="group-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Kindergruppe 1" autoFocus disabled={isSaving} />
+            </FormField>
+            <FormField label="Startdatum" htmlFor="group-start">
+              <Input id="group-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={isSaving} />
+            </FormField>
+            <FormField label="Geplante Sitzungen" htmlFor="group-planned">
+              <Input id="group-planned" type="number" value={plannedSessionCount} onChange={(e) => setPlannedSessionCount(Number(e.target.value))} min={1} disabled={isSaving} />
+            </FormField>
+            <FormField label="Kinder (Ø)" htmlFor="group-kids">
+              <Input id="group-kids" type="number" value={avgKids} onChange={(e) => setAvgKids(Number(e.target.value))} min={0} disabled={isSaving} />
+            </FormField>
+            <Button type="submit" className="w-full" loading={isSaving}>
+              Anlegen
             </Button>
-          </div>
-          <ActionError result={error} />
-          <FormField label="Gruppenname" htmlFor="group-name">
-            <Input id="group-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Kindergruppe 1" autoFocus disabled={isSaving} />
-          </FormField>
-          <FormField label="Startdatum" htmlFor="group-start">
-            <Input id="group-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={isSaving} />
-          </FormField>
-          <FormField label="Geplante Sitzungen" htmlFor="group-planned">
-            <Input id="group-planned" type="number" value={plannedSessionCount} onChange={(e) => setPlannedSessionCount(Number(e.target.value))} min={1} disabled={isSaving} />
-          </FormField>
-          <FormField label="Kinder (Ø)" htmlFor="group-kids">
-            <Input id="group-kids" type="number" value={avgKids} onChange={(e) => setAvgKids(Number(e.target.value))} min={0} disabled={isSaving} />
-          </FormField>
-          <Button onClick={handleAdd} className="w-full" loading={isSaving}>
-            Anlegen
-          </Button>
+          </form>
         </Card>
       )}
 
