@@ -40,7 +40,7 @@ describe.skipIf(!TEST_DATABASE_URL)("runMigrations", () => {
     const first = await runMigrations(t.client, MIGRATIONS_DIR);
     expect(first[0]).toBe("001_initial_schema.sql");
     expect(first).toContain("002_group_therapy_categories.sql");
-    expect(first.at(-1)).toBe("010_supervision_links_unique.sql");
+    expect(first.at(-1)).toBe("011_supervision_group.sql");
 
     const second = await runMigrations(t.client, MIGRATIONS_DIR);
     expect(second).toEqual([]);
@@ -54,7 +54,7 @@ describe.skipIf(!TEST_DATABASE_URL)("runMigrations", () => {
     }
 
     const applied = await runMigrations(t.client, MIGRATIONS_DIR);
-    expect(applied).toEqual(["003_accounts_and_invitations.sql", "004_planned_sessions_per_week.sql", "005_ausbildungsregeln.sql", "006_demo_accounts.sql", "007_sprechstunde_kontingente.sql", "008_supervision_setting.sql", "009_supervision_cases.sql", "010_supervision_links_unique.sql"]);
+    expect(applied).toEqual(["003_accounts_and_invitations.sql", "004_planned_sessions_per_week.sql", "005_ausbildungsregeln.sql", "006_demo_accounts.sql", "007_sprechstunde_kontingente.sql", "008_supervision_setting.sql", "009_supervision_cases.sql", "010_supervision_links_unique.sql", "011_supervision_group.sql"]);
     const done = await t.client.query("SELECT name FROM schema_migrations ORDER BY name");
     expect(done.rows.map((r) => r.name)).toEqual([
       "001_initial_schema.sql",
@@ -67,6 +67,7 @@ describe.skipIf(!TEST_DATABASE_URL)("runMigrations", () => {
       "008_supervision_setting.sql",
       "009_supervision_cases.sql",
       "010_supervision_links_unique.sql",
+      "011_supervision_group.sql",
     ]);
   });
 
@@ -86,6 +87,7 @@ describe.skipIf(!TEST_DATABASE_URL)("runMigrations", () => {
       "008_supervision_setting.sql",
       "009_supervision_cases.sql",
       "010_supervision_links_unique.sql",
+      "011_supervision_group.sql",
     ]);
     const done = await t.client.query("SELECT name FROM schema_migrations ORDER BY name");
     expect(done.rows.map((r) => r.name)).toContain("001_initial_schema.sql");
@@ -140,7 +142,7 @@ describe.skipIf(!TEST_DATABASE_URL)("runMigrations", () => {
       for (const table of tables) {
         const { rows } = await t.client.query(`SELECT * FROM ${table} ORDER BY 1, 2`);
         out[table] = rows.map(
-          ({ planned_sessions_per_week: _neu, is_demo: _demo, genehmigungsdatum: _gen, sprechstunden_ambulanz: _amb, setting: _setting, ...rest }) => rest
+          ({ planned_sessions_per_week: _neu, is_demo: _demo, genehmigungsdatum: _gen, sprechstunden_ambulanz: _amb, setting: _setting, group_id: _gruppe, ...rest }) => rest
         );
       }
       return out;
@@ -148,7 +150,7 @@ describe.skipIf(!TEST_DATABASE_URL)("runMigrations", () => {
     const before = await snapshot();
 
     const applied = await runMigrations(t.client, MIGRATIONS_DIR);
-    expect(applied).toEqual(["004_planned_sessions_per_week.sql", "005_ausbildungsregeln.sql", "006_demo_accounts.sql", "007_sprechstunde_kontingente.sql", "008_supervision_setting.sql", "009_supervision_cases.sql", "010_supervision_links_unique.sql"]);
+    expect(applied).toEqual(["004_planned_sessions_per_week.sql", "005_ausbildungsregeln.sql", "006_demo_accounts.sql", "007_sprechstunde_kontingente.sql", "008_supervision_setting.sql", "009_supervision_cases.sql", "010_supervision_links_unique.sql", "011_supervision_group.sql"]);
 
     expect(await snapshot()).toEqual(before);
     const { rows } = await t.client.query("SELECT planned_sessions_per_week FROM financial_settings");

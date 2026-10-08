@@ -50,6 +50,7 @@ export function checkDemoReferences(data) {
     for (const key of sv.therapySessions) verweis(sessions, "Sitzung", key, `Supervision „${sv.key}“`);
     for (const key of sv.groupSessions) verweis(groupSessions, "Doppelstunde", key, `Supervision „${sv.key}“`);
     for (const c of sv.cases) verweis(patients, "Patient:in", c.patient, `Supervision „${sv.key}“`);
+    if (sv.group) verweis(groups, "Gruppe", sv.group, `Supervision „${sv.key}“`);
     if (sv.cases.length > 0 && sv.cases.reduce((sum, c) => sum + c.minutes, 0) !== sv.durationMinutes) {
       throw new Error(`Beispieldaten: Supervision „${sv.key}“: Dauer je Patient:in ergibt nicht die Gesamtdauer`);
     }
@@ -173,10 +174,10 @@ export async function insertDemoData(db, userId, data) {
     ]
   );
   await db.query(
-    `INSERT INTO supervision_sessions (id, user_id, supervisor_id, date, duration_minutes, kind)
-     SELECT t.id, $1::uuid, t.supervisor_id, t.date, t.duration_minutes, t.kind
-     FROM unnest($2::uuid[], $3::uuid[], $4::date[], $5::int[], $6::varchar[])
-       AS t(id, supervisor_id, date, duration_minutes, kind)`,
+    `INSERT INTO supervision_sessions (id, user_id, supervisor_id, date, duration_minutes, kind, group_id)
+     SELECT t.id, $1::uuid, t.supervisor_id, t.date, t.duration_minutes, t.kind, t.group_id
+     FROM unnest($2::uuid[], $3::uuid[], $4::date[], $5::int[], $6::varchar[], $7::uuid[])
+       AS t(id, supervisor_id, date, duration_minutes, kind, group_id)`,
     [
       userId,
       data.supervisionSessions.map((sv) => idVon(supervisionIds, sv.key)),
@@ -184,6 +185,7 @@ export async function insertDemoData(db, userId, data) {
       data.supervisionSessions.map((sv) => sv.date),
       data.supervisionSessions.map((sv) => sv.durationMinutes),
       data.supervisionSessions.map((sv) => sv.kind),
+      data.supervisionSessions.map((sv) => (sv.group ? idVon(groupIds, sv.group) : null)),
     ]
   );
   const therapieLinks = data.supervisionSessions.flatMap((sv) =>

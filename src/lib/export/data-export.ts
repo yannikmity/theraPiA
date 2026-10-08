@@ -12,7 +12,8 @@ export const DATA_EXPORT_FORMAT = "therapia-datenexport";
 // Version 4: Supervisionen mit setting (einzel/gruppe).
 // Version 5 (#42): financialSettings mit plannedSessionsPerWeek (null = automatisch).
 // Version 6 (#40): Supervisionen mit caseShares (Anteil je Fall: patientId, minutes).
-export const DATA_EXPORT_VERSION = 6;
+// Version 7 (#47): Supervisionen mit groupId (Gruppe einer Gruppensupervision, sonst null).
+export const DATA_EXPORT_VERSION = 7;
 
 export interface DataExport {
   format: typeof DATA_EXPORT_FORMAT;

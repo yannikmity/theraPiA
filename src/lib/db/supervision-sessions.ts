@@ -9,7 +9,7 @@ export async function getSupervisionSessions(): Promise<SupervisionSession[]> {
 
   // Single query with LEFT JOINs + array_agg to fix N+1
   const result = await query(
-    `SELECT ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.setting,
+    `SELECT ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.setting, ss.group_id,
             COALESCE(array_agg(DISTINCT stl.therapy_session_id) FILTER (WHERE stl.therapy_session_id IS NOT NULL), '{}') AS linked_therapy_session_ids,
             COALESCE(array_agg(DISTINCT sgsl.group_session_id) FILTER (WHERE sgsl.group_session_id IS NOT NULL), '{}') AS linked_group_session_ids,
             ${CASE_SHARES_SQL} AS case_shares
@@ -18,7 +18,7 @@ export async function getSupervisionSessions(): Promise<SupervisionSession[]> {
      LEFT JOIN supervision_therapy_links stl ON stl.supervision_id = ss.id
      LEFT JOIN supervision_group_session_links sgsl ON sgsl.supervision_id = ss.id
      WHERE s.user_id = $1
-     GROUP BY ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.setting
+     GROUP BY ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.setting, ss.group_id
      ORDER BY ss.date DESC`,
     [userId]
   );
@@ -130,6 +130,23 @@ async function assertLinksAvailable(db: Db, session: SupervisionSession): Promis
   }
 }
 
+// Gruppenbezug (#47): nur bei Gruppensupervisionen, eigene Gruppe, verknüpfte Doppelstunden aus dieser Gruppe.
+async function assertSupervisionGroup(db: Db, userId: string, session: SupervisionSession): Promise<void> {
+  if (!session.groupId) return;
+  if (session.kind !== "group") throw new ValidationError("Nur eine Gruppensupervision gehört zu einer Gruppe");
+  const group = await db.query("SELECT id FROM groups WHERE id = $1 AND user_id = $2", [session.groupId, userId]);
+  if (group.rows.length === 0) throw new NotFoundError("Gruppe");
+  if (session.linkedGroupSessionIds.length > 0) {
+    const inGroup = await db.query(
+      "SELECT count(*)::int AS n FROM group_sessions WHERE id = ANY($1::uuid[]) AND group_id = $2 AND user_id = $3",
+      [session.linkedGroupSessionIds, session.groupId, userId]
+    );
+    if (inGroup.rows[0].n !== new Set(session.linkedGroupSessionIds).size) {
+      throw new ValidationError("Nur Doppelstunden dieser Gruppe verknüpfen");
+    }
+  }
+}
+
 // Anteile je Fall (#40): nur bei Einzeltherapie-Supervisionen, je Patient:in einmal, eigene Patient:innen. Gesamtdauer
 // minus Summe der Anteile (Zeit ohne Fall) liegt zwischen 0 und allowedGap: beim Anlegen 0, beim Bearbeiten die schon
 // gespeicherte Differenz (storedCaseGap). Jeder Fall einer verknüpften Sitzung braucht einen Anteil; ein Anteil ohne
@@ -205,10 +222,20 @@ async function insertSupervisionLinks(db: Db, session: SupervisionSession): Prom
 
 export async function insertSupervisionSession(db: Db, userId: string, session: SupervisionSession): Promise<void> {
   await assertSupervisionOwnership(db, userId, session);
+  await assertSupervisionGroup(db, userId, session);
   await db.query(
-    `INSERT INTO supervision_sessions (id, user_id, supervisor_id, date, duration_minutes, kind, setting)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [session.id, userId, session.supervisorId, session.date, session.durationMinutes, session.kind, session.setting]
+    `INSERT INTO supervision_sessions (id, user_id, supervisor_id, date, duration_minutes, kind, setting, group_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [
+      session.id,
+      userId,
+      session.supervisorId,
+      session.date,
+      session.durationMinutes,
+      session.kind,
+      session.setting,
+      session.groupId ?? null,
+    ]
   );
   await insertSupervisionLinks(db, session);
 }
@@ -232,7 +259,8 @@ async function storedCaseGap(db: Db, userId: string, id: string): Promise<number
   return rows.length > 0 && rows[0].n > 0 ? Math.max(0, Number(rows[0].gap)) : 0;
 }
 
-// Ersetzt Stammdaten, alle Verknüpfungen und die Anteile je Fall. Nur innerhalb einer Transaktion aufrufen
+// Ersetzt Stammdaten, alle Verknüpfungen und die Anteile je Fall. Die Gruppe (#47) bleibt; wird aus der
+// Gruppensupervision eine Einzelsupervision, entfällt sie. Nur innerhalb einer Transaktion aufrufen
 // (Aufrufer: withTransaction), weil alte Verknüpfungen gelöscht und neue eingefügt werden.
 // Alle Prüfungen laufen vor dem ersten Schreibzugriff, fremde IDs ändern also nichts.
 export async function updateSupervisionSession(db: Db, userId: string, session: SupervisionSession): Promise<void> {
@@ -242,7 +270,8 @@ export async function updateSupervisionSession(db: Db, userId: string, session: 
   await assertSupervisionOwnership(db, userId, session, await storedCaseGap(db, userId, session.id));
   const result = await db.query(
     `UPDATE supervision_sessions
-     SET supervisor_id = $1, date = $2, duration_minutes = $3, kind = $4, setting = $5, updated_at = now()
+     SET supervisor_id = $1, date = $2, duration_minutes = $3, kind = $4, setting = $5,
+         group_id = CASE WHEN $4::varchar = 'group' THEN group_id END, updated_at = now()
      WHERE id = $6 AND user_id = $7`,
     [session.supervisorId, session.date, session.durationMinutes, session.kind, session.setting, session.id, userId]
   );

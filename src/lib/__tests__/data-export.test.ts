@@ -35,7 +35,7 @@ describe("buildDataExport", () => {
     ]);
     expect(e).toMatchObject({ format: DATA_EXPORT_FORMAT, version: DATA_EXPORT_VERSION, exportedAt: "2026-09-26T10:00:00.000Z" });
     expect(e.format).toBe("therapia-datenexport");
-    expect(e.version).toBe(6);
+    expect(e.version).toBe(7);
   });
 
   it("übernimmt die Daten vollständig – Sitzungen, Verknüpfungen, Finanzen, Einladungen, Account", () => {
@@ -51,7 +51,7 @@ describe("buildDataExport", () => {
   it("lässt sich als JSON serialisieren, ohne Passwort- oder Token-Felder", () => {
     const json = JSON.stringify(buildDataExport(sampleUserData(), invitations, null, NOW));
     expect(json).not.toMatch(/password|token/i);
-    expect(JSON.parse(json).version).toBe(6);
+    expect(JSON.parse(json).version).toBe(7);
   });
 
   it("enthält Genehmigungsdatum und Sprechstunden der Ambulanzleitung je Patient:in (#66)", () => {

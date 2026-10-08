@@ -14,6 +14,7 @@ import {
 } from "@/lib/db/index";
 import {
   Group,
+  GroupId,
   GroupSession,
   Supervisor,
   SupervisionSession,
@@ -47,16 +48,12 @@ export async function loadGroupDetailData(groupId: string): Promise<GroupDetailD
     getSupervisors(),
   ]);
 
-  // Nur Supervisionen, die eine Doppelstunde dieser Gruppe besprechen (#47). Eine Gruppensupervision ohne
-  // verknüpfte Doppelstunde hat keinen Gruppenbezug: Sie erscheint in keiner Gruppe, bleibt aber in der
-  // Supervisionsliste und in den Gesamtsummen.
-  const ownSessionIds = new Set<string>(groupSessions.map((s) => s.id));
+  // Nur Supervisionen dieser Gruppe (#47) – über den gespeicherten Gruppenbezug, nicht über die Links: Sie bleiben in
+  // der Gruppe, auch ohne verknüpfte oder nach gelöschten Doppelstunden.
   return {
     group,
     groupSessions,
-    supervisionSessions: supervisionSessions.filter(
-      (s) => s.kind === "group" && s.linkedGroupSessionIds.some((id) => ownSessionIds.has(id))
-    ),
+    supervisionSessions: supervisionSessions.filter((s) => s.kind === "group" && s.groupId === groupId),
     supervisors,
   };
 }
@@ -126,6 +123,7 @@ export const addGroupSupervisionSession: (
       linkedTherapySessionIds: [],
       linkedGroupSessionIds: input.linkedGroupSessionIds as GroupSessionId[],
       caseShares: [],
+      groupId: input.groupId as GroupId,
     };
     await addSupervisionSessionDB(session);
     return loadGroupDetailData(input.groupId);

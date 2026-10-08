@@ -47,6 +47,9 @@ describe("checkDemoReferences", () => {
     expect(() => checkDemoReferences({ ...data, supervisionSessions: [{ ...sv, therapySessions: ["fehlt"] }] })).toThrow(
       /verweist auf unbekannte Sitzung „fehlt“/
     );
+    expect(() => checkDemoReferences({ ...data, supervisionSessions: [{ ...sv, group: "g9" }] })).toThrow(
+      /Supervision .* verweist auf unbekannte Gruppe „g9“/
+    );
   });
 });
 
@@ -106,6 +109,8 @@ describe.skipIf(!TEST_DATABASE_URL)("insertDemoData", () => {
     expect(geladen.financialSettings).toEqual({ incomePerHour: 70, plannedSessionsPerWeek: null });
     expect(geladen.supervisionSessions.reduce((n, s) => n + s.linkedTherapySessionIds.length, 0)).toBe(144);
     expect(geladen.supervisionSessions.reduce((n, s) => n + s.linkedGroupSessionIds.length, 0)).toBe(23);
+    // Gruppensupervisionen gehören zur Beispielgruppe (#47), Einzelsupervisionen zu keiner
+    expect(geladen.supervisionSessions.every((s) => s.groupId === (s.kind === "group" ? geladen.groups[0].id : null))).toBe(true);
     const regeln = standardRegelwerk().regeln;
     expect(calculateOverallRatio(geladen.therapySessions, geladen.supervisionSessions, regeln).ratio).toBe(2.7);
     const status = Object.fromEntries(
