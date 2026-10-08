@@ -89,31 +89,43 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervision: Sitzung nur einmal zuordnen", 
   it("zwei gleichzeitige Anfragen: der Unique-Index lehnt die zweite mit fachlicher Meldung ab", async () => {
     const { db, f } = await setup();
     await db.query("DELETE FROM supervision_sessions WHERE id = $1", [f.a.supervisionId]);
-    const zweiteVerbindung = new pg.Client({ connectionString: TEST_DATABASE_URL });
-    await zweiteVerbindung.connect();
+    const { rows } = await db.query("SELECT current_schema() AS s");
+    const verbinden = async () => {
+      const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+      await client.connect();
+      await client.query(`SET search_path TO ${rows[0].s}`);
+      return client;
+    };
+    const zweiteVerbindung = await verbinden();
+    // Eigene Verbindung für die Beobachtung: innerhalb einer Transaktion hielte pg_stat_activity seinen Schnappschuss.
+    const beobachter = await verbinden();
     try {
-      const { rows } = await db.query("SELECT current_schema() AS s");
-      await zweiteVerbindung.query(`SET search_path TO ${rows[0].s}`);
       const pid = (await zweiteVerbindung.query("SELECT pg_backend_pid() AS pid")).rows[0].pid as number;
       // Beide prüfen vor dem Schreiben, bevor die erste festgeschrieben ist – die Vorprüfung sieht also nichts.
       await db.query("BEGIN");
       await zweiteVerbindung.query("BEGIN");
       await insertSupervisionSession(db, f.a.userId, zweite(f));
       const zweiterVersuch = insertSupervisionSession(zweiteVerbindung, f.a.userId, zweite(f));
+      zweiterVersuch.catch(() => {}); // Ablehnung wird unten geprüft; scheitert der Test vorher, kein unhandled rejection
       // Erst festschreiben, wenn der zweite Insert auf die Sperre der ersten Transaktion wartet.
-      for (let i = 0; i < 100; i++) {
-        const { rows: warten } = await db.query(
+      let wartet = false;
+      for (let i = 0; i < 250 && !wartet; i++) {
+        const { rows: warten } = await beobachter.query(
           "SELECT 1 FROM pg_stat_activity WHERE pid = $1 AND wait_event_type = 'Lock'",
           [pid]
         );
-        if (warten.length > 0) break;
-        await new Promise((resolve) => setTimeout(resolve, 20));
+        wartet = warten.length > 0;
+        if (!wartet) await new Promise((resolve) => setTimeout(resolve, 20));
       }
+      expect(wartet).toBe(true);
       await db.query("COMMIT");
       await expect(zweiterVersuch).rejects.toThrow(MELDUNG_SCHON_ZUGEORDNET);
-      await zweiteVerbindung.query("ROLLBACK");
     } finally {
+      // Offene Transaktionen beenden (nach COMMIT nur ein Hinweis), sonst scheitert cleanup.
+      await db.query("ROLLBACK");
+      await zweiteVerbindung.query("ROLLBACK").catch(() => {});
       await zweiteVerbindung.end();
+      await beobachter.end();
     }
     expect(await countRows(db, "supervision_therapy_links", "WHERE therapy_session_id = $1", [f.a.therapySessionId])).toBe(1);
   });
