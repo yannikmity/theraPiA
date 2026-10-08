@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/index";
 import { calculateQuarterlyFinancesWithGroups, financeTotals } from "@/lib/calculations";
 import { getCurrentRegelwerk } from "@/lib/db/regelwerk";
+import { withTransaction } from "@/lib/db";
 import { FinancialSettings, Supervisor } from "@/types";
 import { createAction } from "@/lib/safe-action";
 import { updateFinancialSettingsSchema } from "@/lib/validation";
@@ -61,8 +62,8 @@ export const saveFinancialSettings: (
   input: z.infer<typeof updateFinancialSettingsSchema>
 ) => Promise<ActionResult<FinancesData>> = createAction({
   schema: updateFinancialSettingsSchema,
-  handler: async (input) => {
-    await updateFinancialSettingsDB(input);
+  handler: async (input, userId) => {
+    await withTransaction((tx) => updateFinancialSettingsDB(tx, userId, input));
     return loadFinancesData();
   },
 });

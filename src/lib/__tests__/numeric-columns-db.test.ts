@@ -94,7 +94,7 @@ describe.skipIf(!TEST_DATABASE_URL)("NUMERIC-Spalten kommen als Zahl", () => {
     const parsed = updateFinancialSettingsSchema.safeParse(before);
     expect(parsed.success).toBe(true);
 
-    await updateFinancialSettings({ ...before, incomePerHour: 95.75 });
+    await updateFinancialSettings(state.client!, state.userId, { ...before, incomePerHour: 95.75 });
     const after = await getFinancialSettings();
     expect(after).toEqual({ ...before, incomePerHour: 95.75 });
   });

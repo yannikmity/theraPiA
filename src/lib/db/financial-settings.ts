@@ -1,4 +1,4 @@
-import { query } from "../db";
+import { Db, query } from "../db";
 import { FinancialSettings, FinancialSettingsUpdate, SupervisorId } from "@/types";
 import { getCurrentUserId } from "./get-current-user";
 
@@ -33,12 +33,13 @@ export async function getFinancialSettings(): Promise<FinancialSettings> {
   };
 }
 
-export async function updateFinancialSettings(settings: FinancialSettingsUpdate): Promise<void> {
-  const userId = await getCurrentUserId();
+// Honorar, Planung und alle Supervisionskosten gehören zusammen: der Aufrufer reicht eine Transaktion herein,
+// damit ein Fehler mittendrin keinen Mischstand aus alten und neuen Werten hinterlässt.
+export async function updateFinancialSettings(db: Db, userId: string, settings: FinancialSettingsUpdate): Promise<void> {
   const planned = settings.plannedSessionsPerWeek;
   // Ein Upsert statt SELECT-dann-INSERT/UPDATE. Die Planung ändert sich nur, wenn das Feld mitgeschickt wurde ($4);
   // ein Schreibpfad, der sie nicht kennt, kann sie nicht auf NULL setzen. Beim Anlegen zählt der Wert (oder NULL).
-  await query(
+  await db.query(
     `INSERT INTO financial_settings (user_id, income_per_hour, planned_sessions_per_week)
      VALUES ($1, $2, $3)
      ON CONFLICT (user_id) DO UPDATE SET
@@ -49,6 +50,6 @@ export async function updateFinancialSettings(settings: FinancialSettingsUpdate)
   );
 
   for (const [supervisorId, cost] of Object.entries(settings.supervisionCosts)) {
-    await query("UPDATE supervisors SET cost_per_hour = $1 WHERE id = $2 AND user_id = $3", [cost, supervisorId, userId]);
+    await db.query("UPDATE supervisors SET cost_per_hour = $1 WHERE id = $2 AND user_id = $3", [cost, supervisorId, userId]);
   }
 }
