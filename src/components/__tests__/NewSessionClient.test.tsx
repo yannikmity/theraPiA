@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 
 const { push, refresh } = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 // Echtes next/navigation (runAction nutzt unstable_rethrow), nur der Router ist gemockt.
@@ -15,6 +15,7 @@ vi.mock("../../app/(app)/sessions/new/actions", () => ({
 }));
 
 import { NewSessionClient } from "../../app/(app)/sessions/new/NewSessionClient";
+import { pressEnter, submitButtons } from "../../lib/__tests__/helpers/form-submit";
 import { addSupervisionSession, addTherapySession, addTherapySessions } from "../../app/(app)/sessions/new/actions";
 import { track } from "../../lib/analytics/track";
 import type { LastWeekSuggestion } from "../../lib/quick-capture";
@@ -659,5 +660,79 @@ describe("NewSessionClient", () => {
     await waitFor(() =>
       expect(addTherapySession).toHaveBeenCalledWith(expect.objectContaining({ category: "sprechstunde", durationMinutes: 25 }))
     );
+  });
+
+  describe("Enter im Feld (#51)", () => {
+    it("speichert die Therapiesitzung mit Enter im Datumsfeld", async () => {
+      vi.mocked(addTherapySession).mockResolvedValue({ success: true, data: undefined });
+      render(<NewSessionClient {...props} />);
+      const date = screen.getByLabelText("Datum") as HTMLInputElement;
+      fireEvent.change(date, { target: { value: "2026-09-26" } });
+      pressEnter(date);
+      await waitFor(() =>
+        expect(addTherapySession).toHaveBeenCalledWith({ patientId: P2, date: "2026-09-26", durationMinutes: 50, notes: "", category: "probatorik" })
+      );
+      expect((await screen.findByRole("status")).textContent).toContain("Gespeichert!");
+    });
+
+    it("speichert die Supervision mit Enter in der freien Dauer", async () => {
+      vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+      render(<NewSessionClient {...props} initialType="supervision" />);
+      fireEvent.click(chip("Andere"));
+      const field = screen.getByLabelText("Dauer in Minuten");
+      fireEvent.change(field, { target: { value: "45" } });
+      pressEnter(field);
+      await waitFor(() => expect(addSupervisionSession).toHaveBeenCalledTimes(1));
+      expect(firstCall()).toMatchObject({ supervisorId: S1, date: "2026-09-27" });
+    });
+
+    it("nur „Speichern“ sendet ab – Chips, Notiz, „Wie letzte Woche“ und Abbrechen nicht", () => {
+      render(<NewSessionClient {...props} />);
+      fireEvent.click(chip("25 Min"));
+      fireEvent.click(chip("Andere"));
+      fireEvent.click(chip("Behandlung"));
+      fireEvent.click(screen.getByRole("button", { name: "Notiz hinzufügen" }));
+      fireEvent.click(screen.getByRole("button", { name: "Wie letzte Woche: 2 Sitzungen übernehmen" }));
+      fireEvent.click(screen.getAllByRole("checkbox")[0]);
+      fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+      fireEvent.click(chip("Supervision"));
+      fireEvent.click(chip("Gruppe"));
+      fireEvent.click(chip("Therapie"));
+      const form = (screen.getByLabelText("Datum") as HTMLInputElement).form!;
+      fireEvent.click(screen.getByRole("button", { name: "Wie letzte Woche: 2 Sitzungen übernehmen" }));
+      expect(submitButtons(form).map((b) => b.textContent)).toEqual(["Speichern"]);
+      expect(addTherapySession).not.toHaveBeenCalled();
+      expect(addTherapySessions).not.toHaveBeenCalled();
+      expect(addSupervisionSession).not.toHaveBeenCalled();
+    });
+
+    it("sendet während des Speicherns kein zweites Mal ab", async () => {
+      let resolve!: (r: Awaited<ReturnType<typeof addTherapySession>>) => void;
+      vi.mocked(addTherapySession).mockReturnValue(new Promise((r) => (resolve = r)));
+      render(<NewSessionClient {...props} />);
+      const date = screen.getByLabelText("Datum") as HTMLInputElement;
+      pressEnter(date);
+      act(() => date.form!.requestSubmit());
+      expect(addTherapySession).toHaveBeenCalledTimes(1);
+      await act(async () => resolve({ success: true, data: undefined }));
+    });
+
+    it("speichert ohne Patient:in auch per Enter nicht", () => {
+      render(<NewSessionClient {...props} initialPatients={[]} initialPatientId="" />);
+      const date = screen.getByLabelText("Datum") as HTMLInputElement;
+      pressEnter(date);
+      act(() => date.form!.requestSubmit());
+      expect(addTherapySession).not.toHaveBeenCalled();
+    });
+
+    it("prüft die freie Dauer auch bei Enter und meldet sie am Feld", () => {
+      render(<NewSessionClient {...props} />);
+      fireEvent.click(chip("Andere"));
+      const field = screen.getByLabelText("Dauer in Minuten");
+      fireEvent.change(field, { target: { value: "0" } });
+      pressEnter(field);
+      expect(addTherapySession).not.toHaveBeenCalled();
+      expect(screen.getByText("Dauer muss mindestens 1 Minute sein")).toBeDefined();
+    });
   });
 });

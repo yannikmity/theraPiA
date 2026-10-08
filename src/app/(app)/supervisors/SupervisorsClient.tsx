@@ -79,6 +79,12 @@ export function SupervisorsClient({ initialSupervisors }: SupervisorsClientProps
     }
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (isSaving) return;
+    void (editingId ? handleUpdate() : handleAdd());
+  }
+
   function handleToggleActive(sv: Supervisor) {
     void saveSupervisor({ id: sv.id, name: sv.name, costPerHour: sv.costPerHour, isActive: !sv.isActive }, `supervisor:${sv.id}`);
   }
@@ -102,40 +108,43 @@ export function SupervisorsClient({ initialSupervisors }: SupervisorsClientProps
       />
 
       {showForm && (
-        <Card className="border-primary/40">
-          <div className="flex items-center justify-between">
-            <h2 className="font-medium text-foreground">{editingId ? "Supervisor:in bearbeiten" : "Neue:r Supervisor:in"}</h2>
-            <Button variant="ghost" size="icon-sm" aria-label="Formular schließen" onClick={closeForm}>
-              <X />
+        // Formular: Enter im Feld speichert (#51).
+        <Card asChild className="border-primary/40">
+          <form noValidate onSubmit={handleSubmit}>
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium text-foreground">{editingId ? "Supervisor:in bearbeiten" : "Neue:r Supervisor:in"}</h2>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label="Formular schließen" onClick={closeForm}>
+                <X />
+              </Button>
+            </div>
+            <ActionError result={errorAt(error, "form")} />
+            <FormField label="Name" htmlFor="supervisor-name">
+              <Input
+                id="supervisor-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="z. B. Supervision Nord"
+                autoFocus
+                disabled={isSaving}
+              />
+            </FormField>
+            <FormField label="Kosten je SV-Einheit (50 Min, EUR, optional)" htmlFor="supervisor-cost">
+              <Input
+                id="supervisor-cost"
+                type="number"
+                value={costPerHour}
+                onChange={(e) => setCostPerHour(e.target.value)}
+                placeholder="z. B. 80"
+                step="0.01"
+                min="0"
+                disabled={isSaving}
+              />
+            </FormField>
+            <Button type="submit" className="w-full" loading={isSaving}>
+              {editingId ? "Speichern" : "Anlegen"}
             </Button>
-          </div>
-          <ActionError result={errorAt(error, "form")} />
-          <FormField label="Name" htmlFor="supervisor-name">
-            <Input
-              id="supervisor-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="z. B. Supervision Nord"
-              autoFocus
-              disabled={isSaving}
-            />
-          </FormField>
-          <FormField label="Kosten je SV-Einheit (50 Min, EUR, optional)" htmlFor="supervisor-cost">
-            <Input
-              id="supervisor-cost"
-              type="number"
-              value={costPerHour}
-              onChange={(e) => setCostPerHour(e.target.value)}
-              placeholder="z. B. 80"
-              step="0.01"
-              min="0"
-              disabled={isSaving}
-            />
-          </FormField>
-          <Button onClick={editingId ? handleUpdate : handleAdd} className="w-full" loading={isSaving}>
-            {editingId ? "Speichern" : "Anlegen"}
-          </Button>
+          </form>
         </Card>
       )}
 

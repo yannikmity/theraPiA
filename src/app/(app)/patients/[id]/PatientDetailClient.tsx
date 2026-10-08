@@ -122,13 +122,16 @@ export function PatientDetailClient({
 
   const handleComplete = () => savePatient("status", { endDate: format(new Date(), "yyyy-MM-dd"), isActive: false });
   const handleReopen = () => savePatient("status", { endDate: null, isActive: true });
-  const handleSaveAntrag = () =>
-    savePatient("antrag", {
+  const handleSaveAntrag = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSaving) return;
+    void savePatient("antrag", {
       antragsdatum: antragsdatum || null,
       beantragteStunden: beantragteStunden ? Number(beantragteStunden) : null,
       genehmigungsdatum: genehmigungsdatum || null,
       sprechstundenAmbulanz: Number(sprechstundenAmbulanz) || 0,
     });
+  };
 
   async function handleUpdateSession(session: TherapySession, values: TherapySessionFormValues) {
     setIsSaving(true);
@@ -240,57 +243,60 @@ export function PatientDetailClient({
         <KontingentTile titel="Gesprächsziffern im Quartal" einheit="Ziffern" kontingent={gespraechsziffernKontingent(patient, therapySessions, todayIso())} />
       </div>
 
-      <Card>
-        <SectionHeader>Antrag</SectionHeader>
-        <FormField label="Antragsdatum" htmlFor="antragsdatum">
-          <Input
-            id="antragsdatum"
-            type="date"
-            value={antragsdatum ?? ""}
-            onChange={(e) => setAntragsdatum(e.target.value)}
-            disabled={isSaving}
-          />
-        </FormField>
-        <FormField label="Genehmigt am" htmlFor="genehmigungsdatum">
-          <Input
-            id="genehmigungsdatum"
-            type="date"
-            value={genehmigungsdatum}
-            onChange={(e) => setGenehmigungsdatum(e.target.value)}
-            disabled={isSaving}
-          />
-        </FormField>
-        <FormField label="Beantragte Behandlungsstunden" htmlFor="beantragte-stunden">
-          <Input
-            id="beantragte-stunden"
-            type="number"
-            value={beantragteStunden}
-            onChange={(e) => setBeantragteStunden(e.target.value)}
-            placeholder="z. B. 60"
-            min={1}
-            disabled={isSaving}
-          />
-        </FormField>
-        <FormField label="Sprechstunden durch die Ambulanzleitung" htmlFor="sprechstunden-ambulanz">
-          <Input
-            id="sprechstunden-ambulanz"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={10}
-            value={sprechstundenAmbulanz}
-            onChange={(e) => setSprechstundenAmbulanz(e.target.value)}
-            disabled={isSaving}
-          />
-        </FormField>
-        <p className="text-xs text-muted-foreground">
-          Von den 10 Sprechstunden je Fall übernimmt die Ambulanzleitung oft einige, meist 2. Das Behandlungsstunden-Kontingent
-          zählt ab „Genehmigt am“, ohne Datum ab dem Antragsdatum.
-        </p>
-        <ActionError result={errorAt(error, "antrag")} />
-        <Button variant="outline" onClick={handleSaveAntrag} loading={isSaving} className="w-full">
-          Antrag speichern
-        </Button>
+      {/* Formular: Enter im Feld speichert den Antrag (#51). */}
+      <Card asChild>
+        <form noValidate onSubmit={handleSaveAntrag}>
+          <SectionHeader>Antrag</SectionHeader>
+          <FormField label="Antragsdatum" htmlFor="antragsdatum">
+            <Input
+              id="antragsdatum"
+              type="date"
+              value={antragsdatum ?? ""}
+              onChange={(e) => setAntragsdatum(e.target.value)}
+              disabled={isSaving}
+            />
+          </FormField>
+          <FormField label="Genehmigt am" htmlFor="genehmigungsdatum">
+            <Input
+              id="genehmigungsdatum"
+              type="date"
+              value={genehmigungsdatum}
+              onChange={(e) => setGenehmigungsdatum(e.target.value)}
+              disabled={isSaving}
+            />
+          </FormField>
+          <FormField label="Beantragte Behandlungsstunden" htmlFor="beantragte-stunden">
+            <Input
+              id="beantragte-stunden"
+              type="number"
+              value={beantragteStunden}
+              onChange={(e) => setBeantragteStunden(e.target.value)}
+              placeholder="z. B. 60"
+              min={1}
+              disabled={isSaving}
+            />
+          </FormField>
+          <FormField label="Sprechstunden durch die Ambulanzleitung" htmlFor="sprechstunden-ambulanz">
+            <Input
+              id="sprechstunden-ambulanz"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={10}
+              value={sprechstundenAmbulanz}
+              onChange={(e) => setSprechstundenAmbulanz(e.target.value)}
+              disabled={isSaving}
+            />
+          </FormField>
+          <p className="text-xs text-muted-foreground">
+            Von den 10 Sprechstunden je Fall übernimmt die Ambulanzleitung oft einige, meist 2. Das Behandlungsstunden-Kontingent
+            zählt ab „Genehmigt am“, ohne Datum ab dem Antragsdatum.
+          </p>
+          <ActionError result={errorAt(error, "antrag")} />
+          <Button type="submit" variant="outline" loading={isSaving} className="w-full">
+            Antrag speichern
+          </Button>
+        </form>
       </Card>
 
       <Card>

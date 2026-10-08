@@ -44,8 +44,9 @@ export function PatientsClient({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<ActionResult<unknown> | null>(null);
 
-  async function handleAdd() {
-    if (!newChiffre.trim()) return;
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (isSaving || !newChiffre.trim()) return;
     setIsSaving(true);
     setError(null);
     const result = await runAction(() => addPatient({ chiffre: newChiffre.trim(), therapyType: newType, startDate: newStartDate }));
@@ -77,43 +78,46 @@ export function PatientsClient({
       />
 
       {showForm && (
-        <Card className="border-primary/40">
-          <div className="flex items-center justify-between">
-            <h2 className="font-medium text-foreground">Neue:r Patient:in</h2>
-            <Button variant="ghost" size="icon-sm" aria-label="Formular schließen" onClick={() => setShowForm(false)}>
-              <X />
+        // Formular: Enter im Feld legt an (#51).
+        <Card asChild className="border-primary/40">
+          <form noValidate onSubmit={handleAdd}>
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium text-foreground">Neue:r Patient:in</h2>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label="Formular schließen" onClick={() => setShowForm(false)}>
+                <X />
+              </Button>
+            </div>
+            <ActionError result={error} />
+            <FormField label="Chiffre" htmlFor="new-chiffre">
+              <Input
+                id="new-chiffre"
+                type="text"
+                value={newChiffre}
+                onChange={(e) => setNewChiffre(e.target.value)}
+                placeholder="z. B. M.K."
+                autoFocus
+                disabled={isSaving}
+              />
+            </FormField>
+            <FormField label="Therapieart" htmlFor="new-type">
+              <NativeSelect
+                id="new-type"
+                value={newType}
+                onChange={(e) => setNewType(e.target.value as typeof newType)}
+                disabled={isSaving}
+                wrapperClassName="w-full"
+              >
+                <NativeSelectOption value="langzeittherapie">Langzeittherapie</NativeSelectOption>
+                <NativeSelectOption value="kurzzeittherapie">Kurzzeittherapie</NativeSelectOption>
+              </NativeSelect>
+            </FormField>
+            <FormField label="Startdatum" htmlFor="new-start">
+              <Input id="new-start" type="date" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} disabled={isSaving} />
+            </FormField>
+            <Button type="submit" className="w-full" loading={isSaving}>
+              Anlegen
             </Button>
-          </div>
-          <ActionError result={error} />
-          <FormField label="Chiffre" htmlFor="new-chiffre">
-            <Input
-              id="new-chiffre"
-              type="text"
-              value={newChiffre}
-              onChange={(e) => setNewChiffre(e.target.value)}
-              placeholder="z. B. M.K."
-              autoFocus
-              disabled={isSaving}
-            />
-          </FormField>
-          <FormField label="Therapieart" htmlFor="new-type">
-            <NativeSelect
-              id="new-type"
-              value={newType}
-              onChange={(e) => setNewType(e.target.value as typeof newType)}
-              disabled={isSaving}
-              wrapperClassName="w-full"
-            >
-              <NativeSelectOption value="langzeittherapie">Langzeittherapie</NativeSelectOption>
-              <NativeSelectOption value="kurzzeittherapie">Kurzzeittherapie</NativeSelectOption>
-            </NativeSelect>
-          </FormField>
-          <FormField label="Startdatum" htmlFor="new-start">
-            <Input id="new-start" type="date" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} disabled={isSaving} />
-          </FormField>
-          <Button onClick={handleAdd} className="w-full" loading={isSaving}>
-            Anlegen
-          </Button>
+          </form>
         </Card>
       )}
 
