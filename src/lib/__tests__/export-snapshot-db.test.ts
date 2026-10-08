@@ -13,7 +13,8 @@ describe.skipIf(!TEST_DATABASE_URL)("Datenexport aus einem Snapshot", () => {
   const databaseUrl = process.env.DATABASE_URL;
   afterEach(async () => {
     await closePool();
-    process.env.DATABASE_URL = databaseUrl;
+    if (databaseUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = databaseUrl;
     for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
   });
 
@@ -94,6 +95,6 @@ describe.skipIf(!TEST_DATABASE_URL)("Datenexport aus einem Snapshot", () => {
     const { f } = await setup();
     await expect(
       withSnapshot((tx) => tx.query("UPDATE financial_settings SET income_per_hour = 1 WHERE user_id = $1", [f.a.userId]))
-    ).rejects.toThrow(/read-only/);
+    ).rejects.toMatchObject({ code: "25006" }); // read_only_sql_transaction
   });
 });
