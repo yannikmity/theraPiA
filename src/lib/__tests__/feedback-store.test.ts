@@ -189,7 +189,7 @@ describe("Feedback-Store", () => {
     const a2 = await store.save(input(), userA);
     // Zwischen Lesen und Löschen verschwindet a2 (MD und PNG) – z. B. durch ein paralleles deleteForUser.
     fsHooks.unlink = async (target) => {
-      if (path.basename(target) === `${a2.id}.md`) {
+      if (path.basename(target) === `${a2.id}.png`) {
         fsHooks.unlink = null;
         await rm(path.join(dir, "feedback", `${a2.id}.md`));
         await rm(path.join(dir, "feedback", `${a2.id}.png`));
@@ -210,6 +210,24 @@ describe("Feedback-Store", () => {
       if (target.endsWith(".png")) throw errnoError("EPERM");
     };
     await expect(store.deleteForUser(userA.id)).rejects.toMatchObject({ code: "EPERM" });
+  });
+
+  it("deleteForUser bleibt wiederholbar: scheitert das PNG, findet der zweite Aufruf beide Dateien (#50)", async () => {
+    const a1 = await store.save(input(), userA);
+    const b1 = await store.save(input(), userB);
+    fsHooks.unlink = (target) => {
+      if (path.basename(target) === `${a1.id}.png`) {
+        fsHooks.unlink = null;
+        throw errnoError("EACCES");
+      }
+    };
+    await expect(store.deleteForUser(userA.id)).rejects.toMatchObject({ code: "EACCES" });
+    // Die Markdown-Datei mit der Zuordnung steht noch.
+    expect((await readdir(path.join(dir, "feedback"))).sort()).toEqual(
+      [`${a1.id}.md`, `${a1.id}.png`, `${b1.id}.md`, `${b1.id}.png`].sort()
+    );
+    expect(await store.deleteForUser(userA.id)).toBe(1);
+    expect((await readdir(path.join(dir, "feedback"))).sort()).toEqual([`${b1.id}.md`, `${b1.id}.png`]);
   });
 
   it("save räumt die PNG weg, wenn das Schreiben der Markdown-Datei scheitert", async () => {

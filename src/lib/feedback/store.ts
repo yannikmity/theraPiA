@@ -193,9 +193,10 @@ export function createFeedbackStore(dir: string, deps: FeedbackStoreDeps = {}): 
         const raw = await readMarkdown(id);
         if (raw === null) continue;
         if (str(parseFrontmatter(raw).meta.user_id) !== userId) continue;
-        const removed = await removeIfPresent(file(id, "md"));
+        // PNG vor Markdown: Die MD-Datei trägt die Zuordnung zur Person. Scheitert das PNG, bleibt sie stehen und
+        // ein erneuter Aufruf findet beide Dateien wieder.
         await removeIfPresent(file(id, "png"));
-        if (removed) count++;
+        if (await removeIfPresent(file(id, "md"))) count++;
       }
       return count;
     },

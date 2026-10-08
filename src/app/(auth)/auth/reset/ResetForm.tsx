@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_LONG_MESSAGE, exceedsPasswordBytes } from "@/lib/constants";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,6 +57,11 @@ export function ResetForm({ token }: { token: string }) {
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
       setError({ message: `Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein`, field: "password" });
+      return;
+    }
+
+    if (exceedsPasswordBytes(password)) {
+      setError({ message: PASSWORD_TOO_LONG_MESSAGE, field: "password" });
       return;
     }
     setLoading(true);

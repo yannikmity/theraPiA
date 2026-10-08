@@ -5,7 +5,7 @@ const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 import { ResetForm } from "../../app/(auth)/auth/reset/ResetForm";
-import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
+import { MAX_PASSWORD_BYTES, MIN_PASSWORD_LENGTH } from "@/lib/constants";
 
 const password = () => screen.getByLabelText("Neues Passwort") as HTMLInputElement;
 const confirm = () => screen.getByLabelText("Passwort wiederholen") as HTMLInputElement;
@@ -46,6 +46,18 @@ describe("ResetForm", () => {
   });
 
   // Server-, Token- und Netzfehler betreffen kein Feld: kein aria-invalid, der Fokus geht auf die Meldung selbst (#15).
+  it("lehnt ein Passwort über 72 Byte ab, ohne den Server zu fragen (#48)", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ResetForm token="beispiel" />);
+    const tooLong = "ü".repeat(MAX_PASSWORD_BYTES / 2) + "x";
+    fill(tooLong, tooLong);
+    fireEvent.click(submitButton());
+    expect(screen.getByRole("alert").textContent).toContain(`höchstens ${MAX_PASSWORD_BYTES} Byte`);
+    expect(password().getAttribute("aria-invalid")).toBe("true");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("verknüpft eine Meldung des Servers mit beiden Feldern, markiert kein Feld als ungültig und fokussiert die Meldung", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "Link ungültig oder abgelaufen" }), { status: 400 })));
     render(<ResetForm token="beispiel" />);

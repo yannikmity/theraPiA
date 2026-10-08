@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_LONG_MESSAGE, exceedsPasswordBytes } from "@/lib/constants";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +52,11 @@ export function RegisterForm({
 
     if (password.length < MIN_PASSWORD_LENGTH) {
       setError(`Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein`);
+      return;
+    }
+
+    if (exceedsPasswordBytes(password)) {
+      setError(PASSWORD_TOO_LONG_MESSAGE);
       return;
     }
 

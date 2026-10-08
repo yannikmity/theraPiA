@@ -16,6 +16,7 @@ import {
   updateFinancialSettingsSchema,
   registerSchema,
   resetPasswordSchema,
+  changePasswordSchema,
   createInvitationSchema,
   nachweisFilterSchema,
   deleteAccountSchema,
@@ -311,6 +312,30 @@ describe("resetPasswordSchema", () => {
     expect(resetPasswordSchema.safeParse({ token: "", password: "1234567890" }).success).toBe(false);
     expect(resetPasswordSchema.safeParse({ token: "abc", password: "kurz" }).success).toBe(false);
   });
+});
+
+describe("Passwort höchstens 72 Byte (#48)", () => {
+  const cases = [
+    ["registerSchema", (pw: string) => registerSchema.safeParse({ email: "pia@example.com", password: pw, name: "Test" })],
+    ["resetPasswordSchema", (pw: string) => resetPasswordSchema.safeParse({ token: "abc", password: pw })],
+    ["changePasswordSchema", (pw: string) => changePasswordSchema.safeParse({ currentPassword: "alt", newPassword: pw })],
+  ] as const;
+
+  for (const [name, parse] of cases) {
+    it(`${name}: 72 Byte gehen durch, 73 nicht`, () => {
+      expect(parse("a".repeat(72)).success).toBe(true);
+      const result = parse("a".repeat(73));
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.issues[0]?.message).toContain("72 Byte");
+    });
+
+    it(`${name}: Umlaute zählen doppelt`, () => {
+      // 36 × „ä“ = 72 Byte, ein weiteres Zeichen kippt die Grenze bei nur 37 sichtbaren Zeichen.
+      expect(parse("ä".repeat(36)).success).toBe(true);
+      expect(parse("ä".repeat(36) + "a").success).toBe(false);
+      expect(parse("€".repeat(25)).success).toBe(false);
+    });
+  }
 });
 
 describe("createInvitationSchema", () => {
