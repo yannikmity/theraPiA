@@ -65,6 +65,8 @@ export const updateSupervisionSessionAction: (
       linkedTherapySessionIds: input.linkedTherapySessionIds as TherapySessionId[],
       linkedGroupSessionIds: input.linkedGroupSessionIds as GroupSessionId[],
       caseShares: input.caseShares.map((c) => ({ patientId: c.patientId as PatientId, minutes: c.minutes })),
+      // Bearbeiten lässt die Gruppe unverändert (#47); updateSupervisionSession liest das Feld nicht.
+      groupId: null,
     };
     // Stammdaten und Verknüpfungen in einer Transaktion ersetzen.
     await withTransaction((tx) => updateSupervisionSessionDB(tx, userId, session));

@@ -55,6 +55,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervision: Anteil je Fall", () => {
       setting: "einzel",
       linkedTherapySessionIds: [newTherapySessionId(f.a.therapySessionId), newTherapySessionId(sessionB.id)],
       linkedGroupSessionIds: [],
+      groupId: null,
       caseShares: [
         { patientId: A, minutes: 25 },
         { patientId: B, minutes: 25 },

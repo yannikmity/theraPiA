@@ -38,6 +38,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervisionen ändern und löschen", () => 
       setting: "gruppe",
       linkedTherapySessionIds: linkedTherapySessionIds.map(newTherapySessionId),
       linkedGroupSessionIds: [],
+      groupId: null,
       caseShares: linkedTherapySessionIds.length > 0 ? [{ patientId: newPatientId(f.a.patientId), minutes: 90 }] : [],
     };
   }
@@ -95,6 +96,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervisionen ändern und löschen", () => 
       setting: "einzel",
       linkedTherapySessionIds: [],
       linkedGroupSessionIds: [newGroupSessionId(secondGroupSession.id)],
+      groupId: null,
       caseShares: [],
     });
 

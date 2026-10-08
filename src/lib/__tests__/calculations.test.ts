@@ -83,6 +83,7 @@ function makeSupervisionSession(
     setting: "einzel",
     linkedTherapySessionIds: [],
     linkedGroupSessionIds: [],
+    groupId: null,
     caseShares: [],
     ...overrides,
   };

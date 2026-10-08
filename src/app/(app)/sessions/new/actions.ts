@@ -151,6 +151,8 @@ export const addSupervisionSession: (
       linkedTherapySessionIds: input.linkedTherapySessionIds as TherapySessionId[],
       linkedGroupSessionIds: input.linkedGroupSessionIds as GroupSessionId[],
       caseShares: input.caseShares.map((c) => ({ patientId: c.patientId as PatientId, minutes: c.minutes })),
+      // Gruppensupervisionen mit Gruppe entstehen auf der Gruppenseite (#47).
+      groupId: null,
     };
     await addSupervisionSessionDB(session);
   },

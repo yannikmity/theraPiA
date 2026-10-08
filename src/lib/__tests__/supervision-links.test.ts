@@ -123,6 +123,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
       setting: "gruppe",
       linkedTherapySessionIds: [],
       linkedGroupSessionIds: [],
+      groupId: null,
       caseShares: [],
     });
     const { rows } = await t.client.query("SELECT setting FROM supervision_sessions WHERE id = $1", [id]);
@@ -145,6 +146,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
       setting: "einzel",
       linkedTherapySessionIds: [f.a.therapySessionId, f.a.therapySessionId].map(newTherapySessionId),
       linkedGroupSessionIds: [],
+      groupId: null,
       caseShares: [{ patientId: newPatientId(f.a.patientId), minutes: 60 }],
     });
     expect(await countRows(t.client, "supervision_therapy_links", "WHERE supervision_id = $1", [id])).toBe(1);
@@ -158,6 +160,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
       setting: "einzel",
       linkedTherapySessionIds: [f.a.therapySessionId, f.a.therapySessionId].map(newTherapySessionId),
       linkedGroupSessionIds: [],
+      groupId: null,
       caseShares: [{ patientId: newPatientId(f.a.patientId), minutes: 60 }],
     });
     expect(await countRows(t.client, "supervision_therapy_links", "WHERE supervision_id = $1", [id])).toBe(1);
@@ -177,6 +180,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
         setting: "einzel",
         linkedTherapySessionIds: [newTherapySessionId(f.a.therapySessionId)],
         linkedGroupSessionIds: [],
+        groupId: null,
         caseShares: [{ patientId: newPatientId(f.a.patientId), minutes: 60 }],
       })
     ).rejects.toThrow("Supervisor:in nicht gefunden");
@@ -206,6 +210,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
         setting: "einzel",
         linkedTherapySessionIds: [newTherapySessionId(f.a.therapySessionId)],
         linkedGroupSessionIds: [],
+        groupId: null,
         caseShares: [{ patientId: newPatientId(f.a.patientId), minutes: 60 }],
       })
     ).rejects.toThrow("simulierter Fehler");
@@ -228,6 +233,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
       setting: "einzel",
       linkedTherapySessionIds: [],
       linkedGroupSessionIds: [],
+      groupId: null,
       caseShares: [],
     });
     const sessions = await getSupervisionSessions();

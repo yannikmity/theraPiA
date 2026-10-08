@@ -68,9 +68,8 @@ export interface SupervisionSession {
   // Die Links auf Therapiesitzungen ändern an den Anteilen nichts.
   caseShares: SupervisionCaseShare[];
   // Gruppe, für die eine Gruppensupervision erfasst wurde (#47); null bei Einzelsupervisionen und ohne Gruppenbezug.
-  // Gelesene Supervisionen haben das Feld immer. Gesetzt wird es nur beim Anlegen auf der Gruppenseite; Bearbeiten
-  // lässt die Gruppe unverändert.
-  groupId?: GroupId | null;
+  // Geschrieben wird es nur beim Anlegen; Bearbeiten lässt die Gruppe unverändert.
+  groupId: GroupId | null;
 }
 
 export interface SupervisionCaseShare {

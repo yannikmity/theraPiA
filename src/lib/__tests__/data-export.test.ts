@@ -52,6 +52,8 @@ describe("buildDataExport", () => {
     const json = JSON.stringify(buildDataExport(sampleUserData(), invitations, null, NOW));
     expect(json).not.toMatch(/password|token/i);
     expect(JSON.parse(json).version).toBe(7);
+    // Gruppe der Gruppensupervision (#47), null bei Einzelsupervisionen – auch im JSON als Feld vorhanden
+    expect(JSON.parse(json).supervisionSessions.map((s: { groupId: unknown }) => s.groupId)).toEqual([null, null, "g-1"]);
   });
 
   it("enthält Genehmigungsdatum und Sprechstunden der Ambulanzleitung je Patient:in (#66)", () => {

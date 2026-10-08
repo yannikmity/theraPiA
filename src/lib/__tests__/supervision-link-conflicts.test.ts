@@ -41,6 +41,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervision: Sitzung nur einmal zuordnen", 
       setting: "einzel",
       linkedTherapySessionIds: [newTherapySessionId(f.a.therapySessionId)],
       linkedGroupSessionIds: [],
+      groupId: null,
       caseShares: [{ patientId: newPatientId(f.a.patientId), minutes: 50 }],
       ...overrides,
     };
