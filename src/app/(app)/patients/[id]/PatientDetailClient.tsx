@@ -183,8 +183,10 @@ export function PatientDetailClient({
     .sort((a, b) => b.date.localeCompare(a.date));
 
   const patientSessionIds = new Set(patientTherapySessions.map((s) => s.id));
+  // Supervisionen mit Anteil dieser Patient:in (#40) oder mit verknüpfter Sitzung; angezeigt wird der Anteil.
+  const shareOf = (sv: SupervisionSession) => sv.caseShares.find((c) => c.patientId === patient.id)?.minutes;
   const linkedSupervisions = supervisionSessions
-    .filter((sv) => sv.linkedTherapySessionIds.some((id) => patientSessionIds.has(id)))
+    .filter((sv) => shareOf(sv) !== undefined || sv.linkedTherapySessionIds.some((id) => patientSessionIds.has(id)))
     .sort((a, b) => b.date.localeCompare(a.date));
 
   const supervisedIds = new Set(
@@ -376,7 +378,7 @@ export function PatientDetailClient({
                     question={`Sitzung vom ${format(parseISO(session.date), "dd.MM.yyyy")} wirklich löschen?`}
                     description={
                       supervisedIds.has(session.id)
-                        ? "Die Zuordnung zur Supervision wird entfernt, die Supervision selbst bleibt bestehen."
+                        ? "Die Zuordnung zur Supervision wird entfernt; die Supervision und der Anteil der Patient:in daran bleiben bestehen."
                         : undefined
                     }
                     onConfirm={() => handleDeleteSession(session)}
@@ -408,7 +410,7 @@ export function PatientDetailClient({
                       <span className="ml-2 text-xs text-muted-foreground">{supervisor?.name}</span>
                     </div>
                   </div>
-                  <span className="text-sm text-muted-foreground">{sv.durationMinutes} Min</span>
+                  <span className="text-sm text-muted-foreground">{shareOf(sv) ?? sv.durationMinutes} Min</span>
                 </div>
               );
             })}
@@ -420,7 +422,7 @@ export function PatientDetailClient({
         <SectionHeader>Patient:in löschen</SectionHeader>
         <p className="text-xs text-muted-foreground">
           Entfernt die Patient:in dauerhaft. {mitgeloescht(patientTherapySessions.length)}; zugeordnete Supervisionen bleiben
-          bestehen, verlieren aber die Zuordnung.
+          mit ihrer ganzen Dauer bestehen, ihr Anteil daran wird keiner anderen Patient:in angerechnet.
         </p>
         <ActionError result={errorAt(error, "delete")} />
         <ConfirmButton

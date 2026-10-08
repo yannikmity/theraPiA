@@ -47,6 +47,10 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
     return sv.kind === "group" ? sv.linkedGroupSessionIds.length : sv.linkedTherapySessionIds.length;
   }
 
+  function caseLabel(patientId: string): string {
+    return data.patients.find((p) => p.id === patientId)?.chiffre ?? "?";
+  }
+
   // Angeboten werden Sitzungen, die keiner anderen Supervision zugeordnet sind – plus die eigenen. Therapiesitzungen
   // nur bis zum Datum, das gerade im Formular steht.
   function linkOptionsFor(sv: SupervisionSession, date: string): LinkOption[] {
@@ -62,7 +66,8 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
       .sort((a, b) => b.date.localeCompare(a.date))
       .map((ts) => ({
         id: ts.id,
-        label: `${data.patients.find((p) => p.id === ts.patientId)?.chiffre ?? "?"} · ${format(parseISO(ts.date), "dd.MM.yyyy")} · ${ts.durationMinutes} Min`,
+        label: `${caseLabel(ts.patientId)} · ${format(parseISO(ts.date), "dd.MM.yyyy")} · ${ts.durationMinutes} Min`,
+        patientId: ts.patientId,
       }));
   }
 
@@ -79,6 +84,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
         setting: values.setting,
         linkedTherapySessionIds: sv.kind === "group" ? [] : values.linkedIds,
         linkedGroupSessionIds: sv.kind === "group" ? values.linkedIds : [],
+        caseShares: sv.kind === "group" ? [] : values.caseShares,
       })
     );
     setIsSaving(false);
@@ -144,6 +150,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
                     session={sv}
                     supervisors={data.supervisors}
                     linkOptionsFor={(date) => linkOptionsFor(sv, date)}
+                    caseLabel={caseLabel}
                     saving={isSaving}
                     onSave={(values) => handleSave(sv, values)}
                     onCancel={() => {

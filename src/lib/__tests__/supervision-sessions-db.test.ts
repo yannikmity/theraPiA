@@ -4,6 +4,7 @@ import { createTestDb, TEST_DATABASE_URL } from "./helpers/test-db";
 import { seedOwnershipFixture, countRows } from "./helpers/fixtures";
 import {
   newGroupSessionId,
+  newPatientId,
   newSupervisionSessionId,
   newSupervisorId,
   newTherapySessionId,
@@ -37,6 +38,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervisionen ändern und löschen", () => 
       setting: "gruppe",
       linkedTherapySessionIds: linkedTherapySessionIds.map(newTherapySessionId),
       linkedGroupSessionIds: [],
+      caseShares: linkedTherapySessionIds.length > 0 ? [{ patientId: newPatientId(f.a.patientId), minutes: 90 }] : [],
     };
   }
 
@@ -93,6 +95,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervisionen ändern und löschen", () => 
       setting: "einzel",
       linkedTherapySessionIds: [],
       linkedGroupSessionIds: [newGroupSessionId(secondGroupSession.id)],
+      caseShares: [],
     });
 
     const { rows } = await db.query(

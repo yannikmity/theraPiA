@@ -82,6 +82,21 @@ const noTherapyLinksForGroup = (s: SupervisionLinks) => s.kind !== "group" || s.
 const INDIVIDUAL_LINKS = { error: "Eine Einzelsupervision kann keine Doppelstunden verknüpfen", path: ["linkedGroupSessionIds"] };
 const GROUP_LINKS = { error: "Eine Gruppensupervision kann keine Therapiesitzungen verknüpfen", path: ["linkedTherapySessionIds"] };
 
+// Anteil je Fall (#40): Dauer je besprochener Patient:in, nur bei Einzelsupervision. Beim Anlegen ist die Gesamtdauer
+// ihre Summe; beim Bearbeiten darf sie größer sein (Zeit einer gelöschten Patient:in bleibt). Wie groß die Differenz
+// höchstens sein darf und ob jede besprochene Sitzung einen Anteil ihres Falls hat, prüft die Datenbankschicht.
+const caseShares = z.array(z.object({ patientId: z.string().uuid(), minutes: durationMinutes }));
+type SupervisionShares = SupervisionLinks & { durationMinutes: number; caseShares: { patientId: string; minutes: number }[] };
+const noSharesForGroup = (s: SupervisionShares) => s.kind !== "group" || s.caseShares.length === 0;
+const uniqueSharePatients = (s: SupervisionShares) => new Set(s.caseShares.map((c) => c.patientId)).size === s.caseShares.length;
+const sharesSum = (s: SupervisionShares) => s.caseShares.reduce((sum, c) => sum + c.minutes, 0);
+const sharesSumToDuration = (s: SupervisionShares) => s.caseShares.length === 0 || sharesSum(s) === s.durationMinutes;
+const sharesWithinDuration = (s: SupervisionShares) => sharesSum(s) <= s.durationMinutes;
+const GROUP_SHARES = { error: "Eine Gruppensupervision hat keine Dauer je Patient:in", path: ["caseShares"] };
+const UNIQUE_SHARES = { error: "Jede Patient:in nur einmal angeben", path: ["caseShares"] };
+const SHARES_SUM = { error: "Die Gesamtdauer muss der Summe der Dauern je Patient:in entsprechen", path: ["durationMinutes"] };
+const SHARES_MAX = { error: "Die Summe der Dauern je Patient:in darf die Gesamtdauer nicht überschreiten", path: ["durationMinutes"] };
+
 export const addSupervisionSessionSchema = z
   .object({
     supervisorId: z.string().uuid(),
@@ -91,9 +106,13 @@ export const addSupervisionSessionSchema = z
     setting: supervisionSetting.default("einzel"),
     linkedTherapySessionIds: uniqueUuids,
     linkedGroupSessionIds: uniqueUuids,
+    caseShares: caseShares.default([]),
   })
   .refine(noGroupLinksForIndividual, INDIVIDUAL_LINKS)
-  .refine(noTherapyLinksForGroup, GROUP_LINKS);
+  .refine(noTherapyLinksForGroup, GROUP_LINKS)
+  .refine(noSharesForGroup, GROUP_SHARES)
+  .refine(uniqueSharePatients, UNIQUE_SHARES)
+  .refine(sharesSumToDuration, SHARES_SUM);
 
 export const updateSupervisionSessionSchema = z
   .object({
@@ -105,9 +124,13 @@ export const updateSupervisionSessionSchema = z
     setting: supervisionSetting,
     linkedTherapySessionIds: uniqueUuidsRequired,
     linkedGroupSessionIds: uniqueUuidsRequired,
+    caseShares,
   })
   .refine(noGroupLinksForIndividual, INDIVIDUAL_LINKS)
-  .refine(noTherapyLinksForGroup, GROUP_LINKS);
+  .refine(noTherapyLinksForGroup, GROUP_LINKS)
+  .refine(noSharesForGroup, GROUP_SHARES)
+  .refine(uniqueSharePatients, UNIQUE_SHARES)
+  .refine(sharesWithinDuration, SHARES_MAX);
 
 export const deleteByIdSchema = z.object({
   id: z.string().uuid(),

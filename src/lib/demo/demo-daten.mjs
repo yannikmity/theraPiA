@@ -51,6 +51,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
  * @property {"individual" | "group"} kind
  * @property {string[]} therapySessions Schlüssel der besprochenen Sitzungen
  * @property {string[]} groupSessions Schlüssel der besprochenen Doppelstunden
+ * @property {{ patient: string, minutes: number }[]} cases Dauer je besprochener Patient:in (#40), Summe = durationMinutes
  */
 /**
  * @typedef {object} DemoGroup
@@ -132,6 +133,17 @@ const GRUPPE = { key: "g1", name: "Gruppe Beispiel", vonWoche: 30, offset: 6, pl
 const EINZEL_SV = { vonWoche: 64, bisWoche: 2, schritt: 2, ohneD: [8, 16] };
 // Gruppensupervision bei Supervisor:in B: bespricht die durchgeführten Doppelstunden eines Vier-Wochen-Fensters.
 const GRUPPEN_SV = { wochen: [2, 6, 10, 14, 18, 22, 26], fenster: 4 };
+
+/**
+ * Gesamtdauer gleich auf die Fälle verteilt, ganze Minuten, Rest minutenweise an die ersten – wie Migration 009.
+ * @param {number} gesamt
+ * @param {string[]} patienten Schlüssel in fester Reihenfolge
+ */
+const anteile = (gesamt, patienten) =>
+  patienten.map((patient, i) => ({
+    patient,
+    minutes: Math.floor(gesamt / patienten.length) + (i < gesamt % patienten.length ? 1 : 0),
+  }));
 
 /**
  * @param {number} woche
@@ -228,15 +240,17 @@ export function generateDemoData(today) {
       if (s.patient === "E") return false;
       return !(s.patient === "D" && EINZEL_SV.ohneD.includes(k));
     });
-    const personen = new Set(besprochen.map((s) => s.patient)).size;
+    const personen = [...new Set(besprochen.map((s) => s.patient))].sort();
+    const durationMinutes = personen.length >= 3 ? 100 : 50;
     supervisionSessions.push({
       key: `sv-${k}`,
       supervisor: "s1",
       date: vorTagen(7 * k),
-      durationMinutes: personen >= 3 ? 100 : 50,
+      durationMinutes,
       kind: "individual",
       therapySessions: besprochen.map((s) => s.key),
       groupSessions: [],
+      cases: anteile(durationMinutes, personen),
     });
   }
   for (const k of GRUPPEN_SV.wochen) {
@@ -252,6 +266,7 @@ export function generateDemoData(today) {
       kind: "group",
       therapySessions: [],
       groupSessions: besprochen.map((g) => g.key),
+      cases: [],
     });
   }
 

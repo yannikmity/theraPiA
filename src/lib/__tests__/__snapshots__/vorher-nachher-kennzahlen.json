@@ -499,7 +499,13 @@
               "chiffre": "V-1"
             }
           ],
-          "linkedGroupSessions": []
+          "linkedGroupSessions": [],
+          "caseShares": [
+            {
+              "chiffre": "V-1",
+              "minutes": 60
+            }
+          ]
         },
         {
           "id": "sv-2",
@@ -514,7 +520,13 @@
               "chiffre": "V-2"
             }
           ],
-          "linkedGroupSessions": []
+          "linkedGroupSessions": [],
+          "caseShares": [
+            {
+              "chiffre": "V-2",
+              "minutes": 70
+            }
+          ]
         },
         {
           "id": "sv-3",
@@ -533,7 +545,8 @@
               "date": "2026-06-18",
               "groupName": "Gruppe Beispiel"
             }
-          ]
+          ],
+          "caseShares": []
         },
         {
           "id": "sv-4",
@@ -548,7 +561,13 @@
               "chiffre": "V-3"
             }
           ],
-          "linkedGroupSessions": []
+          "linkedGroupSessions": [],
+          "caseShares": [
+            {
+              "chiffre": "V-3",
+              "minutes": 45
+            }
+          ]
         }
       ],
       "groupSessions": [
@@ -739,7 +758,13 @@
               "chiffre": "V-1"
             }
           ],
-          "linkedGroupSessions": []
+          "linkedGroupSessions": [],
+          "caseShares": [
+            {
+              "chiffre": "V-1",
+              "minutes": 60
+            }
+          ]
         },
         {
           "id": "sv-3",
@@ -758,7 +783,8 @@
               "date": "2026-06-18",
               "groupName": "Gruppe Beispiel"
             }
-          ]
+          ],
+          "caseShares": []
         },
         {
           "id": "sv-4",
@@ -773,7 +799,13 @@
               "chiffre": "V-3"
             }
           ],
-          "linkedGroupSessions": []
+          "linkedGroupSessions": [],
+          "caseShares": [
+            {
+              "chiffre": "V-3",
+              "minutes": 45
+            }
+          ]
         }
       ],
       "groupSessions": [

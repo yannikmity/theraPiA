@@ -51,6 +51,13 @@ async function seedAccount(client: Client, prefix: string): Promise<SeededAccoun
     "INSERT INTO supervision_therapy_links (supervision_id, therapy_session_id) VALUES ($1, $2)",
     [supervision.id, therapySession.id]
   );
+  // Anteil je Fall (#40) erst ab Migration 009 – Migrationstests legen die Fixture auf älteren Ständen an.
+  if ((await one("SELECT to_regclass('supervision_cases') IS NOT NULL AS da", [])).da) {
+    await client.query("INSERT INTO supervision_cases (supervision_id, patient_id, minutes) VALUES ($1, $2, 60)", [
+      supervision.id,
+      patient.id,
+    ]);
+  }
   return {
     userId: user.id,
     supervisorId: supervisor.id,

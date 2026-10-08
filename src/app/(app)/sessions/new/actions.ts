@@ -150,6 +150,7 @@ export const addSupervisionSession: (
       setting: input.setting,
       linkedTherapySessionIds: input.linkedTherapySessionIds as TherapySessionId[],
       linkedGroupSessionIds: input.linkedGroupSessionIds as GroupSessionId[],
+      caseShares: input.caseShares.map((c) => ({ patientId: c.patientId as PatientId, minutes: c.minutes })),
     };
     await addSupervisionSessionDB(session);
   },

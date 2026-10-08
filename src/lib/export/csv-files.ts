@@ -81,6 +81,12 @@ export function supervisionsCsv(data: UserData): string {
       .filter(defined)
       .map((g): Item => ({ date: g.date, label: groupNameOf.get(g.groupId) ?? "" }))
       .sort(byDate);
+    // Dauer je Fall (#40): „A-1: 25 Min, A-2: 25 Min“
+    const shares = sv.caseShares
+      .map((c) => ({ label: chiffreOf.get(c.patientId) ?? "", minutes: c.minutes }))
+      .sort((a, b) => compareNatural(a.label, b.label))
+      .map((c) => `${c.label}: ${c.minutes} Min`)
+      .join(", ");
     return [
       sv.date,
       supervisorNameOf.get(sv.supervisorId) ?? "",
@@ -90,10 +96,11 @@ export function supervisionsCsv(data: UserData): string {
       formatHours(sv.durationMinutes),
       describe(therapy),
       describe(groups),
+      shares,
     ];
   });
   return toCsv(
-    ["Datum", "Supervisor:in", "Art", "Setting", "Dauer (Minuten)", "Dauer (Stunden)", "Besprochene Sitzungen", "Besprochene Doppelstunden"],
+    ["Datum", "Supervisor:in", "Art", "Setting", "Dauer (Minuten)", "Dauer (Stunden)", "Besprochene Sitzungen", "Besprochene Doppelstunden", "Dauer je Patient:in"],
     rows
   );
 }

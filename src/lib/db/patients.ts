@@ -82,8 +82,10 @@ export async function updatePatient(patient: Patient): Promise<void> {
   }
 }
 
-// Ein Statement: Therapiesitzungen der Patient:in und deren Supervisions-Verknüpfungen fallen
-// per ON DELETE CASCADE mit, die Supervisionen selbst bleiben. Atomar ohne eigene Transaktion.
+// Ein Statement: Therapiesitzungen der Patient:in, deren Supervisions-Verknüpfungen und ihre Anteile an Supervisionen
+// fallen per ON DELETE CASCADE mit. Die Supervisionen bleiben mit unveränderter Gesamtdauer – sie haben stattgefunden,
+// Kosten und Nachweis ändern sich nicht rückwirkend. Der Anteil wird nicht auf andere Fälle verteilt (#40); die
+// Differenz zwischen Gesamtdauer und Summe der Anteile ist Zeit ohne vorhandenen Fall. Atomar ohne eigene Transaktion.
 export async function deletePatient(db: Db, userId: string, id: PatientId | string): Promise<void> {
   const result = await db.query("DELETE FROM patients WHERE id = $1 AND user_id = $2", [id, userId]);
   if (result.rowCount === 0) throw new NotFoundError("Patient:in");

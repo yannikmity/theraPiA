@@ -42,7 +42,8 @@ const t = (id: string, patient: string, date: string, durationMinutes: number, c
   notes: "",
   category,
 });
-const sv = (id: string, supervisor: string, date: string, durationMinutes: number, therapy: string[], groups: string[] = []): SupervisionSession => ({
+// Einzeltherapie-Supervisionen besprechen hier je einen Fall, der die ganze Dauer trägt (Anteile je Fall, #40).
+const sv = (id: string, supervisor: string, date: string, durationMinutes: number, therapy: string[], groups: string[] = [], patient?: string): SupervisionSession => ({
   id: newSupervisionSessionId(id),
   supervisorId: newSupervisorId(supervisor),
   date,
@@ -51,6 +52,7 @@ const sv = (id: string, supervisor: string, date: string, durationMinutes: numbe
   setting: "einzel",
   linkedTherapySessionIds: therapy.map(newTherapySessionId),
   linkedGroupSessionIds: groups.map(newGroupSessionId),
+  caseShares: patient ? [{ patientId: newPatientId(patient), minutes: durationMinutes }] : [],
 });
 const g = (id: string, date: string, status: GroupSessionStatus, childCount: number | null, countsTowardAmbulanzzeit = true): GroupSession => ({
   id: newGroupSessionId(id),
@@ -104,10 +106,10 @@ export function vorherNachherDaten(): { data: UserData; settings: FinancialSetti
       t("t-14", "p-1", "2026-08-20", 50),
     ],
     supervisionSessions: [
-      sv("sv-1", "s-1", "2026-04-28", 60, ["t-01", "t-02", "t-03"]),
-      sv("sv-2", "s-2", "2026-06-10", 70, ["t-06"]),
+      sv("sv-1", "s-1", "2026-04-28", 60, ["t-01", "t-02", "t-03"], [], "p-1"),
+      sv("sv-2", "s-2", "2026-06-10", 70, ["t-06"], [], "p-2"),
       sv("sv-3", "s-1", "2026-07-15", 90, [], ["gs-2", "gs-4"]),
-      sv("sv-4", "s-1", "2026-08-13", 45, ["t-08"]),
+      sv("sv-4", "s-1", "2026-08-13", 45, ["t-08"], [], "p-3"),
     ],
     groups: [
       { id: newGroupId("g-1"), name: "Gruppe Beispiel", startDate: "2026-04-01", plannedSessionCount: 20, avgKids: 6, isActive: true, createdAt: "2026-04-01T08:00:00.000Z" },

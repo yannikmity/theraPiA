@@ -23,8 +23,13 @@ vi.mock("../db", () => ({
   },
 }));
 vi.mock("../db/get-current-user", () => ({ getCurrentUserId: async () => state.userId }));
-import { addSupervisionSession, insertSupervisionSession, updateSupervisionSession } from "../db/supervision-sessions";
-import { newSupervisionSessionId, newSupervisorId, newTherapySessionId } from "@/types";
+import {
+  addSupervisionSession,
+  getSupervisionSessions,
+  insertSupervisionSession,
+  updateSupervisionSession,
+} from "../db/supervision-sessions";
+import { newPatientId, newSupervisionSessionId, newSupervisorId, newTherapySessionId } from "@/types";
 
 describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
   let cleanup: (() => Promise<void>) | undefined;
@@ -60,6 +65,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
         setting: "einzel",
         linkedTherapySessionIds: [sessB.id],
         linkedGroupSessionIds: [],
+        caseShares: [],
       } as never)
     ).rejects.toThrow("Therapiesitzung nicht gefunden");
 
@@ -93,6 +99,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
         setting: "einzel",
         linkedTherapySessionIds: [],
         linkedGroupSessionIds: [gsB.id],
+        caseShares: [],
       } as never)
     ).rejects.toThrow("Gruppensitzung nicht gefunden");
 
@@ -116,6 +123,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
       setting: "gruppe",
       linkedTherapySessionIds: [],
       linkedGroupSessionIds: [],
+      caseShares: [],
     });
     const { rows } = await t.client.query("SELECT setting FROM supervision_sessions WHERE id = $1", [id]);
     expect(rows[0].setting).toBe("gruppe");
@@ -135,6 +143,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
       setting: "einzel",
       linkedTherapySessionIds: [f.a.therapySessionId, f.a.therapySessionId].map(newTherapySessionId),
       linkedGroupSessionIds: [],
+      caseShares: [{ patientId: newPatientId(f.a.patientId), minutes: 60 }],
     });
     expect(await countRows(t.client, "supervision_therapy_links", "WHERE supervision_id = $1", [id])).toBe(1);
 
@@ -147,6 +156,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
       setting: "einzel",
       linkedTherapySessionIds: [f.a.therapySessionId, f.a.therapySessionId].map(newTherapySessionId),
       linkedGroupSessionIds: [],
+      caseShares: [{ patientId: newPatientId(f.a.patientId), minutes: 60 }],
     });
     expect(await countRows(t.client, "supervision_therapy_links", "WHERE supervision_id = $1", [id])).toBe(1);
   });
@@ -165,6 +175,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
         setting: "einzel",
         linkedTherapySessionIds: [newTherapySessionId(f.a.therapySessionId)],
         linkedGroupSessionIds: [],
+        caseShares: [{ patientId: newPatientId(f.a.patientId), minutes: 60 }],
       })
     ).rejects.toThrow("Supervisor:in nicht gefunden");
     expect(await countRows(t.client, "supervision_sessions")).toBe(2); // nur die beiden aus der Fixture
@@ -192,8 +203,36 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
         setting: "einzel",
         linkedTherapySessionIds: [newTherapySessionId(f.a.therapySessionId)],
         linkedGroupSessionIds: [],
+        caseShares: [{ patientId: newPatientId(f.a.patientId), minutes: 60 }],
       })
     ).rejects.toThrow("simulierter Fehler");
     expect(await countRows(t.client, "supervision_sessions", "WHERE id = $1", [id])).toBe(0);
+  });
+
+  it("getSupervisionSessions liefert die Anteile je Fall, nur eigene", async () => {
+    const t = await createTestDb();
+    cleanup = t.cleanup;
+    const f = await seedOwnershipFixture(t.client);
+    state.client = t.client;
+    state.userId = f.a.userId;
+    const ohne = crypto.randomUUID();
+    await insertSupervisionSession(t.client, f.a.userId, {
+      id: newSupervisionSessionId(ohne),
+      supervisorId: newSupervisorId(f.a.supervisorId),
+      date: "2026-01-20",
+      durationMinutes: 45,
+      kind: "individual",
+      setting: "einzel",
+      linkedTherapySessionIds: [],
+      linkedGroupSessionIds: [],
+      caseShares: [],
+    });
+    const sessions = await getSupervisionSessions();
+    expect(sessions.map((s) => [s.id, s.caseShares]).sort()).toEqual(
+      [
+        [f.a.supervisionId, [{ patientId: f.a.patientId, minutes: 60 }]],
+        [ohne, []],
+      ].sort()
+    );
   });
 });

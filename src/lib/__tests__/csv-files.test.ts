@@ -34,11 +34,11 @@ describe("CSV-Dateien", () => {
   it("Supervisionen: Art, Setting und besprochene Sitzungen/Doppelstunden nach Datum", () => {
     const l = lines(supervisionsCsv(sampleUserData()));
     expect(l[0]).toBe(
-      `${CSV_BOM}Datum;Supervisor:in;Art;Setting;Dauer (Minuten);Dauer (Stunden);Besprochene Sitzungen;Besprochene Doppelstunden`
+      `${CSV_BOM}Datum;Supervisor:in;Art;Setting;Dauer (Minuten);Dauer (Stunden);Besprochene Sitzungen;Besprochene Doppelstunden;Dauer je Patient:in`
     );
-    expect(l[1]).toBe("2026-02-20;Supervision Eins;Einzeltherapie;Einzel;60;1,00;A-01 (2026-01-10), A-02 (2026-02-14);");
-    expect(l[2]).toBe("2026-03-15;Supervision Zwei;Einzeltherapie;Gruppe;90;1,50;A-01 (2026-03-31);");
-    expect(l[3]).toBe("2026-04-05;Supervision Eins;Gruppentherapie;Einzel;60;1,00;;Gruppe Montag (2026-01-12)");
+    expect(l[1]).toBe("2026-02-20;Supervision Eins;Einzeltherapie;Einzel;60;1,00;A-01 (2026-01-10), A-02 (2026-02-14);;A-01: 30 Min, A-02: 30 Min");
+    expect(l[2]).toBe("2026-03-15;Supervision Zwei;Einzeltherapie;Gruppe;90;1,50;A-01 (2026-03-31);;A-01: 90 Min");
+    expect(l[3]).toBe("2026-04-05;Supervision Eins;Gruppentherapie;Einzel;60;1,00;;Gruppe Montag (2026-01-12);");
   });
 
   it("Supervisionen: besprochene Sitzungen gleichen Datums natürlich nach Chiffre", () => {
@@ -46,7 +46,7 @@ describe("CSV-Dateien", () => {
     data.patients[0].chiffre = "A-10";
     data.patients[1].chiffre = "A-2";
     data.therapySessions[1].date = "2026-01-10";
-    expect(lines(supervisionsCsv(data))[1]).toBe("2026-02-20;Supervision Eins;Einzeltherapie;Einzel;60;1,00;A-2 (2026-01-10), A-10 (2026-01-10);");
+    expect(lines(supervisionsCsv(data))[1]).toBe("2026-02-20;Supervision Eins;Einzeltherapie;Einzel;60;1,00;A-2 (2026-01-10), A-10 (2026-01-10);;A-2: 30 Min, A-10: 30 Min");
   });
 
   it("Doppelstunden: Status auf Deutsch, Teilnehmende, ja/nein, Notiz und Supervision", () => {

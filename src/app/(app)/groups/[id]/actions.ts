@@ -119,6 +119,7 @@ export const addGroupSupervisionSession: (
       setting: input.setting,
       linkedTherapySessionIds: [],
       linkedGroupSessionIds: input.linkedGroupSessionIds as GroupSessionId[],
+      caseShares: [],
     };
     await addSupervisionSessionDB(session);
     return loadGroupDetailData(input.groupId);

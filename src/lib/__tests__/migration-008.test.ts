@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, afterEach } from "vitest";
-import { runMigrations } from "../../../scripts/migrate.mjs";
-import { createTestDb, migrateBis, MIGRATIONS_DIR, TEST_DATABASE_URL } from "./helpers/test-db";
+import { createTestDb, migrateBis, TEST_DATABASE_URL } from "./helpers/test-db";
 import { seedOwnershipFixture } from "./helpers/fixtures";
 
 describe.skipIf(!TEST_DATABASE_URL)("Migration 008 (Setting der Supervision)", () => {
@@ -33,7 +32,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Migration 008 (Setting der Supervision)", (
     const f = await seedOwnershipFixture(t.client);
     const spalten = "id, supervisor_id, to_char(date, 'YYYY-MM-DD') AS date, duration_minutes, kind";
     const vorher = await t.client.query(`SELECT ${spalten} FROM supervision_sessions ORDER BY id`);
-    expect(await runMigrations(t.client, MIGRATIONS_DIR, { lockId: 7008 })).toEqual(["008_supervision_setting.sql"]);
+    expect(await migrateBis(t.client, "008_supervision_setting.sql")).toEqual(["008_supervision_setting.sql"]);
     const nachher = await t.client.query(`SELECT ${spalten} FROM supervision_sessions ORDER BY id`);
     expect(nachher.rows).toEqual(vorher.rows);
     const sv = await t.client.query("SELECT setting FROM supervision_sessions WHERE id = $1", [f.a.supervisionId]);
