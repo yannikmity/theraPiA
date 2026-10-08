@@ -196,7 +196,7 @@ Die Ausgabe endet mit `SQL backup created successfully`, und in `backups/last/` 
   2. Das Backup wie in [Abschnitt 6](#6-backups) unter „Wiederherstellen“ einspielen; das dortige `docker compose pull` und `docker compose up -d` holen dabei schon das alte Image.
   3. Statt mit `docker compose start app` mit `docker compose up -d` abschließen, damit der Container `app` sicher mit dem alten Image läuft, dann `docker compose logs --tail 50 app` prüfen: `Datenbank ist aktuell.` und `✓ Ready in …`.
 
-  Meldet das Einspielen in Schritt 2 einen Fehler (`ERROR:`), ist die Datenbank noch im Zustand der neuen Version: dann nicht mit Schritt 3 weitermachen, sondern ein anderes Backup einspielen oder in `.env` wieder die neue Version setzen und mit `docker compose up -d` starten.
+  Meldet das Einspielen in Schritt 2 einen Fehler (`ERROR:` oder „Backup fehlt …“), ist die Datenbank noch im Zustand der neuen Version: dann nicht mit Schritt 3 weitermachen, sondern ein anderes Backup einspielen oder in `.env` wieder die neue Version setzen und mit `docker compose up -d` starten.
 
 Danach den Health-Check aus [Abschnitt 2](#2-installation) aufrufen und den Fehler als Issue melden (siehe [Support-Grenzen](README.md#support-grenzen)).
 
@@ -238,13 +238,19 @@ In jedem Ordner zeigt `therapia-latest.sql.gz` auf das neueste Backup. Ein zusä
    ```bash
    BACKUP=backups/daily/therapia-20260925.sql.gz
 
-   docker compose stop app
-   { echo 'SET client_min_messages = warning; DROP SCHEMA public CASCADE; CREATE SCHEMA public;'; gunzip -c "$BACKUP"; } \
-     | docker compose exec -T db sh -c 'psql -q -1 -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > /dev/null
-   docker compose start app
+   if gunzip -t "$BACKUP" && gunzip -c "$BACKUP" | tail -n 10 | grep -q '^-- PostgreSQL database dump complete'; then
+     docker compose stop app
+     { echo 'SET client_min_messages = warning; DROP SCHEMA public CASCADE; CREATE SCHEMA public;'; gunzip -c "$BACKUP"; } \
+       | docker compose exec -T db sh -c 'psql -q -1 -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > /dev/null
+     docker compose start app
+   else
+     echo "Backup fehlt, ist beschädigt oder unvollständig – Datenbank nicht angefasst."
+   fi
    ```
 
-   Der mittlere Befehl leert die Datenbank und spielt das Backup in einer einzigen Transaktion ein (`-1`). Gibt er nichts aus, hat es geklappt. Schlägt etwas fehl (z. B. beschädigte Datei), zeigt er eine Meldung mit `ERROR:` und die Datenbank bleibt unverändert im alten Zustand; die App dann trotzdem mit `docker compose start app` wieder starten.
+   Zuerst prüft der Befehl die Datei: Sie muss sich entpacken lassen und mit der Schlusszeile eines vollständigen `pg_dump` enden. Nur dann leert er die Datenbank und spielt das Backup in einer einzigen Transaktion ein (`-1`). Gibt er nichts aus, hat es geklappt. Meldet `gunzip` einen Fehler oder erscheint „Backup fehlt …“, ist nichts verändert und die App läuft weiter – Pfad prüfen oder ein anderes Backup wählen. Meldet `psql` einen Fehler (`ERROR:`), rollt die Transaktion zurück und die Datenbank bleibt im alten Zustand; die App dann trotzdem mit `docker compose start app` wieder starten.
+
+   Wichtig: Die Prüfung vorab ist nötig. Ohne sie würde bei falschem Pfad nur das Entpacken scheitern – `psql` bekäme dann allein das Leeren der Datenbank, führte es fehlerfrei aus und speicherte eine leere Datenbank.
 3. Prüfen: Health-Check aus Abschnitt 2 aufrufen und in der App anmelden – die Daten entsprechen dem Stand des Backups.
 
 **Wiederherstellung einmal direkt nach der Installation testen:** ersten Account anlegen, ein Backup auslösen (`docker compose exec backup /backup.sh`), dann die Schritte oben mit der Datei aus `backups/last/` durchgehen und prüfen, dass die Anmeldung danach noch funktioniert. Ein Backup, dessen Wiederherstellung nie geprüft wurde, ist keins.
