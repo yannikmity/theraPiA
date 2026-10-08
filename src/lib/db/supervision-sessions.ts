@@ -61,6 +61,73 @@ async function assertSupervisionOwnership(
     if (owned.rows[0].n !== new Set(session.linkedGroupSessionIds).size) throw new NotFoundError("Gruppensitzung");
   }
   await assertCaseShares(db, userId, session, allowedGap);
+  await assertLinksAvailable(db, session);
+}
+
+export const MELDUNG_SCHON_ZUGEORDNET =
+  "Eine der gewählten Sitzungen ist inzwischen schon einer anderen Supervision zugeordnet. Bitte die Seite neu laden.";
+const LINK_UNIQUE_CONSTRAINTS = new Set([
+  "supervision_therapy_links_therapy_session_id_key",
+  "supervision_group_session_links_group_session_id_key",
+]);
+
+// Eine Sitzung gehört zu höchstens einer Supervision (#35). Ein veralteter Tab bietet Sitzungen an, die inzwischen
+// woanders zugeordnet sind – hier mit Sitzung und Datum ablehnen. Gleichzeitige Anfragen fängt der Unique-Index aus
+// Migration 010 ab (insertSupervisionLinks). Neu verknüpfte Therapiesitzungen dürfen außerdem nicht nach dem Datum der
+// Supervision liegen (#37); schon gespeicherte bleiben erlaubt, wie im Formular (linkableTherapySessions).
+async function assertLinksAvailable(db: Db, session: SupervisionSession): Promise<void> {
+  const taken: string[] = [];
+  if (session.linkedTherapySessionIds.length > 0) {
+    const { rows } = await db.query(
+      `SELECT DISTINCT p.chiffre, ts.date, to_char(ts.date, 'DD.MM.YYYY') AS datum
+       FROM supervision_therapy_links stl
+       JOIN therapy_sessions ts ON ts.id = stl.therapy_session_id
+       JOIN patients p ON p.id = ts.patient_id
+       WHERE stl.therapy_session_id = ANY($1::uuid[]) AND stl.supervision_id <> $2
+       ORDER BY ts.date, p.chiffre`,
+      [session.linkedTherapySessionIds, session.id]
+    );
+    taken.push(...rows.map((r) => `${r.chiffre} am ${r.datum}`));
+  }
+  if (session.linkedGroupSessionIds.length > 0) {
+    const { rows } = await db.query(
+      `SELECT DISTINCT g.name, gs.date, to_char(gs.date, 'DD.MM.YYYY') AS datum
+       FROM supervision_group_session_links sgl
+       JOIN group_sessions gs ON gs.id = sgl.group_session_id
+       JOIN groups g ON g.id = gs.group_id
+       WHERE sgl.group_session_id = ANY($1::uuid[]) AND sgl.supervision_id <> $2
+       ORDER BY gs.date, g.name`,
+      [session.linkedGroupSessionIds, session.id]
+    );
+    taken.push(...rows.map((r) => `${r.name} am ${r.datum}`));
+  }
+  if (taken.length > 0) {
+    const was = taken.length === 1 ? "Die Sitzung" : "Die Sitzungen";
+    const ist = taken.length === 1 ? "ist" : "sind";
+    throw new ValidationError(
+      `${was} ${taken.join(", ")} ${ist} inzwischen schon einer anderen Supervision zugeordnet. Bitte die Seite neu laden.`
+    );
+  }
+
+  if (session.linkedTherapySessionIds.length > 0) {
+    const { rows } = await db.query(
+      `SELECT p.chiffre, to_char(ts.date, 'DD.MM.YYYY') AS datum
+       FROM therapy_sessions ts
+       JOIN patients p ON p.id = ts.patient_id
+       WHERE ts.id = ANY($1::uuid[]) AND ts.date > $2::date
+         AND NOT EXISTS (SELECT 1 FROM supervision_therapy_links stl WHERE stl.therapy_session_id = ts.id AND stl.supervision_id = $3)
+       ORDER BY ts.date, p.chiffre`,
+      [session.linkedTherapySessionIds, session.date, session.id]
+    );
+    if (rows.length > 0) {
+      const list = rows.map((r) => `${r.chiffre} am ${r.datum}`).join(", ");
+      throw new ValidationError(
+        rows.length === 1
+          ? `Die Sitzung ${list} liegt nach dem Datum der Supervision`
+          : `Die Sitzungen ${list} liegen nach dem Datum der Supervision`
+      );
+    }
+  }
 }
 
 // Anteile je Fall (#40): nur bei Einzeltherapie-Supervisionen, je Patient:in einmal, eigene Patient:innen. Gesamtdauer
@@ -100,22 +167,32 @@ async function assertCaseShares(db: Db, userId: string, session: SupervisionSess
 
 // Verknüpfungen und Anteile je Fall. Doppelte IDs (Aufrufer ohne Zod-Schema, z. B. ein späterer Import) würden am Primärschlüssel scheitern (23505);
 // die Besitzprüfung zählt ohnehin über ein Set. Hier zusammenfassen, damit beide Wege dasselbe Ergebnis haben.
+// Hat eine gleichzeitige Anfrage dieselbe Sitzung gerade zugeordnet, schlägt der Unique-Index an (23505) – dann die
+// fachliche Meldung statt eines unerwarteten Fehlers.
 async function insertSupervisionLinks(db: Db, session: SupervisionSession): Promise<void> {
   const therapyIds = [...new Set(session.linkedTherapySessionIds)];
   const groupIds = [...new Set(session.linkedGroupSessionIds)];
-  if (therapyIds.length > 0) {
-    await db.query(
-      `INSERT INTO supervision_therapy_links (supervision_id, therapy_session_id)
-       SELECT $1, unnest($2::uuid[])`,
-      [session.id, therapyIds]
-    );
-  }
-  if (groupIds.length > 0) {
-    await db.query(
-      `INSERT INTO supervision_group_session_links (supervision_id, group_session_id)
-       SELECT $1, unnest($2::uuid[])`,
-      [session.id, groupIds]
-    );
+  try {
+    if (therapyIds.length > 0) {
+      await db.query(
+        `INSERT INTO supervision_therapy_links (supervision_id, therapy_session_id)
+         SELECT $1, unnest($2::uuid[])`,
+        [session.id, therapyIds]
+      );
+    }
+    if (groupIds.length > 0) {
+      await db.query(
+        `INSERT INTO supervision_group_session_links (supervision_id, group_session_id)
+         SELECT $1, unnest($2::uuid[])`,
+        [session.id, groupIds]
+      );
+    }
+  } catch (error) {
+    const { code, constraint } = error as { code?: string; constraint?: string };
+    if (code === "23505" && constraint !== undefined && LINK_UNIQUE_CONSTRAINTS.has(constraint)) {
+      throw new ValidationError(MELDUNG_SCHON_ZUGEORDNET);
+    }
+    throw error;
   }
   if (session.caseShares.length > 0) {
     await db.query(
@@ -159,6 +236,9 @@ async function storedCaseGap(db: Db, userId: string, id: string): Promise<number
 // (Aufrufer: withTransaction), weil alte Verknüpfungen gelöscht und neue eingefügt werden.
 // Alle Prüfungen laufen vor dem ersten Schreibzugriff, fremde IDs ändern also nichts.
 export async function updateSupervisionSession(db: Db, userId: string, session: SupervisionSession): Promise<void> {
+  // Fremde Supervision zuerst ablehnen – sonst meldete die Prüfung der Verknüpfungen Konflikte mit ihren Links.
+  const own = await db.query("SELECT 1 FROM supervision_sessions WHERE id = $1 AND user_id = $2", [session.id, userId]);
+  if (own.rows.length === 0) throw new NotFoundError("Supervisionssitzung");
   await assertSupervisionOwnership(db, userId, session, await storedCaseGap(db, userId, session.id));
   const result = await db.query(
     `UPDATE supervision_sessions

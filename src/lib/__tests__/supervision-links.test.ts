@@ -133,6 +133,8 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
     const t = await createTestDb();
     cleanup = t.cleanup;
     const f = await seedOwnershipFixture(t.client);
+    // Die Sitzung der Fixture gehört schon zur Supervision der Fixture (#35).
+    await t.client.query("DELETE FROM supervision_sessions WHERE id = $1", [f.a.supervisionId]);
     const id = crypto.randomUUID();
     await insertSupervisionSession(t.client, f.a.userId, {
       id: newSupervisionSessionId(id),
@@ -187,6 +189,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
     const f = await seedOwnershipFixture(t.client);
     state.client = t.client;
     state.userId = f.a.userId;
+    await t.client.query("DELETE FROM supervision_sessions WHERE id = $1", [f.a.supervisionId]);
     // Fehler NACH dem ersten Insert: die Supervision steht schon, erst die Verknüpfung scheitert.
     await t.client.query(`
       CREATE FUNCTION test_link_fail() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'simulierter Fehler'; END $$ LANGUAGE plpgsql;
