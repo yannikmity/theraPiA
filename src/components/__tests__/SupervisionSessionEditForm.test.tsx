@@ -181,4 +181,61 @@ describe("SupervisionSessionEditForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ setting: "gruppe" })));
   });
+
+  // #37: Neu gewählte Sitzungen nach dem neuen Datum fallen beim Datumswechsel weg, samt nicht gespeichertem Anteil –
+  // sonst würden sie unsichtbar mitgespeichert und das Speichern scheiterte an einem unsichtbaren Fall.
+  it("wählt beim Datumswechsel ausgeblendete neue Sitzungen ab und verwirft ihren Anteil", () => {
+    const onSave = vi.fn(async () => {});
+    const spaet = { id: "t-3", label: "A-3 · 25.09.2026 · 50 Min", patientId: "p-3" };
+    render(
+      <SupervisionSessionEditForm
+        session={session}
+        supervisors={supervisors}
+        linkOptionsFor={(date) => (date >= "2026-09-25" ? [...linkOptions, spaet] : linkOptions)}
+        caseLabel={(id) => chiffren[id]}
+        saving={false}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+    const sitzungen = () => within(screen.getByRole("group", { name: "Besprochene Sitzungen" })).getAllByRole("checkbox");
+    fireEvent.change(screen.getByLabelText("Datum"), { target: { value: "2026-09-30" } });
+    fireEvent.click(sitzungen()[2]);
+    fireEvent.change(screen.getByLabelText("A-3"), { target: { value: "25" } });
+    expect(screen.getByText("Gesamt: 85 Min")).toBeDefined();
+
+    fireEvent.change(screen.getByLabelText("Datum"), { target: { value: "2026-09-20" } });
+    expect(sitzungen()).toHaveLength(2);
+    expect(screen.queryByLabelText("A-3")).toBeNull();
+    expect(screen.getByText("Gesamt: 60 Min")).toBeDefined();
+
+    // Zurück zum späteren Datum: die Sitzung ist wieder da, aber nicht gewählt, der Anteil leer.
+    fireEvent.change(screen.getByLabelText("Datum"), { target: { value: "2026-09-30" } });
+    expect(sitzungen()[2].getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(sitzungen()[2]);
+    expect((screen.getByLabelText("A-3") as HTMLInputElement).value).toBe("");
+    fireEvent.click(sitzungen()[2]);
+
+    fireEvent.change(screen.getByLabelText("Datum"), { target: { value: "2026-09-20" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(onSave).toHaveBeenCalledWith({
+      supervisorId: "s-1",
+      date: "2026-09-20",
+      durationMinutes: 60,
+      setting: "einzel",
+      linkedIds: ["t-1"],
+      caseShares: [{ patientId: "p-1", minutes: 60 }],
+    });
+  });
+
+  it("behält gespeicherte Zuordnungen und Anteile beim Datumswechsel", () => {
+    const onSave = vi.fn(async () => {});
+    renderForm(onSave);
+    fireEvent.change(screen.getByLabelText("Datum"), { target: { value: "2026-09-01" } });
+    expect((screen.getByLabelText("A-1") as HTMLInputElement).value).toBe("60");
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ date: "2026-09-01", linkedIds: ["t-1"], caseShares: [{ patientId: "p-1", minutes: 60 }] })
+    );
+  });
 });
