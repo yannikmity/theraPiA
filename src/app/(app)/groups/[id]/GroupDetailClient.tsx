@@ -275,7 +275,7 @@ export function GroupDetailClient({
           <p className="py-3 text-center text-sm text-muted-foreground">Noch keine Doppelstunden</p>
         ) : (
           <div className="divide-y divide-border">
-            {sessions
+            {[...sessions]
               .sort((a, b) => b.date.localeCompare(a.date))
               .map((session) => {
                 const isSupervised = supervisedIds.includes(session.id);
@@ -415,7 +415,7 @@ export function GroupDetailClient({
           <p className="py-3 text-center text-sm text-muted-foreground">Noch keine Gruppen-Supervision</p>
         ) : (
           <div className="divide-y divide-border">
-            {supervisionSessions
+            {[...supervisionSessions]
               .sort((a, b) => b.date.localeCompare(a.date))
               .map((sv) => {
                 const supervisor = initialSupervisors.find((s) => s.id === sv.supervisorId);
