@@ -10,7 +10,8 @@ export const DATA_EXPORT_FORMAT = "therapia-datenexport";
 // Version 2 (#8): persönliche Ausbildungsregeln (ausbildungsregelnAbweichungen).
 // Version 3 (#66): Patient:innen mit genehmigungsdatum und sprechstundenAmbulanz.
 // Version 4: Supervisionen mit setting (einzel/gruppe).
-export const DATA_EXPORT_VERSION = 4;
+// Version 5 (#42): financialSettings mit plannedSessionsPerWeek (null = automatisch).
+export const DATA_EXPORT_VERSION = 5;
 
 export interface DataExport {
   format: typeof DATA_EXPORT_FORMAT;
@@ -23,7 +24,7 @@ export interface DataExport {
   supervisionSessions: SupervisionSession[];
   groups: Group[];
   groupSessions: GroupSession[];
-  financialSettings: { incomePerHour: number };
+  financialSettings: UserData["financialSettings"];
   ausbildungsregelnAbweichungen: RegelAbweichungen | null; // null = keine persönlichen Abweichungen
   createdInvitations: CreatedInvitation[];
 }

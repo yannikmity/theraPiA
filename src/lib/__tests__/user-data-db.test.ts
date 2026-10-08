@@ -78,8 +78,18 @@ describe.skipIf(!TEST_DATABASE_URL)("Daten eines Accounts laden", () => {
   it("nimmt ohne Finanz-Einstellungen 0 an und legt keine Zeile an", async () => {
     const { db, f } = await setup();
     const data = await loadUserData(db, f.a.userId);
-    expect(data.financialSettings).toEqual({ incomePerHour: 0 });
+    expect(data.financialSettings).toEqual({ incomePerHour: 0, plannedSessionsPerWeek: null });
     expect(await countRows(db, "financial_settings", "WHERE user_id = $1", [f.a.userId])).toBe(0);
+  });
+
+  it("liefert die Wochenplanung: 12 und 0 wie gespeichert, NULL (automatisch) als null (#42)", async () => {
+    const { db, f } = await setup();
+    await db.query("INSERT INTO financial_settings (user_id, income_per_hour) VALUES ($1, 40)", [f.a.userId]);
+    expect((await loadUserData(db, f.a.userId)).financialSettings).toEqual({ incomePerHour: 40, plannedSessionsPerWeek: null });
+    for (const planned of [12, 0]) {
+      await db.query("UPDATE financial_settings SET planned_sessions_per_week = $2 WHERE user_id = $1", [f.a.userId, planned]);
+      expect((await loadUserData(db, f.a.userId)).financialSettings).toEqual({ incomePerHour: 40, plannedSessionsPerWeek: planned });
+    }
   });
 
   it("gibt keinen Passwort-Hash heraus", async () => {

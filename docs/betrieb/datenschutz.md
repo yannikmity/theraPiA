@@ -68,7 +68,7 @@ Eine Datei `therapia-datenexport-JJJJ-MM-TT.json`, UTF-8. Feldnamen wie in der A
 
 | Feld | Inhalt |
 |---|---|
-| `format`, `version`, `exportedAt` | `"therapia-datenexport"`, `4`, Zeitstempel des Exports (ISO 8601, UTC) |
+| `format`, `version`, `exportedAt` | `"therapia-datenexport"`, `5`, Zeitstempel des Exports (ISO 8601, UTC) |
 | `account` | `id`, `email`, `name`, `role` (`admin` oder `pia`), `createdAt` – kein Passwort-Hash |
 | `patients` | je `id`, `chiffre`, `therapyType`, `startDate`, `endDate`, `isActive`, `createdAt`, `antragsdatum`, `genehmigungsdatum`, `beantragteStunden`, `sprechstundenAmbulanz` |
 | `supervisors` | je `id`, `name`, `costPerHour`, `isActive` |
@@ -76,11 +76,11 @@ Eine Datei `therapia-datenexport-JJJJ-MM-TT.json`, UTF-8. Feldnamen wie in der A
 | `supervisionSessions` | je `id`, `supervisorId`, `date`, `durationMinutes`, `kind` (`individual` oder `group`), `setting` (`einzel` oder `gruppe`), `linkedTherapySessionIds`, `linkedGroupSessionIds` |
 | `groups` | je `id`, `name`, `startDate`, `plannedSessionCount`, `avgKids`, `isActive`, `createdAt` |
 | `groupSessions` | je `id`, `groupId`, `date`, `status`, `childCount`, `countsTowardAmbulanzzeit`, `durationMinutes`, `notes` |
-| `financialSettings` | `incomePerHour` |
+| `financialSettings` | `incomePerHour`, `plannedSessionsPerWeek` (geplante Sitzungen pro Woche für die Prognose; `null` = automatisch) |
 | `ausbildungsregelnAbweichungen` | persönliche Ausbildungsregeln oder `null`: `behandlungsstundenZiel`, `svEinheitenZiel`, `verhaeltnisWarnung`, `verhaeltnisKritisch`, `gruppeDoppelstundenZiel`, `gruppeAmbulanzzeitZiel` – je Zahl oder `null` (erbt vom Ausbildungsprofil) |
 | `createdInvitations` | von der Person erzeugte Einladungen: `email`, `role`, `createdAt`, `expiresAt`, `usedAt` – ohne Token |
 
-Datumsfelder sind `JJJJ-MM-TT`, Zeitstempel ISO 8601. Nicht enthalten: Passwort-Hash, Reset-Links, Einladungs-Tokens, Server-Protokolle (Caddy/Docker, siehe oben) und Feedback aus dem Widget – auf Anfrage stellt ein Admin die Dateien der Person aus dem Feedback-Ordner bereit (siehe [Feedback-Widget](#feedback-widget)).
+Datumsfelder sind `JJJJ-MM-TT`, Zeitstempel ISO 8601. Alle Felder stammen aus einem gemeinsamen Datenbank-Snapshot: Wer während des Exports speichert, landet ganz oder gar nicht im Export, Verknüpfungen zeigen nie auf fehlende Einträge. Nicht enthalten: Passwort-Hash, Reset-Links, Einladungs-Tokens, Server-Protokolle (Caddy/Docker, siehe oben) und Feedback aus dem Widget – auf Anfrage stellt ein Admin die Dateien der Person aus dem Feedback-Ordner bereit (siehe [Feedback-Widget](#feedback-widget)).
 
 ### Form der CSV-Dateien
 

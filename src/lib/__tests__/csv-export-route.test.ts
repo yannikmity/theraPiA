@@ -8,9 +8,12 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/auth", () => ({ auth: async () => state.session }));
-vi.mock("@/lib/db", () => ({ db: {} }));
+const tx = vi.hoisted(() => ({ query: async () => ({ rows: [] }) }));
+vi.mock("@/lib/db", () => ({ withSnapshot: (fn: (db: unknown) => unknown) => fn(tx) }));
 vi.mock("@/lib/db/user-data", () => ({
-  loadUserData: async (_db: unknown, userId: string) => {
+  loadUserData: async (db: unknown, userId: string) => {
+    // Nur über den Snapshot laden (#41).
+    if (db !== tx) throw new Error("ohne Snapshot geladen");
     state.loadedFor.push(userId);
     return sampleUserData();
   },

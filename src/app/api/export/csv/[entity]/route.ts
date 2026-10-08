@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { withSnapshot } from "@/lib/db";
 import { loadUserData } from "@/lib/db/user-data";
 import { CSV_EXPORTS, isCsvExportKey, parseExportYear } from "@/lib/export/csv-files";
 import { attachmentResponse, exportFilename } from "@/lib/export/http";
@@ -27,7 +27,8 @@ export async function GET(request: Request, context: { params: Promise<{ entity:
     return NextResponse.json({ error: "Ungültiges Jahr" }, { status: 400 });
   }
   try {
-    const data = await loadUserData(db, session.user.id);
+    const userId = session.user.id;
+    const data = await withSnapshot((tx) => loadUserData(tx, userId));
     // Mit Jahr: therapia-ausgaben-2026-stand-2026-09-29.csv – das Jahr der Daten, dann der Tag des Exports.
     const stem = year === undefined ? fileStem : `${fileStem}-${year}-stand`;
     return attachmentResponse(build(data, { year }), exportFilename(stem, "csv"), "text/csv; charset=utf-8");

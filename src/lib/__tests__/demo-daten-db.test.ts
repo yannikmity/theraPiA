@@ -103,7 +103,7 @@ describe.skipIf(!TEST_DATABASE_URL)("insertDemoData", () => {
 
     const geladen = await loadUserData(db, userId);
     expect(geladen.patients.map((p) => p.chiffre)).toEqual(["A-1041", "B-2317", "C-3082", "D-4265", "E-5119"]);
-    expect(geladen.financialSettings).toEqual({ incomePerHour: 70 });
+    expect(geladen.financialSettings).toEqual({ incomePerHour: 70, plannedSessionsPerWeek: null });
     expect(geladen.supervisionSessions.reduce((n, s) => n + s.linkedTherapySessionIds.length, 0)).toBe(144);
     expect(geladen.supervisionSessions.reduce((n, s) => n + s.linkedGroupSessionIds.length, 0)).toBe(23);
     const regeln = standardRegelwerk().regeln;

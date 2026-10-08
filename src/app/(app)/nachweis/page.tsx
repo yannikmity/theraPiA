@@ -1,5 +1,5 @@
 import { parseISO } from "date-fns";
-import { db } from "@/lib/db";
+import { withSnapshot } from "@/lib/db";
 import { requireSession } from "@/lib/require-session";
 import { todayIso } from "@/lib/dates";
 import { resolveNachweisFilter, type NachweisSearchParams } from "@/lib/nachweis-filter";
@@ -22,7 +22,9 @@ export default async function NachweisPage({ searchParams }: { searchParams: Pro
   // aus dem Berliner „heute“, Formular und Seite aus demselben Wert. `now` bleibt der Erstellungszeitpunkt.
   const today = todayIso(now);
   const { filter, invalid } = resolveNachweisFilter(await searchParams, parseISO(today));
-  const page = await loadNachweisPage(db, session.user.id, filter, now);
+  const userId = session.user.id;
+  // Daten und Regelwerk aus einem Snapshot (#41).
+  const page = await withSnapshot((tx) => loadNachweisPage(tx, userId, filter, now));
   const effective = {
     from: page.nachweis.period.from,
     to: page.nachweis.period.to,
