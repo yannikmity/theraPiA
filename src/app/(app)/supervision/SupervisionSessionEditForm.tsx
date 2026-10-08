@@ -62,7 +62,7 @@ export function SupervisionSessionEditForm({
   const [setting, setSetting] = useState<SupervisionSetting>(session.setting);
   const [date, setDate] = useState(session.date);
   const [duration, setDuration] = useState(String(session.durationMinutes));
-  const [linkedIds, setLinkedIds] = useState<string[]>(
+  const [linkedIdsAll, setLinkedIds] = useState<string[]>(
     session.kind === "group" ? [...session.linkedGroupSessionIds] : [...session.linkedTherapySessionIds]
   );
   // Die Auswahl folgt dem Datum im Formular, nicht dem gespeicherten.
@@ -79,7 +79,7 @@ export function SupervisionSessionEditForm({
   });
   const caseRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const patientOf = new Map(linkOptions.map((o) => [o.id, o.patientId]));
-  const linkedCases = linkedIds.map((id) => patientOf.get(id)).filter((p): p is string => p !== undefined);
+  const linkedCases = linkedIdsAll.map((id) => patientOf.get(id)).filter((p): p is string => p !== undefined);
   const caseIds =
     session.kind === "group"
       ? []
@@ -104,6 +104,11 @@ export function SupervisionSessionEditForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitted(true);
+    // Nur Sitzungen speichern, die zum Datum im Formular angeboten werden (#37). Eine durch ein früheres Datum
+    // ausgeblendete Auswahl bleibt im Zustand – Zurückstellen des Datums bringt sie samt Minuten wieder –, wird aber
+    // nicht unsichtbar mitgespeichert. Ihre Fälle fehlen schon in caseIds (patientOf kennt nur angebotene Sitzungen).
+    // Gespeicherte Zuordnungen stehen unabhängig vom Datum in den Optionen.
+    const linkedIds = linkedIdsAll.filter((id) => patientOf.has(id));
     if (dateError(date)) {
       dateRef.current?.focus();
       return;
@@ -200,7 +205,7 @@ export function SupervisionSessionEditForm({
         ) : (
           <div className="max-h-48 space-y-1.5 overflow-y-auto">
             {linkOptions.map((o) => {
-              const checked = linkedIds.includes(o.id);
+              const checked = linkedIdsAll.includes(o.id);
               return (
                 <label
                   key={o.id}

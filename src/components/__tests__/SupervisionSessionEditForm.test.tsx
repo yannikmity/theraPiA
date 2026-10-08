@@ -181,4 +181,61 @@ describe("SupervisionSessionEditForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ setting: "gruppe" })));
   });
+
+  // #37: Eine durch ein früheres Datum ausgeblendete neue Sitzung wird nicht unsichtbar mitgespeichert – sonst scheiterte
+  // das Speichern an einem unsichtbaren Fall. Die Auswahl bleibt im Zustand, damit Zwischenwerte beim Tippen des
+  // Datums nichts verwerfen.
+  it("speichert nur zum Datum angebotene Sitzungen; Zurückstellen des Datums bringt Auswahl und Minuten wieder", () => {
+    const onSave = vi.fn(async () => {});
+    const spaet = { id: "t-3", label: "A-3 · 25.09.2026 · 50 Min", patientId: "p-3" };
+    render(
+      <SupervisionSessionEditForm
+        session={session}
+        supervisors={supervisors}
+        linkOptionsFor={(date) => (date >= "2026-09-25" ? [...linkOptions, spaet] : linkOptions)}
+        caseLabel={(id) => chiffren[id]}
+        saving={false}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+    const sitzungen = () => within(screen.getByRole("group", { name: "Besprochene Sitzungen" })).getAllByRole("checkbox");
+    const datum = (value: string) => fireEvent.change(screen.getByLabelText("Datum"), { target: { value } });
+    datum("2026-09-30");
+    fireEvent.click(sitzungen()[2]);
+    fireEvent.change(screen.getByLabelText("A-3"), { target: { value: "25" } });
+    expect(screen.getByText("Gesamt: 85 Min")).toBeDefined();
+
+    // Zwischenwert beim Tippen: Sitzung und Fall ausgeblendet, aber nicht verworfen
+    datum("0002-09-30");
+    expect(sitzungen()).toHaveLength(2);
+    expect(screen.queryByLabelText("A-3")).toBeNull();
+    expect(screen.getByText("Gesamt: 60 Min")).toBeDefined();
+    datum("2026-09-30");
+    expect(sitzungen()[2].getAttribute("aria-checked")).toBe("true");
+    expect((screen.getByLabelText("A-3") as HTMLInputElement).value).toBe("25");
+
+    // Früheres Datum speichern: ohne die ausgeblendete Sitzung und ohne ihren Fall
+    datum("2026-09-20");
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(onSave).toHaveBeenCalledWith({
+      supervisorId: "s-1",
+      date: "2026-09-20",
+      durationMinutes: 60,
+      setting: "einzel",
+      linkedIds: ["t-1"],
+      caseShares: [{ patientId: "p-1", minutes: 60 }],
+    });
+  });
+
+  it("behält gespeicherte Zuordnungen und Anteile beim Datumswechsel", () => {
+    const onSave = vi.fn(async () => {});
+    renderForm(onSave);
+    fireEvent.change(screen.getByLabelText("Datum"), { target: { value: "2026-09-01" } });
+    expect((screen.getByLabelText("A-1") as HTMLInputElement).value).toBe("60");
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ date: "2026-09-01", linkedIds: ["t-1"], caseShares: [{ patientId: "p-1", minutes: 60 }] })
+    );
+  });
 });

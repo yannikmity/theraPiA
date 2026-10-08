@@ -51,7 +51,9 @@ describe.skipIf(!TEST_DATABASE_URL)("Daten eines Accounts laden", () => {
 
   it("liefert Verknüpfungen nur auf eigene Sitzungen – fremde Ziele fallen weg (Defense in Depth)", async () => {
     const { db, f } = await setup();
-    // Direkt in die Tabellen geschrieben, an der Besitzprüfung der App vorbei.
+    // Direkt in die Tabellen geschrieben, an der Besitzprüfung der App vorbei. Die Sitzung von B gehört höchstens einer
+    // Supervision (Migration 010) – Bs eigenen Link vorher entfernen.
+    await db.query("DELETE FROM supervision_therapy_links WHERE supervision_id = $1", [f.b.supervisionId]);
     await db.query("INSERT INTO supervision_therapy_links (supervision_id, therapy_session_id) VALUES ($1, $2)", [
       f.a.supervisionId,
       f.b.therapySessionId,
