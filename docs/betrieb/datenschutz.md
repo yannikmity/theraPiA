@@ -73,7 +73,7 @@ Eine Datei `therapia-datenexport-JJJJ-MM-TT.json`, UTF-8. Feldnamen wie in der A
 | `patients` | je `id`, `chiffre`, `therapyType`, `startDate`, `endDate`, `isActive`, `createdAt`, `antragsdatum`, `genehmigungsdatum`, `beantragteStunden`, `sprechstundenAmbulanz` |
 | `supervisors` | je `id`, `name`, `costPerHour`, `isActive` |
 | `therapySessions` | je `id`, `patientId`, `date`, `durationMinutes`, `notes`, `category` |
-| `supervisionSessions` | je `id`, `supervisorId`, `date`, `durationMinutes`, `kind` (`individual` oder `group`), `setting` (`einzel` oder `gruppe`), `linkedTherapySessionIds`, `linkedGroupSessionIds`, `caseShares` (Dauer je besprochener Patient:in: je `patientId`, `minutes`; Summe = `durationMinutes`) |
+| `supervisionSessions` | je `id`, `supervisorId`, `date`, `durationMinutes`, `kind` (`individual` oder `group`), `setting` (`einzel` oder `gruppe`), `linkedTherapySessionIds`, `linkedGroupSessionIds`, `caseShares` (Dauer je besprochener Patient:in: je `patientId`, `minutes`; Summe höchstens `durationMinutes` – nach dem Löschen einer Patient:in fehlt ihr Anteil, die Gesamtdauer bleibt) |
 | `groups` | je `id`, `name`, `startDate`, `plannedSessionCount`, `avgKids`, `isActive`, `createdAt` |
 | `groupSessions` | je `id`, `groupId`, `date`, `status`, `childCount`, `countsTowardAmbulanzzeit`, `durationMinutes`, `notes` |
 | `financialSettings` | `incomePerHour`, `plannedSessionsPerWeek` (geplante Sitzungen pro Woche für die Prognose; `null` = automatisch) |

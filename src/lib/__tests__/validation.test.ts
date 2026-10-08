@@ -459,6 +459,18 @@ describe("Supervision: Dauer je Patient:in (#40)", () => {
   });
 });
 
+describe("Supervision bearbeiten: Zeit ohne Fall (#40)", () => {
+  const base = { id: UUID_B, supervisorId: UUID_A, date: "2026-02-10", kind: "individual", setting: "einzel", linkedTherapySessionIds: [], linkedGroupSessionIds: [] };
+
+  it("erlaubt eine Gesamtdauer über der Summe der Anteile, aber keine darunter", () => {
+    const caseShares = [{ patientId: UUID_A, minutes: 25 }];
+    expect(updateSupervisionSessionSchema.safeParse({ ...base, durationMinutes: 50, caseShares }).success).toBe(true);
+    const zuKurz = updateSupervisionSessionSchema.safeParse({ ...base, durationMinutes: 20, caseShares });
+    expect(zuKurz.success).toBe(false);
+    if (!zuKurz.success) expect(zuKurz.error.issues[0].path).toEqual(["durationMinutes"]);
+  });
+});
+
 describe("Bearbeiten-Schemas ohne Defaults", () => {
   it("updateTherapySessionSchema verlangt notes und category", () => {
     const base = { id: UUID_B, patientId: UUID_A, date: "2026-02-10", durationMinutes: 50 };

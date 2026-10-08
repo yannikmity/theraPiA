@@ -20,7 +20,7 @@ import {
 } from "@/types";
 
 // Anteil je Fall (#40): Die Dauer einer Supervision je besprochener Patient:in ist gespeichert. Löschen einer Sitzung
-// oder eines Falls verteilt sie nicht auf andere Fälle um.
+// oder eines Falls verteilt sie nicht auf andere Fälle um; die Gesamtdauer bleibt.
 describe.skipIf(!TEST_DATABASE_URL)("Supervision: Anteil je Fall", () => {
   let cleanup: (() => Promise<void>) | undefined;
   afterEach(async () => {
@@ -90,18 +90,39 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervision: Anteil je Fall", () => {
     expect(await stand(db, f.a.userId, supervision.id, A, B)).toEqual({ a: 0.5, b: 0.5, gesamt: 50, summeAnteile: 50 });
   });
 
-  it("Löschen des ganzen Falls A ändert Bs Anrechnung nicht; die Gesamtdauer sinkt um As Anteil", async () => {
+  it("Löschen des ganzen Falls A ändert Bs Anrechnung nicht; die Gesamtdauer bleibt", async () => {
     const { db, f, A, B, supervision } = await setup();
     await deletePatient(db, f.a.userId, A);
-    expect(await stand(db, f.a.userId, supervision.id, A, B)).toEqual({ a: 0, b: 0.5, gesamt: 25, summeAnteile: 25 });
+    // Summe der Anteile 25 ≤ Gesamtdauer 50: die Differenz ist Zeit ohne vorhandenen Fall.
+    expect(await stand(db, f.a.userId, supervision.id, A, B)).toEqual({ a: 0, b: 0.5, gesamt: 50, summeAnteile: 25 });
   });
 
-  it("Löschen des einzigen Falls einer Supervision löscht sie mit, andere bleiben", async () => {
+  it("Löschen aller Fälle einer Supervision lässt sie mit voller Dauer und ohne Anteile bestehen", async () => {
     const { db, f, A, B, supervision } = await setup();
     await deletePatient(db, f.a.userId, A);
     await deletePatient(db, f.a.userId, B);
-    expect(await countRows(db, "supervision_sessions", "WHERE id = $1", [supervision.id])).toBe(0);
-    expect(await countRows(db, "supervision_sessions", "WHERE id = $1", [f.b.supervisionId])).toBe(1);
+    expect(await stand(db, f.a.userId, supervision.id, A, B)).toEqual({ a: 0, b: 0, gesamt: 50, summeAnteile: 0 });
+  });
+
+  it("Bearbeiten nach gelöschtem Fall: die Zeit ohne Fall bleibt erhalten, darf aber nicht wachsen", async () => {
+    const { db, f, A, B, sessionB, supervision } = await setup();
+    await deletePatient(db, f.a.userId, A);
+    const nachher = { ...supervision, linkedTherapySessionIds: [newTherapySessionId(sessionB)] };
+    // B auf 30 Min, die 25 Min ohne Fall bleiben: Gesamtdauer 55
+    await updateSupervisionSession(db, f.a.userId, { ...nachher, durationMinutes: 55, caseShares: [{ patientId: B, minutes: 30 }] });
+    expect(await stand(db, f.a.userId, supervision.id, A, B)).toEqual({ a: 0, b: 0.6, gesamt: 55, summeAnteile: 30 });
+    // Mehr Zeit ohne Fall als gespeichert (26 statt 25 Min) wird abgelehnt, nichts ändert sich
+    await expect(
+      updateSupervisionSession(db, f.a.userId, { ...nachher, durationMinutes: 56, caseShares: [{ patientId: B, minutes: 30 }] })
+    ).rejects.toThrow("Die Zeit ohne Fall darf beim Bearbeiten nicht wachsen");
+    // Summe über der Gesamtdauer ebenso
+    await expect(
+      updateSupervisionSession(db, f.a.userId, { ...nachher, durationMinutes: 20, caseShares: [{ patientId: B, minutes: 30 }] })
+    ).rejects.toThrow("Die Summe der Dauern je Patient:in darf die Gesamtdauer nicht überschreiten");
+    expect(await stand(db, f.a.userId, supervision.id, A, B)).toEqual({ a: 0, b: 0.6, gesamt: 55, summeAnteile: 30 });
+    // Ausdrücklich korrigiert: ohne Zeit ohne Fall ist erlaubt
+    await updateSupervisionSession(db, f.a.userId, { ...nachher, durationMinutes: 30, caseShares: [{ patientId: B, minutes: 30 }] });
+    expect(await stand(db, f.a.userId, supervision.id, A, B)).toEqual({ a: 0, b: 0.6, gesamt: 30, summeAnteile: 30 });
   });
 
   it("Supervisionen ohne Anteil bleiben beim Löschen einer Patient:in unverändert", async () => {

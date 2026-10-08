@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { dateError } from "@/components/forms/date";
 import { DURATION_MAX_MINUTES, DURATION_MIN_MINUTES, durationError } from "@/components/forms/duration";
+import { compareNatural } from "@/lib/collation";
 import { SUPERVISION_SETTING_LABELS, SUPERVISION_SETTING_ORDER } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +47,8 @@ interface SupervisionSessionEditFormProps {
 // Die Zuordnungen sind ein fieldset mit legend, damit Screenreader die Checkbox-Gruppe benennen (#43).
 // Einzeltherapie-Supervision mit Fällen (#40): Dauer je Patient:in, vorbelegt mit den gespeicherten Anteilen; die
 // Gesamtdauer ist ihre Summe. Die Fälle ergeben sich aus den gewählten Sitzungen. Ein gespeicherter Fall, dessen
-// Sitzungen gelöscht wurden, bleibt mit seinem Anteil stehen und lässt sich ausdrücklich entfernen.
+// Sitzungen gelöscht wurden, bleibt mit seinem Anteil stehen und lässt sich ausdrücklich entfernen. Zeit ohne
+// vorhandenen Fall (Anteil einer gelöschten Patient:in) steht als feste Zeile darunter und zählt zur Gesamtdauer.
 export function SupervisionSessionEditForm({
   session,
   supervisors,
@@ -81,8 +83,10 @@ export function SupervisionSessionEditForm({
   const caseIds =
     session.kind === "group"
       ? []
-      : [...new Set([...linkedCases, ...keptCases])].sort((a, b) => caseLabel(a).localeCompare(caseLabel(b)));
-  const caseTotal = caseIds.reduce((sum, id) => sum + (Number(caseMinutes[id]) || 0), 0);
+      : [...new Set([...linkedCases, ...keptCases])].sort((a, b) => compareNatural(caseLabel(a), caseLabel(b)));
+  const storedSum = session.caseShares.reduce((sum, c) => sum + c.minutes, 0);
+  const gap = session.caseShares.length > 0 ? Math.max(0, session.durationMinutes - storedSum) : 0;
+  const caseTotal = gap + caseIds.reduce((sum, id) => sum + (Number(caseMinutes[id]) || 0), 0);
   const caseTotalMessage =
     submitted && caseTotal > DURATION_MAX_MINUTES
       ? `Gesamtdauer ${caseTotal} Min überschreitet das Maximum von ${DURATION_MAX_MINUTES} Min.`
@@ -119,6 +123,7 @@ export function SupervisionSessionEditForm({
     }
     if (caseTotal > DURATION_MAX_MINUTES) return;
     const caseShares = caseIds.map((id) => ({ patientId: id, minutes: Number(caseMinutes[id]) }));
+    // caseTotal enthält die Zeit ohne Fall – sie bleibt beim Speichern erhalten.
     void onSave({ supervisorId, date, durationMinutes: caseTotal, setting, linkedIds, caseShares });
   }
 
@@ -240,7 +245,7 @@ export function SupervisionSessionEditForm({
                     />
                   </FormField>
                 </div>
-                {keptCases.includes(id) && (
+                {keptCases.includes(id) && !linkedCases.includes(id) && (
                   <Button
                     type="button"
                     variant="outline"
@@ -254,6 +259,9 @@ export function SupervisionSessionEditForm({
               </div>
             );
           })}
+          {gap > 0 && (
+            <p className="text-sm text-muted-foreground">Ohne Fall (gelöschte Patient:in): {gap} Min</p>
+          )}
           <p className={cn("text-xs", caseTotalMessage ? "text-destructive" : "text-muted-foreground")}>
             {caseTotalMessage ?? `Gesamt: ${caseTotal} Min`}
           </p>

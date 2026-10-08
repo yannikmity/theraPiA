@@ -223,7 +223,7 @@ export function NachweisDocument({ nachweis }: { nachweis: Nachweis }) {
                   <td className={TD}>{SUPERVISION_SETTING_LABELS[sv.setting]}</td>
                   <td className={cn(TD, "text-right whitespace-nowrap tabular-nums")}>
                     {minutes(sv.durationMinutes)}
-                    {/* Aufteilung nur bei mehreren Fällen (#40) – bei einem Fall ist sie die Gesamtdauer. */}
+                    {/* Aufteilung nur bei mehreren Fällen (#40). */}
                     {sv.caseShares.length > 1 &&
                       sv.caseShares.map((c) => (
                         <span key={c.chiffre} className="block text-xs text-muted-foreground print:text-[9pt] print:text-foreground">

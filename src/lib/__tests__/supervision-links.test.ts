@@ -23,7 +23,12 @@ vi.mock("../db", () => ({
   },
 }));
 vi.mock("../db/get-current-user", () => ({ getCurrentUserId: async () => state.userId }));
-import { addSupervisionSession, insertSupervisionSession, updateSupervisionSession } from "../db/supervision-sessions";
+import {
+  addSupervisionSession,
+  getSupervisionSessions,
+  insertSupervisionSession,
+  updateSupervisionSession,
+} from "../db/supervision-sessions";
 import { newPatientId, newSupervisionSessionId, newSupervisorId, newTherapySessionId } from "@/types";
 
 describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
@@ -202,5 +207,32 @@ describe.skipIf(!TEST_DATABASE_URL)("insertSupervisionSession", () => {
       })
     ).rejects.toThrow("simulierter Fehler");
     expect(await countRows(t.client, "supervision_sessions", "WHERE id = $1", [id])).toBe(0);
+  });
+
+  it("getSupervisionSessions liefert die Anteile je Fall, nur eigene", async () => {
+    const t = await createTestDb();
+    cleanup = t.cleanup;
+    const f = await seedOwnershipFixture(t.client);
+    state.client = t.client;
+    state.userId = f.a.userId;
+    const ohne = crypto.randomUUID();
+    await insertSupervisionSession(t.client, f.a.userId, {
+      id: newSupervisionSessionId(ohne),
+      supervisorId: newSupervisorId(f.a.supervisorId),
+      date: "2026-01-20",
+      durationMinutes: 45,
+      kind: "individual",
+      setting: "einzel",
+      linkedTherapySessionIds: [],
+      linkedGroupSessionIds: [],
+      caseShares: [],
+    });
+    const sessions = await getSupervisionSessions();
+    expect(sessions.map((s) => [s.id, s.caseShares]).sort()).toEqual(
+      [
+        [f.a.supervisionId, [{ patientId: f.a.patientId, minutes: 60 }]],
+        [ohne, []],
+      ].sort()
+    );
   });
 });

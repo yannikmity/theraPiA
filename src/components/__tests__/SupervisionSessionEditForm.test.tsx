@@ -116,6 +116,33 @@ describe("SupervisionSessionEditForm", () => {
     expect(screen.getByRole("group", { name: "Besprochene Doppelstunden" })).toBeDefined();
   });
 
+  it("blendet „Entfernen“ aus, sobald für den Fall wieder eine Sitzung angehakt ist", () => {
+    renderForm(undefined, {
+      durationMinutes: 50,
+      caseShares: [
+        { patientId: newPatientId("p-1"), minutes: 25 },
+        { patientId: newPatientId("p-2"), minutes: 25 },
+      ],
+    });
+    expect(screen.getByRole("button", { name: "A-2 entfernen" })).toBeDefined();
+    fireEvent.click(within(screen.getByRole("group", { name: "Besprochene Sitzungen" })).getAllByRole("checkbox")[1]);
+    expect(screen.queryByRole("button", { name: "A-2 entfernen" })).toBeNull();
+  });
+
+  // Patient:in gelöscht: ihr Anteil fehlt, die Gesamtdauer blieb. Die Zeit ohne Fall bleibt beim Speichern erhalten.
+  it("zeigt Zeit ohne Fall als feste Zeile und rechnet sie in die Gesamtdauer ein", () => {
+    const onSave = vi.fn(async () => {});
+    renderForm(onSave, { durationMinutes: 50, caseShares: [{ patientId: newPatientId("p-1"), minutes: 25 }] });
+    expect(screen.getByText("Ohne Fall (gelöschte Patient:in): 25 Min")).toBeDefined();
+    expect(screen.getByText("Gesamt: 50 Min")).toBeDefined();
+    fireEvent.change(screen.getByLabelText("A-1"), { target: { value: "30" } });
+    expect(screen.getByText("Gesamt: 55 Min")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ durationMinutes: 55, caseShares: [{ patientId: "p-1", minutes: 30 }] })
+    );
+  });
+
   it("meldet Dauer 0 am Feld und speichert nicht", () => {
     const onSave = vi.fn(async () => {});
     renderForm(onSave);

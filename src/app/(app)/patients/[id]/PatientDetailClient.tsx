@@ -378,7 +378,7 @@ export function PatientDetailClient({
                     question={`Sitzung vom ${format(parseISO(session.date), "dd.MM.yyyy")} wirklich löschen?`}
                     description={
                       supervisedIds.has(session.id)
-                        ? "Die Zuordnung zur Supervision wird entfernt, die Supervision selbst bleibt bestehen."
+                        ? "Die Zuordnung zur Supervision wird entfernt; die Supervision und der Anteil der Patient:in daran bleiben bestehen."
                         : undefined
                     }
                     onConfirm={() => handleDeleteSession(session)}
@@ -421,8 +421,8 @@ export function PatientDetailClient({
       <Card>
         <SectionHeader>Patient:in löschen</SectionHeader>
         <p className="text-xs text-muted-foreground">
-          Entfernt die Patient:in dauerhaft. {mitgeloescht(patientTherapySessions.length)}; ihre Dauer in Supervisionen mit
-          weiteren Patient:innen entfällt, Supervisionen nur zu dieser Patient:in werden mitgelöscht.
+          Entfernt die Patient:in dauerhaft. {mitgeloescht(patientTherapySessions.length)}; zugeordnete Supervisionen bleiben
+          mit ihrer ganzen Dauer bestehen, ihr Anteil daran wird keiner anderen Patient:in angerechnet.
         </p>
         <ActionError result={errorAt(error, "delete")} />
         <ConfirmButton

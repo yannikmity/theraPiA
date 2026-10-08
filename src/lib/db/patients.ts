@@ -83,27 +83,10 @@ export async function updatePatient(patient: Patient): Promise<void> {
 }
 
 // Ein Statement: Therapiesitzungen der Patient:in, deren Supervisions-Verknüpfungen und ihre Anteile an Supervisionen
-// fallen per ON DELETE CASCADE mit. Der Anteil wird nicht auf andere Fälle verteilt (#40): die Gesamtdauer einer
-// Supervision mit weiteren Fällen sinkt um ihn (Gesamtdauer = Summe der Anteile). Eine Supervision, die nur diese
-// Patient:in besprach, hätte danach 0 Minuten und entfällt mit. Supervisionen ohne Anteil bleiben unverändert.
-// Atomar ohne eigene Transaktion.
+// fallen per ON DELETE CASCADE mit. Die Supervisionen bleiben mit unveränderter Gesamtdauer – sie haben stattgefunden,
+// Kosten und Nachweis ändern sich nicht rückwirkend. Der Anteil wird nicht auf andere Fälle verteilt (#40); die
+// Differenz zwischen Gesamtdauer und Summe der Anteile ist Zeit ohne vorhandenen Fall. Atomar ohne eigene Transaktion.
 export async function deletePatient(db: Db, userId: string, id: PatientId | string): Promise<void> {
-  const result = await db.query(
-    `WITH anteile AS (
-       SELECT sc.supervision_id, sc.minutes,
-              EXISTS (SELECT 1 FROM supervision_cases o
-                      WHERE o.supervision_id = sc.supervision_id AND o.patient_id <> sc.patient_id) AS weitere
-       FROM supervision_cases sc JOIN patients p ON p.id = sc.patient_id
-       WHERE sc.patient_id = $1 AND p.user_id = $2
-     ), gekuerzt AS (
-       UPDATE supervision_sessions ss SET duration_minutes = ss.duration_minutes - a.minutes, updated_at = now()
-       FROM anteile a WHERE ss.id = a.supervision_id AND ss.user_id = $2 AND a.weitere
-     ), entfallen AS (
-       DELETE FROM supervision_sessions ss USING anteile a
-       WHERE ss.id = a.supervision_id AND ss.user_id = $2 AND NOT a.weitere
-     )
-     DELETE FROM patients WHERE id = $1 AND user_id = $2`,
-    [id, userId]
-  );
+  const result = await db.query("DELETE FROM patients WHERE id = $1 AND user_id = $2", [id, userId]);
   if (result.rowCount === 0) throw new NotFoundError("Patient:in");
 }
