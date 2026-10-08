@@ -61,6 +61,7 @@ describe("PatientsClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Erste:n Patient:in anlegen" }));
     const field = screen.getByLabelText("Chiffre") as HTMLInputElement;
     expect(submitButtons(field.form!).map((b) => b.textContent)).toEqual(["Anlegen"]);
+    expect(screen.getByRole("form", { name: "Neue:r Patient:in" })).toBe(field.form);
     fireEvent.change(field, { target: { value: "B-2" } });
     pressEnter(field);
     act(() => field.form!.requestSubmit());

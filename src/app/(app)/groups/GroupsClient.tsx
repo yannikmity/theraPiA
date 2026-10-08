@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { Plus, ChevronRight, X } from "lucide-react";
@@ -33,14 +33,18 @@ export function GroupsClient({ initialGroups, initialGroupSessions, ebmStaffeln 
   const [plannedSessionCount, setPlannedSessionCount] = useState(20);
   const [avgKids, setAvgKids] = useState(9);
   const [isSaving, setIsSaving] = useState(false);
+  // Sperre gegen doppeltes Absenden: greift sofort, noch bevor isSaving neu gerendert ist.
+  const savingRef = useRef(false);
   const [error, setError] = useState<ActionResult<unknown> | null>(null);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (isSaving || !name.trim()) return;
+    if (savingRef.current || !name.trim()) return;
+    savingRef.current = true;
     setIsSaving(true);
     setError(null);
     const result = await runAction(() => addGroup({ name: name.trim(), startDate, plannedSessionCount, avgKids }));
+    savingRef.current = false;
     setIsSaving(false);
     if (result.success) {
       setGroups(result.data.groups);
@@ -66,7 +70,7 @@ export function GroupsClient({ initialGroups, initialGroupSessions, ebmStaffeln 
       {showForm && (
         // Formular: Enter im Feld legt an (#51).
         <Card asChild className="border-primary/40">
-          <form noValidate onSubmit={handleAdd}>
+          <form noValidate aria-label="Neue Gruppe" onSubmit={handleAdd}>
             <div className="flex items-center justify-between">
               <h2 className="font-medium text-foreground">Neue Gruppe</h2>
               <Button type="button" variant="ghost" size="icon-sm" aria-label="Formular schließen" onClick={() => setShowForm(false)}>
