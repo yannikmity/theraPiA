@@ -47,10 +47,16 @@ export async function loadGroupDetailData(groupId: string): Promise<GroupDetailD
     getSupervisors(),
   ]);
 
+  // Nur Supervisionen, die eine Doppelstunde dieser Gruppe besprechen (#47). Eine Gruppensupervision ohne
+  // verknüpfte Doppelstunde hat keinen Gruppenbezug: Sie erscheint in keiner Gruppe, bleibt aber in der
+  // Supervisionsliste und in den Gesamtsummen.
+  const ownSessionIds = new Set<string>(groupSessions.map((s) => s.id));
   return {
     group,
     groupSessions,
-    supervisionSessions: supervisionSessions.filter((s) => s.kind === "group"),
+    supervisionSessions: supervisionSessions.filter(
+      (s) => s.kind === "group" && s.linkedGroupSessionIds.some((id) => ownSessionIds.has(id))
+    ),
     supervisors,
   };
 }
