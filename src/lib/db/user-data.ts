@@ -43,7 +43,7 @@ export interface UserData {
   supervisionSessions: SupervisionSession[];
   groups: Group[];
   groupSessions: GroupSession[];
-  financialSettings: { incomePerHour: number };
+  financialSettings: { incomePerHour: number; plannedSessionsPerWeek: number | null }; // null = automatisch
 }
 
 // Von der Person erzeugte Einladungen – ohne Token-Hash und ohne die einlösende Person.
@@ -62,8 +62,7 @@ function iso(value: string | Date): string {
 // Liest alles mit `WHERE user_id = $1`, nie über Joins auf fremde Zeilen. DECIMAL-Spalten liest pg als Zahl
 // (siehe pg-types.ts). Feste Sortierung, damit Exporte reproduzierbar sind; Patient:innen, Supervisor:innen und Gruppen zusätzlich
 // natürlich nach Chiffre bzw. Name (collation.ts, #51), die SQL-Reihenfolge ist die stabile Grundlage. Die Abfragen laufen
-// nacheinander. Mit dem Pool `db` (Route-Handler) kann jede auf einer anderen Verbindung landen – es gibt dann
-// keinen gemeinsamen Snapshot; nur innerhalb einer Transaktion oder mit dem Test-Client teilen sie eine Verbindung.
+// nacheinander; einen gemeinsamen Stand haben sie nur in einem Snapshot – Aufrufer laden daher über withSnapshot (db.ts, #41).
 export async function loadUserData(db: Db, userId: string): Promise<UserData> {
   const account = await db.query("SELECT id, email, name, role, created_at FROM users WHERE id = $1", [userId]);
   if (account.rows.length === 0) throw new NotFoundError("Account");
@@ -113,7 +112,7 @@ export async function loadUserData(db: Db, userId: string): Promise<UserData> {
     [userId]
   );
   const finances = await db.query(
-    "SELECT income_per_hour FROM financial_settings WHERE user_id = $1",
+    "SELECT income_per_hour, planned_sessions_per_week FROM financial_settings WHERE user_id = $1",
     [userId]
   );
 
@@ -131,7 +130,10 @@ export async function loadUserData(db: Db, userId: string): Promise<UserData> {
     ),
     groups: groups.rows.map((r) => mapGroupRow(r as GroupRow)).sort((a, b) => compareNatural(a.name, b.name)),
     groupSessions: groupSessions.rows.map((r) => mapGroupSessionRow(r as GroupSessionRow)),
-    financialSettings: { incomePerHour: finances.rows[0]?.income_per_hour ?? 0 },
+    financialSettings: {
+      incomePerHour: finances.rows[0]?.income_per_hour ?? 0,
+      plannedSessionsPerWeek: finances.rows[0]?.planned_sessions_per_week ?? null,
+    },
   };
 }
 

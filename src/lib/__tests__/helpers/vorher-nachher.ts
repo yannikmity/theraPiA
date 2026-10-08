@@ -123,7 +123,7 @@ export function vorherNachherDaten(): { data: UserData; settings: FinancialSetti
       g("gs-8", "2026-08-06", "durchgefuehrt", 7),
       g("gs-9", "2026-09-03", "geplant", 9),
     ],
-    financialSettings: { incomePerHour: 85 },
+    financialSettings: { incomePerHour: 85, plannedSessionsPerWeek: null },
   };
   const settings: FinancialSettings = {
     incomePerHour: 85,

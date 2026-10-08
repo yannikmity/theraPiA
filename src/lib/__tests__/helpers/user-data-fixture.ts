@@ -93,6 +93,6 @@ export function sampleUserData(): UserData {
       { id: newGroupSessionId("gs-2"), groupId: newGroupId("g-1"), date: "2026-01-19", status: "ausgefallen", childCount: null, countsTowardAmbulanzzeit: true, durationMinutes: 100, notes: "Krankheit" },
       { id: newGroupSessionId("gs-3"), groupId: newGroupId("g-1"), date: "2026-04-06", status: "durchgefuehrt", childCount: 5, countsTowardAmbulanzzeit: false, durationMinutes: 100, notes: "" },
     ],
-    financialSettings: { incomePerHour: 40 },
+    financialSettings: { incomePerHour: 40, plannedSessionsPerWeek: null },
   };
 }

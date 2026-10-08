@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { withSnapshot } from "@/lib/db";
 import { loadCreatedInvitations, loadUserData } from "@/lib/db/user-data";
 import { buildDataExport } from "@/lib/export/data-export";
 import { loadAbweichungen } from "@/lib/services/ausbildungsregeln";
@@ -16,10 +16,11 @@ export async function GET() {
   }
   try {
     const userId = session.user.id;
-    const data = await loadUserData(db, userId);
-    const invitations = await loadCreatedInvitations(db, userId);
-    const abweichungen = await loadAbweichungen(db, userId);
-    const body = JSON.stringify(buildDataExport(data, invitations, abweichungen), null, 2);
+    // Ein Snapshot für alles, damit Verknüpfungen, Einladungen und Regeln denselben Stand zeigen (#41).
+    const exported = await withSnapshot(async (tx) =>
+      buildDataExport(await loadUserData(tx, userId), await loadCreatedInvitations(tx, userId), await loadAbweichungen(tx, userId))
+    );
+    const body = JSON.stringify(exported, null, 2);
     return attachmentResponse(body, exportFilename("datenexport", "json"), "application/json; charset=utf-8");
   } catch (error) {
     console.error("Datenexport fehlgeschlagen:", error);

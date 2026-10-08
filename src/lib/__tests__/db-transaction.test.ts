@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { Pool, type PoolClient } from "pg";
-import { withTransaction, closePool } from "../db";
+import { withTransaction, withSnapshot, closePool } from "../db";
 
 // Fake-Verbindung: `fails` nennt SQL-Befehle, die scheitern sollen. Der Pool wird nie wirklich verbunden.
 const client = {
@@ -66,6 +66,12 @@ describe("withTransaction", () => {
     client.fails.add("COMMIT");
     await expect(withTransaction(async () => "x")).rejects.toThrow("COMMIT fehlgeschlagen");
     expect(client.calls).toEqual(["BEGIN", "COMMIT", "ROLLBACK"]);
+    expect(client.release).toHaveBeenCalledWith(undefined);
+  });
+
+  it("withSnapshot liest mit REPEATABLE READ READ ONLY (#41)", async () => {
+    await withSnapshot((tx) => tx.query("SELECT 1"));
+    expect(client.calls).toEqual(["BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY", "SELECT 1", "COMMIT"]);
     expect(client.release).toHaveBeenCalledWith(undefined);
   });
 });

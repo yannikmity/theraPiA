@@ -78,7 +78,7 @@ export async function loadEbmStaffeln(db: Db): Promise<EbmStaffel[]> {
   return [...staffeln.values()];
 }
 
-// Nacheinander statt Promise.all: mit dem Test-Client teilen sich alle Abfragen eine Verbindung (wie loadUserData).
+// Nacheinander statt Promise.all: mit dem Test-Client und im Snapshot (withSnapshot) teilen sich alle Abfragen eine Verbindung (wie loadUserData).
 export async function loadRegelwerk(db: Db, userId: string): Promise<Regelwerk> {
   const instanz = await loadInstanzprofil(db);
   const abweichungen = await loadAbweichungen(db, userId);

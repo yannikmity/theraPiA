@@ -23,11 +23,11 @@ export async function query(
   return getPool().query(text, params);
 }
 
-export async function withTransaction<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
+export async function withTransaction<T>(fn: (tx: Db) => Promise<T>, begin = "BEGIN"): Promise<T> {
   const client = await getPool().connect();
   let releaseError: Error | undefined;
   try {
-    await client.query("BEGIN");
+    await client.query(begin);
     const result = await fn(client);
     await client.query("COMMIT");
     return result;
@@ -42,6 +42,14 @@ export async function withTransaction<T>(fn: (tx: Db) => Promise<T>): Promise<T>
   } finally {
     client.release(releaseError);
   }
+}
+
+// Mehrere Leseabfragen mit einem gemeinsamen Stand (#41): eine Verbindung, ein Snapshot für die ganze Transaktion.
+// READ COMMITTED reicht nicht – dort sieht jede Abfrage, was andere inzwischen committet haben.
+export const SNAPSHOT_BEGIN = "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY";
+
+export function withSnapshot<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
+  return withTransaction(fn, SNAPSHOT_BEGIN);
 }
 
 export async function closePool(): Promise<void> {
