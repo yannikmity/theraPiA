@@ -20,6 +20,7 @@ import type { Ausbildungsregeln } from "@/lib/ausbildungsregeln/model";
 import RatioIndicator from "@/components/RatioIndicator";
 import { ActionError, errorAt, type ScopedActionError } from "@/components/ActionError";
 import { runAction } from "@/lib/run-action";
+import { MELDUNG_CHIFFRE_PFLICHT } from "@/lib/constants";
 import { track, trackFailure } from "@/lib/analytics/track";
 import { SectionHeader, FormField, ConfirmButton, fieldErrorId } from "@/components/ui";
 import { Badge } from "@/components/ui/badge";
@@ -45,8 +46,6 @@ function mitgeloescht(n: number): string {
   if (n === 1) return "Die einzige Therapiesitzung wird mitgelöscht";
   return `Alle ${n} Therapiesitzungen werden mitgelöscht`;
 }
-
-const CHIFFRE_PFLICHT = "Chiffre ist erforderlich";
 
 interface PatientDetailClientProps {
   initialPatient: Patient | undefined;
@@ -121,6 +120,8 @@ export function PatientDetailClient({
     setIsSaving(false);
     if (result.success) {
       applyData(result.data);
+      // Das Feld zeigt danach die gespeicherte Chiffre (ohne Leerzeichen am Rand), nicht die Eingabe.
+      if (scope === "chiffre") setChiffre(result.data.patient?.chiffre ?? "");
     } else {
       trackFailure("patient", "update", result);
       setError({ scope, result });
@@ -144,7 +145,7 @@ export function PatientDetailClient({
     e.preventDefault();
     const neu = chiffre.trim();
     if (!neu) {
-      setError({ scope: "chiffre", result: { success: false, error: CHIFFRE_PFLICHT, fieldErrors: { chiffre: [CHIFFRE_PFLICHT] } } });
+      setError({ scope: "chiffre", result: { success: false, error: MELDUNG_CHIFFRE_PFLICHT, fieldErrors: { chiffre: [MELDUNG_CHIFFRE_PFLICHT] } } });
       return;
     }
     void savePatient("chiffre", { chiffre: neu });

@@ -6,6 +6,10 @@ import type { SessionCategory } from "@/types";
 // Ziele, Verhältnis-Schwellen, Gruppenziele und EBM-Staffel sind pflegbare Ausbildungsregeln (src/lib/ausbildungsregeln).
 export const UNIT_MINUTES = 50;
 
+// Chiffre (#74): Meldungen für Server und Formular – hier statt in validation.ts, damit der Client kein zod lädt.
+export const MELDUNG_CHIFFRE_PFLICHT = "Chiffre ist erforderlich";
+export const MELDUNG_CHIFFRE_VERGEBEN = "Diese Chiffre ist schon vergeben";
+
 // Auth
 export const MIN_PASSWORD_LENGTH = 10;
 // bcrypt wertet nur die ersten 72 Byte aus; alles dahinter würde stillschweigend ignoriert. Gilt nur beim Setzen,

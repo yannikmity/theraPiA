@@ -5,6 +5,7 @@ import { seedOwnershipFixture, countRows } from "./helpers/fixtures";
 
 vi.mock("../auth", () => ({ auth: vi.fn() }));
 import { deletePatient, updatePatient } from "../db/patients";
+import { MELDUNG_CHIFFRE_VERGEBEN } from "../constants";
 import { loadUserData } from "../db/user-data";
 import { supervisionsCsv, therapySessionsCsv } from "../export/csv-files";
 import { buildNachweis } from "../nachweis";
@@ -106,8 +107,8 @@ describe.skipIf(!TEST_DATABASE_URL)("Chiffre umbenennen (#74)", () => {
 
     await expect(versuch).rejects.toBeInstanceOf(ValidationError);
     await expect(versuch).rejects.toMatchObject({
-      message: "Diese Chiffre ist schon vergeben",
-      fieldErrors: { chiffre: ["Diese Chiffre ist schon vergeben"] },
+      message: MELDUNG_CHIFFRE_VERGEBEN,
+      fieldErrors: { chiffre: [MELDUNG_CHIFFRE_VERGEBEN] },
     });
     const chiffren = (await loadUserData(db, f.a.userId)).patients.map((p) => p.chiffre).sort();
     expect(chiffren).toEqual(["A-1", "A-2"]);

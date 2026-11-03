@@ -20,6 +20,7 @@ import { pressEnter, submitButtons } from "../../lib/__tests__/helpers/form-subm
 import { deletePatient, deleteTherapySession, updatePatient, updateTherapySession } from "../../app/(app)/patients/[id]/actions";
 import { newPatientId, newTherapySessionId, type Patient, type TherapySession } from "@/types";
 import { standardRegelwerk } from "../../lib/ausbildungsregeln/resolve";
+import { MELDUNG_CHIFFRE_PFLICHT, MELDUNG_CHIFFRE_VERGEBEN } from "../../lib/constants";
 
 const P1 = "550e8400-e29b-41d4-a716-446655440001";
 const patient: Patient = {
@@ -179,6 +180,7 @@ describe("PatientDetailClient", () => {
       fireEvent.change(chiffreFeld(), { target: { value: "  A-neu " } });
       fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
       await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("A-neu"));
+      expect(chiffreFeld().value).toBe("A-neu");
       expect(updatePatient).toHaveBeenCalledWith(
         expect.objectContaining({ id: P1, chiffre: "A-neu", therapyType: "langzeittherapie", startDate: "2026-01-05", isActive: true })
       );
@@ -198,14 +200,14 @@ describe("PatientDetailClient", () => {
     it("zeigt eine schon vergebene Chiffre als Meldung am Feld und behält die alte Überschrift", async () => {
       vi.mocked(updatePatient).mockResolvedValue({
         success: false,
-        error: "Diese Chiffre ist schon vergeben",
-        fieldErrors: { chiffre: ["Diese Chiffre ist schon vergeben"] },
+        error: MELDUNG_CHIFFRE_VERGEBEN,
+        fieldErrors: { chiffre: [MELDUNG_CHIFFRE_VERGEBEN] },
       });
       render(<PatientDetailClient {...props} />);
       fireEvent.change(chiffreFeld(), { target: { value: "B-7" } });
       fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
       await waitFor(() => expect(chiffreFeld().getAttribute("aria-invalid")).toBe("true"));
-      expect(document.getElementById("chiffre-fehler")?.textContent).toBe("Diese Chiffre ist schon vergeben");
+      expect(document.getElementById("chiffre-fehler")?.textContent).toBe(MELDUNG_CHIFFRE_VERGEBEN);
       expect(chiffreFeld().getAttribute("aria-describedby")).toBe("chiffre-fehler chiffre-hinweis");
       // Nur einmal, am Feld – nicht zusätzlich als Sammelmeldung „chiffre: …“.
       expect(card("Chiffre").textContent?.match(/schon vergeben/g)).toHaveLength(1);
@@ -226,7 +228,7 @@ describe("PatientDetailClient", () => {
       render(<PatientDetailClient {...props} />);
       fireEvent.change(chiffreFeld(), { target: { value: "   " } });
       fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
-      expect(document.getElementById("chiffre-fehler")?.textContent).toBe("Chiffre ist erforderlich");
+      expect(document.getElementById("chiffre-fehler")?.textContent).toBe(MELDUNG_CHIFFRE_PFLICHT);
       expect(chiffreFeld().getAttribute("aria-invalid")).toBe("true");
       expect(updatePatient).not.toHaveBeenCalled();
     });

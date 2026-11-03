@@ -3,6 +3,7 @@ import { Patient, PatientId } from "@/types";
 import { mapPatientRow, PatientRow } from "../db-mappers";
 import { NotFoundError, ValidationError } from "../errors";
 import { getCurrentUserId } from "./get-current-user";
+import { MELDUNG_CHIFFRE_VERGEBEN } from "../constants";
 
 const PATIENT_COLUMNS =
   "id, chiffre, therapy_type, start_date, end_date, is_active, created_at, antragsdatum, beantragte_stunden, genehmigungsdatum, sprechstunden_ambulanz";
@@ -54,8 +55,6 @@ export async function addPatient(patient: Patient): Promise<void> {
     ]
   );
 }
-
-export const MELDUNG_CHIFFRE_VERGEBEN = "Diese Chiffre ist schon vergeben";
 
 // Die Chiffre ist je Account eindeutig (UNIQUE(user_id, chiffre)). Eine Kollision beim Umbenennen (23505) wird zur
 // Meldung am Feld statt zum Serverfehler (#74); andere Fehler gehen weiter.

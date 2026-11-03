@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  MELDUNG_CHIFFRE_PFLICHT,
   MAX_SESSIONS_PER_BATCH,
   MIN_PASSWORD_LENGTH,
   PASSWORD_TOO_LONG_MESSAGE,
@@ -22,7 +23,7 @@ const sessionCategory = z.enum(["sprechstunde", "probatorik", "behandlung", "bez
 const supervisionKind = z.enum(["individual", "group"]);
 const supervisionSetting = z.enum(["einzel", "gruppe"]);
 // Anlegen und Umbenennen prüfen gleich (#74); Leerzeichen am Rand zählen nicht zur Chiffre.
-const chiffre = z.string().trim().min(1, "Chiffre ist erforderlich").max(50, "Chiffre darf höchstens 50 Zeichen lang sein");
+const chiffre = z.string().trim().min(1, MELDUNG_CHIFFRE_PFLICHT).max(50, "Chiffre darf höchstens 50 Zeichen lang sein");
 
 // Patient schemas
 export const addPatientSchema = z.object({
