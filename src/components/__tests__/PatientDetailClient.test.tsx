@@ -10,6 +10,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
 vi.mock("../../lib/analytics/track", () => ({ track: vi.fn(), trackFailure: vi.fn() }));
 vi.mock("../../app/(app)/patients/[id]/actions", () => ({
   updatePatient: vi.fn(),
+  renamePatient: vi.fn(),
   updateTherapySession: vi.fn(),
   deleteTherapySession: vi.fn(),
   deletePatient: vi.fn(),
@@ -17,9 +18,16 @@ vi.mock("../../app/(app)/patients/[id]/actions", () => ({
 
 import { PatientDetailClient } from "../../app/(app)/patients/[id]/PatientDetailClient";
 import { pressEnter, submitButtons } from "../../lib/__tests__/helpers/form-submit";
-import { deletePatient, deleteTherapySession, updatePatient, updateTherapySession } from "../../app/(app)/patients/[id]/actions";
+import {
+  deletePatient,
+  deleteTherapySession,
+  renamePatient,
+  updatePatient,
+  updateTherapySession,
+} from "../../app/(app)/patients/[id]/actions";
 import { newPatientId, newTherapySessionId, type Patient, type TherapySession } from "@/types";
 import { standardRegelwerk } from "../../lib/ausbildungsregeln/resolve";
+import { MELDUNG_CHIFFRE_PFLICHT, MELDUNG_CHIFFRE_VERGEBEN } from "../../lib/constants";
 
 const P1 = "550e8400-e29b-41d4-a716-446655440001";
 const patient: Patient = {
@@ -57,6 +65,7 @@ describe("PatientDetailClient", () => {
     vi.mocked(deletePatient).mockReset();
     vi.mocked(deleteTherapySession).mockReset();
     vi.mocked(updatePatient).mockReset();
+    vi.mocked(renamePatient).mockReset();
     vi.mocked(updateTherapySession).mockReset();
     push.mockReset();
   });
@@ -144,5 +153,199 @@ describe("PatientDetailClient", () => {
     pressEnter(field);
     await waitFor(() => expect(updatePatient).toHaveBeenCalledWith(expect.objectContaining({ beantragteStunden: 60 })));
     expect(updatePatient).toHaveBeenCalledTimes(1);
+  });
+
+  describe("Chiffre bearbeiten (#74)", () => {
+    const chiffreFeld = () => screen.getByLabelText("Chiffre") as HTMLInputElement;
+    const detail = (chiffre: string) => ({
+      patient: { ...patient, chiffre },
+      therapySessions: props.initialTherapySessions,
+      supervisionSessions: [],
+      supervisors: [],
+    });
+
+    it("zeigt die Chiffre im Feld mit dem Hinweis auf Chiffren statt Klarnamen", () => {
+      render(<PatientDetailClient {...props} />);
+      expect(chiffreFeld().value).toBe("A-1");
+      expect(card("Chiffre").textContent).toContain("Nur Chiffren, keine Klarnamen");
+      expect(chiffreFeld().getAttribute("aria-describedby")).toBe("chiffre-hinweis");
+      expect(document.getElementById("chiffre-hinweis")?.textContent).toContain("keine Klarnamen");
+    });
+
+    it("ist mobil gut bedienbar: keine Autokorrektur, kein Ausfüllvorschlag, höchstens 50 Zeichen", () => {
+      render(<PatientDetailClient {...props} />);
+      const feld = chiffreFeld();
+      expect(feld.getAttribute("autocomplete")).toBe("off");
+      expect(feld.getAttribute("autocorrect")).toBe("off");
+      expect(feld.getAttribute("spellcheck")).toBe("false");
+      expect(feld.getAttribute("enterkeyhint")).toBe("done");
+      expect(feld.maxLength).toBe(50);
+    });
+
+    it("speichert die geänderte Chiffre ohne Leerzeichen am Rand und zeigt sie danach in der Überschrift", async () => {
+      vi.mocked(renamePatient).mockResolvedValue({ success: true, data: detail("A-neu") });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "  A-neu " } });
+      fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
+      await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("A-neu"));
+      expect(chiffreFeld().value).toBe("A-neu");
+      // Nur ID und Chiffre: ein veralteter Tab schreibt beim Umbenennen keine Antrags- oder Statusfelder zurück.
+      expect(renamePatient).toHaveBeenCalledWith({ id: P1, chiffre: "A-neu" });
+      expect(updatePatient).not.toHaveBeenCalled();
+    });
+
+    it("speichert die Chiffre mit Enter; das Formular hat nur „Chiffre speichern“ als Submit-Knopf", async () => {
+      vi.mocked(renamePatient).mockResolvedValue({ success: false, error: "egal" });
+      render(<PatientDetailClient {...props} />);
+      const feld = chiffreFeld();
+      expect(submitButtons(feld.form!).map((b) => b.textContent)).toEqual(["Chiffre speichern"]);
+      fireEvent.change(feld, { target: { value: "A-2" } });
+      pressEnter(feld);
+      await waitFor(() => expect(renamePatient).toHaveBeenCalledWith(expect.objectContaining({ chiffre: "A-2" })));
+      expect(renamePatient).toHaveBeenCalledTimes(1);
+    });
+
+    it("zeigt eine schon vergebene Chiffre als Meldung am Feld und behält die alte Überschrift", async () => {
+      vi.mocked(renamePatient).mockResolvedValue({
+        success: false,
+        error: MELDUNG_CHIFFRE_VERGEBEN,
+        fieldErrors: { chiffre: [MELDUNG_CHIFFRE_VERGEBEN] },
+      });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "B-7" } });
+      fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
+      await waitFor(() => expect(chiffreFeld().getAttribute("aria-invalid")).toBe("true"));
+      expect(document.getElementById("chiffre-fehler")?.textContent).toBe(MELDUNG_CHIFFRE_VERGEBEN);
+      expect(chiffreFeld().getAttribute("aria-describedby")).toBe("chiffre-fehler chiffre-hinweis");
+      // Nur einmal, am Feld – nicht zusätzlich als Sammelmeldung „chiffre: …“.
+      expect(card("Chiffre").textContent?.match(/schon vergeben/g)).toHaveLength(1);
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("A-1");
+      expect(chiffreFeld().value).toBe("B-7");
+    });
+
+    it("nimmt die Meldung am Feld weg, sobald weitergetippt wird", async () => {
+      vi.mocked(renamePatient).mockResolvedValue({
+        success: false,
+        error: MELDUNG_CHIFFRE_VERGEBEN,
+        fieldErrors: { chiffre: [MELDUNG_CHIFFRE_VERGEBEN] },
+      });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "B-7" } });
+      fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
+      await waitFor(() => expect(chiffreFeld().getAttribute("aria-invalid")).toBe("true"));
+      fireEvent.change(chiffreFeld(), { target: { value: "B-8" } });
+      expect(document.getElementById("chiffre-fehler")).toBeNull();
+      expect(chiffreFeld().getAttribute("aria-invalid")).toBeNull();
+      expect(chiffreFeld().getAttribute("aria-describedby")).toBe("chiffre-hinweis");
+    });
+
+    it("lässt beim Tippen in der Chiffre einen Fehler einer anderen Karte stehen", async () => {
+      vi.mocked(updatePatient).mockResolvedValue({ success: false, error: "Antrag nicht gespeichert" });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.click(screen.getByRole("button", { name: "Antrag speichern" }));
+      await waitFor(() => expect(card("Antrag").contains(screen.getByRole("alert"))).toBe(true));
+      fireEvent.change(chiffreFeld(), { target: { value: "A-2" } });
+      expect(within(card("Antrag")).getByRole("alert").textContent).toContain("Antrag nicht gespeichert");
+    });
+
+    it("zeigt andere Fehler beim Speichern der Chiffre in der Chiffre-Karte", async () => {
+      vi.mocked(renamePatient).mockResolvedValue({ success: false, error: "Patient:in nicht gefunden" });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "A-2" } });
+      fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
+      await waitFor(() => expect(card("Chiffre").contains(screen.getByRole("alert"))).toBe(true));
+      expect(screen.getByRole("alert").textContent).toContain("Patient:in nicht gefunden");
+    });
+
+    it("lehnt eine leere Chiffre ohne Serveraufruf mit Meldung am Feld ab", () => {
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "   " } });
+      fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
+      expect(document.getElementById("chiffre-fehler")?.textContent).toBe(MELDUNG_CHIFFRE_PFLICHT);
+      expect(chiffreFeld().getAttribute("aria-invalid")).toBe("true");
+      expect(renamePatient).not.toHaveBeenCalled();
+    });
+
+    it("kennzeichnet das Feld als Pflichtfeld", () => {
+      render(<PatientDetailClient {...props} />);
+      expect(chiffreFeld().required).toBe(true);
+    });
+
+    // Der Fokus springt aufs Feld, damit Screenreader Feld und Meldung (aria-describedby) gleich vorlesen.
+    it("setzt bei einer vergebenen Chiffre den Fokus aufs Feld", async () => {
+      vi.mocked(renamePatient).mockResolvedValue({
+        success: false,
+        error: MELDUNG_CHIFFRE_VERGEBEN,
+        fieldErrors: { chiffre: [MELDUNG_CHIFFRE_VERGEBEN] },
+      });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "B-7" } });
+      const knopf = screen.getByRole("button", { name: "Chiffre speichern" });
+      knopf.focus();
+      fireEvent.click(knopf);
+      await waitFor(() => expect(document.activeElement).toBe(chiffreFeld()));
+    });
+
+    // Bei Enter bzw. „Fertig“ hat das Feld den Fokus schon; die Meldung muss dann selbst angesagt werden.
+    it("sagt eine vergebene Chiffre nach Enter im Feld als Alert an", async () => {
+      vi.mocked(renamePatient).mockResolvedValue({
+        success: false,
+        error: MELDUNG_CHIFFRE_VERGEBEN,
+        fieldErrors: { chiffre: [MELDUNG_CHIFFRE_VERGEBEN] },
+      });
+      render(<PatientDetailClient {...props} />);
+      const feld = chiffreFeld();
+      feld.focus();
+      fireEvent.change(feld, { target: { value: "B-7" } });
+      pressEnter(feld);
+      await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(MELDUNG_CHIFFRE_VERGEBEN));
+      expect(screen.getByRole("alert").id).toBe("chiffre-fehler");
+      expect(document.activeElement).toBe(chiffreFeld());
+    });
+
+    it("setzt bei einer leeren Chiffre den Fokus aufs Feld", async () => {
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "" } });
+      const knopf = screen.getByRole("button", { name: "Chiffre speichern" });
+      knopf.focus();
+      fireEvent.click(knopf);
+      await waitFor(() => expect(document.activeElement).toBe(chiffreFeld()));
+    });
+
+    it("übernimmt eine in einem anderen Tab geänderte Chiffre ins unbearbeitete Feld", async () => {
+      vi.mocked(updatePatient).mockResolvedValue({ success: true, data: detail("A-anderer-tab") });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.click(screen.getByRole("button", { name: "Antrag speichern" }));
+      await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("A-anderer-tab"));
+      expect(chiffreFeld().value).toBe("A-anderer-tab");
+    });
+
+    it("übernimmt die Chiffre aus einem anderen Tab auch nach dem Bearbeiten einer Sitzung", async () => {
+      vi.mocked(updateTherapySession).mockResolvedValue({ success: true, data: detail("A-anderer-tab") });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.click(screen.getAllByRole("button", { name: "Sitzung bearbeiten" })[0]);
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("A-anderer-tab"));
+      expect(chiffreFeld().value).toBe("A-anderer-tab");
+    });
+
+    it("lässt einen ungespeicherten Chiffre-Entwurf stehen, wenn der Antrag gespeichert wird", async () => {
+      vi.mocked(updatePatient).mockResolvedValue({ success: true, data: detail("A-anderer-tab") });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "Entwurf" } });
+      fireEvent.click(screen.getByRole("button", { name: "Antrag speichern" }));
+      await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("A-anderer-tab"));
+      expect(chiffreFeld().value).toBe("Entwurf");
+    });
+
+    it("schickt beim Speichern des Antrags keine Chiffre mit, auch keinen ungespeicherten Entwurf", async () => {
+      vi.mocked(updatePatient).mockResolvedValue({ success: false, error: "egal" });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "Entwurf" } });
+      fireEvent.click(screen.getByRole("button", { name: "Antrag speichern" }));
+      await waitFor(() => expect(updatePatient).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(updatePatient).mock.calls[0][0]).not.toHaveProperty("chiffre");
+      expect(renamePatient).not.toHaveBeenCalled();
+    });
   });
 });

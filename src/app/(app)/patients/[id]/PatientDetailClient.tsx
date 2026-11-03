@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
@@ -20,8 +20,10 @@ import type { Ausbildungsregeln } from "@/lib/ausbildungsregeln/model";
 import RatioIndicator from "@/components/RatioIndicator";
 import { ActionError, errorAt, type ScopedActionError } from "@/components/ActionError";
 import { runAction } from "@/lib/run-action";
+import type { ActionResult } from "@/lib/action-result";
+import { MELDUNG_CHIFFRE_PFLICHT } from "@/lib/constants";
 import { track, trackFailure } from "@/lib/analytics/track";
-import { SectionHeader, FormField, ConfirmButton } from "@/components/ui";
+import { SectionHeader, FormField, ConfirmButton, fieldErrorId } from "@/components/ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,6 +32,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { QuickCaptureLink } from "@/components/QuickCaptureLink";
 import {
   updatePatient,
+  renamePatient,
   updateTherapySession,
   deleteTherapySession,
   deletePatient,
@@ -69,6 +72,8 @@ export function PatientDetailClient({
   // Sperre gegen doppeltes Absenden: greift sofort, noch bevor isSaving neu gerendert ist.
   const savingRef = useRef(false);
   const [error, setError] = useState<ScopedActionError | null>(null);
+  const [chiffre, setChiffre] = useState(initialPatient?.chiffre ?? "");
+  const chiffreRef = useRef<HTMLInputElement>(null);
   const [antragsdatum, setAntragsdatum] = useState(initialPatient?.antragsdatum ?? "");
   const [beantragteStunden, setBeantragteStunden] = useState(
     initialPatient?.beantragteStunden?.toString() ?? ""
@@ -77,32 +82,58 @@ export function PatientDetailClient({
   const [sprechstundenAmbulanz, setSprechstundenAmbulanz] = useState(String(initialPatient?.sprechstundenAmbulanz ?? 0));
   const router = useRouter();
 
+  // Meldung zur Chiffre (vergeben, leer): Fokus aufs Feld, damit Screenreader Feld und Meldung gleich vorlesen. Läuft
+  // nach dem Rendern, wenn das Feld nicht mehr gesperrt ist.
+  useEffect(() => {
+    const result = errorAt(error, "chiffre");
+    if (result && !result.success && result.fieldErrors?.chiffre) chiffreRef.current?.focus();
+  }, [error]);
+
   if (!patient) return null;
 
   // Alle Actions liefern den kompletten Seitenstand zurück, damit Stunden, Verhältnis und
-  // SV-Markierungen nach jeder Änderung stimmen.
-  function applyData(data: PatientDetailData) {
+  // SV-Markierungen nach jeder Änderung stimmen. Ein unbearbeitetes Chiffre-Feld übernimmt dabei den Serverstand, etwa
+  // eine in einem anderen Tab geänderte Chiffre; ein Entwurf bleibt stehen. `renamed`: nach dem Umbenennen zeigt das
+  // Feld immer die gespeicherte Chiffre (ohne Leerzeichen am Rand).
+  function applyData(data: PatientDetailData, renamed = false) {
+    const gespeichert = patient?.chiffre;
+    const neu = data.patient?.chiffre ?? "";
+    setChiffre((feld) => (renamed || feld === gespeichert ? neu : feld));
     setPatient(data.patient);
     setTherapySessions(data.therapySessions);
     setSupervisionSessions(data.supervisionSessions);
   }
 
-  // Alle Änderungen an der Patient:in gehen durch eine Action mit dem vollen Datensatz; `changes` überschreibt die
-  // Felder, die die jeweilige Stelle ändert. Der Fehler landet an genau dieser Stelle (scope).
-  async function savePatient(
+  // Änderungen an der Patient:in: gemeinsame Sperre gegen doppeltes Absenden, der Fehler landet an genau dieser Stelle
+  // (scope).
+  async function runPatientAction(scope: "chiffre" | "antrag" | "status", call: () => Promise<ActionResult<PatientDetailData>>) {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
+    setError(null);
+    const result = await runAction(call);
+    savingRef.current = false;
+    setIsSaving(false);
+    if (result.success) {
+      applyData(result.data, scope === "chiffre");
+    } else {
+      trackFailure("patient", "update", result);
+      setError({ scope, result });
+    }
+  }
+
+  // Antrag und Status gehen mit allen Feldern außer der Chiffre an die Action; `changes` überschreibt die Felder, die
+  // die jeweilige Stelle ändert. Die Chiffre ändert nur renamePatient (#74).
+  function savePatient(
     scope: "antrag" | "status",
     changes: Partial<
       Pick<Patient, "endDate" | "isActive" | "antragsdatum" | "beantragteStunden" | "genehmigungsdatum" | "sprechstundenAmbulanz">
     >
   ) {
-    if (!patient || savingRef.current) return;
-    savingRef.current = true;
-    setIsSaving(true);
-    setError(null);
-    const result = await runAction(() =>
+    if (!patient) return;
+    return runPatientAction(scope, () =>
       updatePatient({
         id: patient.id,
-        chiffre: patient.chiffre,
         therapyType: patient.therapyType,
         startDate: patient.startDate,
         endDate: patient.endDate,
@@ -114,14 +145,6 @@ export function PatientDetailClient({
         ...changes,
       })
     );
-    savingRef.current = false;
-    setIsSaving(false);
-    if (result.success) {
-      applyData(result.data);
-    } else {
-      trackFailure("patient", "update", result);
-      setError({ scope, result });
-    }
   }
 
   const handleComplete = () => savePatient("status", { endDate: format(new Date(), "yyyy-MM-dd"), isActive: false });
@@ -134,6 +157,18 @@ export function PatientDetailClient({
       genehmigungsdatum: genehmigungsdatum || null,
       sprechstundenAmbulanz: Number(sprechstundenAmbulanz) || 0,
     });
+  };
+
+  // Gleiche Prüfung wie beim Anlegen (#74); eine leere Chiffre geht gar nicht erst an den Server.
+  const handleSaveChiffre = (e: React.FormEvent) => {
+    e.preventDefault();
+    const neu = chiffre.trim();
+    if (!neu) {
+      setError({ scope: "chiffre", result: { success: false, error: MELDUNG_CHIFFRE_PFLICHT, fieldErrors: { chiffre: [MELDUNG_CHIFFRE_PFLICHT] } } });
+      return;
+    }
+    if (!patient) return;
+    void runPatientAction("chiffre", () => renamePatient({ id: patient.id, chiffre: neu }));
   };
 
   async function handleUpdateSession(session: TherapySession, values: TherapySessionFormValues) {
@@ -180,6 +215,10 @@ export function PatientDetailClient({
     setError({ scope: "delete", result });
     setIsSaving(false);
   }
+
+  // Eine Meldung zur Chiffre (vergeben, leer) steht am Feld, nicht zusätzlich als Sammelmeldung darüber.
+  const chiffreError = errorAt(error, "chiffre");
+  const chiffreMessage = chiffreError && !chiffreError.success ? chiffreError.fieldErrors?.chiffre?.[0] : undefined;
 
   const ratio = calculatePatientRatio(patient, therapySessions, supervisionSessions, regeln);
   const remaining = remainingContingentForPatient(patient, therapySessions);
@@ -245,6 +284,51 @@ export function PatientDetailClient({
         <KontingentTile titel="Probatorik" einheit="Sitzungen" kontingent={probatorikKontingent(patient, therapySessions)} />
         <KontingentTile titel="Gesprächsziffern im Quartal" einheit="Ziffern" kontingent={gespraechsziffernKontingent(patient, therapySessions, todayIso())} />
       </div>
+
+      {/* Chiffre nachträglich ändern (#74); Sitzungen, Supervisionen und Exporte hängen an der ID und folgen von selbst. */}
+      <Card asChild>
+        <form noValidate aria-label="Chiffre ändern" onSubmit={handleSaveChiffre}>
+          <SectionHeader>Chiffre</SectionHeader>
+          {!chiffreMessage && <ActionError result={chiffreError} />}
+          {/* Meldung hier statt über FormField: als Alert, damit sie auch nach Enter bzw. „Fertig“ angesagt wird – dann
+              hat das Feld den Fokus schon, und der Fokussprung allein liest nichts vor. */}
+          <FormField label="Chiffre" htmlFor="chiffre">
+            <Input
+              ref={chiffreRef}
+              id="chiffre"
+              type="text"
+              required
+              value={chiffre}
+              onChange={(e) => {
+                setChiffre(e.target.value);
+                // Eine Meldung zur Chiffre gilt der vorigen Eingabe; Fehler anderer Karten bleiben stehen.
+                if (chiffreError) setError(null);
+              }}
+              placeholder="z. B. M.K."
+              maxLength={50}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              enterKeyHint="done"
+              aria-invalid={chiffreMessage ? true : undefined}
+              aria-describedby={chiffreMessage ? `${fieldErrorId("chiffre")} chiffre-hinweis` : "chiffre-hinweis"}
+              disabled={isSaving}
+            />
+            {chiffreMessage && (
+              <p id={fieldErrorId("chiffre")} role="alert" className="text-xs text-destructive">
+                {chiffreMessage}
+              </p>
+            )}
+          </FormField>
+          <p id="chiffre-hinweis" className="text-xs text-muted-foreground">
+            Nur Chiffren, keine Klarnamen. Sitzungen, Supervisionen und Exporte zeigen nach dem Speichern die neue Chiffre.
+          </p>
+          <Button type="submit" variant="outline" loading={isSaving} className="w-full">
+            Chiffre speichern
+          </Button>
+        </form>
+      </Card>
 
       {/* Formular: Enter im Feld speichert den Antrag (#51). */}
       <Card asChild>

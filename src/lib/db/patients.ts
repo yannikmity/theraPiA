@@ -1,8 +1,9 @@
 import { query, type Db } from "../db";
 import { Patient, PatientId } from "@/types";
 import { mapPatientRow, PatientRow } from "../db-mappers";
-import { NotFoundError } from "../errors";
+import { NotFoundError, ValidationError } from "../errors";
 import { getCurrentUserId } from "./get-current-user";
+import { MELDUNG_CHIFFRE_VERGEBEN } from "../constants";
 
 const PATIENT_COLUMNS =
   "id, chiffre, therapy_type, start_date, end_date, is_active, created_at, antragsdatum, beantragte_stunden, genehmigungsdatum, sprechstunden_ambulanz";
@@ -55,27 +56,48 @@ export async function addPatient(patient: Patient): Promise<void> {
   );
 }
 
-export async function updatePatient(patient: Patient): Promise<void> {
-  const userId = await getCurrentUserId();
-  const result = await query(
+// Alle Felder außer der Chiffre; die ändert nur renamePatient. So setzt ein veralteter Tab beim Speichern von Antrag
+// oder Status eine inzwischen geänderte Chiffre nicht zurück (#74).
+export type PatientUpdate = Omit<Patient, "chiffre" | "createdAt">;
+
+export async function updatePatient(db: Db, userId: string, patient: PatientUpdate): Promise<void> {
+  const result = await db.query(
     `UPDATE patients
-     SET chiffre = $1, therapy_type = $2, start_date = $3, end_date = $4, is_active = $5,
-         antragsdatum = $6, beantragte_stunden = $7, genehmigungsdatum = $10, sprechstunden_ambulanz = $11
-     WHERE id = $8 AND user_id = $9`,
+     SET therapy_type = $1, start_date = $2, end_date = $3, is_active = $4,
+         antragsdatum = $5, beantragte_stunden = $6, genehmigungsdatum = $7, sprechstunden_ambulanz = $8
+     WHERE id = $9 AND user_id = $10`,
     [
-      patient.chiffre,
       patient.therapyType,
       patient.startDate,
       patient.endDate,
       patient.isActive,
       patient.antragsdatum,
       patient.beantragteStunden,
-      patient.id,
-      userId,
       patient.genehmigungsdatum,
       patient.sprechstundenAmbulanz,
+      patient.id,
+      userId,
     ]
   );
+
+  if (result.rowCount === 0) {
+    throw new NotFoundError("Patient:in");
+  }
+}
+
+// Schreibt nur die Chiffre (#74). Sie ist je Account eindeutig (UNIQUE(user_id, chiffre)); eine Kollision (23505) wird
+// zur Meldung am Feld statt zum Serverfehler, andere Fehler gehen weiter.
+export async function renamePatient(db: Db, userId: string, id: PatientId | string, chiffre: string): Promise<void> {
+  let result;
+  try {
+    result = await db.query("UPDATE patients SET chiffre = $1 WHERE id = $2 AND user_id = $3", [chiffre, id, userId]);
+  } catch (error) {
+    const { code, constraint } = error as { code?: string; constraint?: string };
+    if (code === "23505" && constraint === "patients_user_id_chiffre_key") {
+      throw new ValidationError(MELDUNG_CHIFFRE_VERGEBEN, { chiffre: [MELDUNG_CHIFFRE_VERGEBEN] });
+    }
+    throw error;
+  }
 
   if (result.rowCount === 0) {
     throw new NotFoundError("Patient:in");
