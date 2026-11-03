@@ -32,7 +32,7 @@ export type FailureCategory = "validation" | "error";
 export type SaveMode = "new" | "edit";
 // Datenarten der Downloads unter Profil → Meine Daten (fünf CSV-Dateien und der JSON-Datenexport); `expenses` auch unter Finanzen.
 export type ExportEntity = "therapy_sessions" | "supervisions" | "group_sessions" | "patients" | "expenses" | "json";
-// Einstiegspunkte des Schnelleinstiegs „+ Sitzung“ (Dashboard-Zeile, Kopf der Patient:innen-Seite).
+// Einstiegspunkte des Schnelleinstiegs (Dashboard-Zeile, Knöpfe auf der Patient:innen-Seite).
 export type QuickCaptureSource = "dashboard" | "patient";
 // Was der Schnelleinstieg öffnet: Therapie-Erfassung („+ Sitzung“) oder Supervision (Patient:innen-Seite, #77).
 export type QuickCaptureType = "therapie" | "supervision";

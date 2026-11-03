@@ -100,6 +100,8 @@ export function NewSessionClient({
   const [supervisorId, setSupervisorId] = useState(initialSupervisors[0]?.id || "");
   // Besprochene Fälle: null = Vorauswahl (alle als „SV fällig“ markierten Fälle zum Datum), sonst die eigene Auswahl.
   const [chosenPatientIds, setChosenPatientIds] = useState<string[] | null>(null);
+  // Die Patient:in aus der Adresse gilt nur bis zum ersten Speichern – „Weitere Stunde erfassen“ wählt sie nicht erneut vor.
+  const [casePatientId, setCasePatientId] = useState(initialCasePatientId);
   const [setting, setSetting] = useState<SupervisionSetting>(
     settingBySupervisor[initialSupervisors[0]?.id ?? ""] ?? "einzel"
   );
@@ -129,14 +131,14 @@ export function NewSessionClient({
   // offene Sitzungen und stünden sonst über den vorausgewählten laufenden. Die Patient:in aus der Adresse steht oben.
   const cases = useMemo(
     () =>
-      supervisionCaseOptions(initialUnsupervisedSessions, supervisionPatients, date, regeln, initialCasePatientId),
-    [initialUnsupervisedSessions, supervisionPatients, date, regeln, initialCasePatientId]
+      supervisionCaseOptions(initialUnsupervisedSessions, supervisionPatients, date, regeln, casePatientId),
+    [initialUnsupervisedSessions, supervisionPatients, date, regeln, casePatientId]
   );
   // „SV fällig“ und Vorauswahl nur für laufende Fälle: Abgeschlossene tragen oft viele alte, nie zugeordnete
   // Sitzungen und wären sonst bei jeder Supervision vorausgewählt. Sie bleiben wählbar (Abschluss-Supervision).
   const isDue = (c: (typeof cases)[number]) => c.due && c.patient.isActive;
   // Einstieg von der Patient:innen-Seite (?patient=): genau diese Patient:in vorausgewählt, nicht zusätzlich die fälligen.
-  const requestedCase = cases.find((c) => c.patient.id === initialCasePatientId);
+  const requestedCase = cases.find((c) => c.patient.id === casePatientId);
   const selectedPatientIds =
     chosenPatientIds ?? (requestedCase ? [requestedCase.patient.id] : cases.filter(isDue).map((c) => c.patient.id));
   const selectedCases = cases.filter((c) => selectedPatientIds.includes(c.patient.id));
@@ -230,6 +232,7 @@ export function NewSessionClient({
     setNotes("");
     setShowNotes(false);
     setChosenPatientIds(null);
+    setCasePatientId(undefined);
     setError(null);
     setDurationMessage(undefined);
     setTotalMessage(undefined);

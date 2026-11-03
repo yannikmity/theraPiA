@@ -327,6 +327,14 @@ describe("NewSessionClient", () => {
     await waitFor(() => expect(firstCall().caseShares).toEqual([{ patientId: P2, minutes: 50 }]));
   });
 
+  it("Weitere Stunde erfassen nach einer Supervision von der Detailseite: die Patient:in ist nicht erneut vorausgewählt", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    render(<NewSessionClient {...props} initialType="supervision" initialCasePatientId={P2} />);
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Weitere Stunde erfassen" }));
+    expect(screen.getByRole("checkbox", { name: /A-2/ }).getAttribute("aria-checked")).toBe("false");
+  });
+
   it("Supervision: eine unbekannte Patient:in aus der Adresse ändert die Vorauswahl nicht", () => {
     const five = ["a", "b", "c", "d", "e"].map((x, i) => open(x, P1, `2026-09-0${i + 1}`));
     render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={five} initialCasePatientId="fremd" />);
