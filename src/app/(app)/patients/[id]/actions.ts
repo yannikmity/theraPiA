@@ -49,7 +49,7 @@ export const updatePatient: (
   input: z.infer<typeof updatePatientSchema>
 ) => Promise<ActionResult<PatientDetailData>> = createAction({
   schema: updatePatientSchema,
-  handler: async (input) => {
+  handler: async (input, userId) => {
     const existing = await getPatient(input.id);
     const patient: Patient = {
       id: input.id as Patient["id"],
@@ -64,7 +64,7 @@ export const updatePatient: (
       genehmigungsdatum: input.genehmigungsdatum,
       sprechstundenAmbulanz: input.sprechstundenAmbulanz,
     };
-    await updatePatientDB(patient);
+    await updatePatientDB(db, userId, patient);
     return loadPatientDetailData(patient.id);
   },
 });

@@ -21,17 +21,19 @@ const notes = z.string().max(2000);
 const sessionCategory = z.enum(["sprechstunde", "probatorik", "behandlung", "bezugsperson", "gespraechsziffer"]);
 const supervisionKind = z.enum(["individual", "group"]);
 const supervisionSetting = z.enum(["einzel", "gruppe"]);
+// Anlegen und Umbenennen prüfen gleich (#74); Leerzeichen am Rand zählen nicht zur Chiffre.
+const chiffre = z.string().trim().min(1, "Chiffre ist erforderlich").max(50, "Chiffre darf höchstens 50 Zeichen lang sein");
 
 // Patient schemas
 export const addPatientSchema = z.object({
-  chiffre: z.string().min(1, "Chiffre ist erforderlich").max(50),
+  chiffre,
   therapyType: z.enum(["kurzzeittherapie", "langzeittherapie"]),
   startDate: isoDate,
 });
 
 export const updatePatientSchema = z.object({
   id: z.string().uuid(),
-  chiffre: z.string().min(1, "Chiffre ist erforderlich").max(50),
+  chiffre,
   therapyType: z.enum(["kurzzeittherapie", "langzeittherapie"]),
   startDate: isoDate,
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),

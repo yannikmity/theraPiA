@@ -148,6 +148,21 @@ describe("updatePatientSchema", () => {
   ])("meldet beantragte Stunden %s auf Deutsch: „%s“", (beantragteStunden, meldung) => {
     expect(meldungen(updatePatientSchema.safeParse({ ...basis, beantragteStunden }))).toEqual([meldung]);
   });
+
+  // Umbenennen prüft wie das Anlegen (#74): Pflichtfeld, höchstens 50 Zeichen, Meldungen auf Deutsch.
+  it.each([
+    ["", "Chiffre ist erforderlich"],
+    ["   ", "Chiffre ist erforderlich"],
+    ["x".repeat(51), "Chiffre darf höchstens 50 Zeichen lang sein"],
+  ])("meldet die Chiffre „%s“ beim Bearbeiten wie beim Anlegen: „%s“", (chiffre, meldung) => {
+    expect(meldungen(updatePatientSchema.safeParse({ ...basis, chiffre }))).toEqual([meldung]);
+    expect(meldungen(addPatientSchema.safeParse({ chiffre, therapyType: "langzeittherapie", startDate: "2024-01-15" }))).toEqual([meldung]);
+  });
+
+  it("entfernt Leerzeichen am Rand der Chiffre und lässt genau 50 Zeichen zu (#74)", () => {
+    expect(updatePatientSchema.parse({ ...basis, chiffre: "  A-2  " }).chiffre).toBe("A-2");
+    expect(updatePatientSchema.safeParse({ ...basis, chiffre: "x".repeat(50) }).success).toBe(true);
+  });
 });
 
 describe("addTherapySessionSchema", () => {

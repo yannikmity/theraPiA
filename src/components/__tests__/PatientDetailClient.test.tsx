@@ -145,4 +145,98 @@ describe("PatientDetailClient", () => {
     await waitFor(() => expect(updatePatient).toHaveBeenCalledWith(expect.objectContaining({ beantragteStunden: 60 })));
     expect(updatePatient).toHaveBeenCalledTimes(1);
   });
+
+  describe("Chiffre bearbeiten (#74)", () => {
+    const chiffreFeld = () => screen.getByLabelText("Chiffre") as HTMLInputElement;
+    const detail = (chiffre: string) => ({
+      patient: { ...patient, chiffre },
+      therapySessions: props.initialTherapySessions,
+      supervisionSessions: [],
+      supervisors: [],
+    });
+
+    it("zeigt die Chiffre im Feld mit dem Hinweis auf Chiffren statt Klarnamen", () => {
+      render(<PatientDetailClient {...props} />);
+      expect(chiffreFeld().value).toBe("A-1");
+      expect(card("Chiffre").textContent).toContain("Nur Chiffren, keine Klarnamen");
+      expect(chiffreFeld().getAttribute("aria-describedby")).toBe("chiffre-hinweis");
+      expect(document.getElementById("chiffre-hinweis")?.textContent).toContain("keine Klarnamen");
+    });
+
+    it("ist mobil gut bedienbar: keine Autokorrektur, kein Ausfüllvorschlag, höchstens 50 Zeichen", () => {
+      render(<PatientDetailClient {...props} />);
+      const feld = chiffreFeld();
+      expect(feld.getAttribute("autocomplete")).toBe("off");
+      expect(feld.getAttribute("autocorrect")).toBe("off");
+      expect(feld.getAttribute("spellcheck")).toBe("false");
+      expect(feld.getAttribute("enterkeyhint")).toBe("done");
+      expect(feld.maxLength).toBe(50);
+    });
+
+    it("speichert die geänderte Chiffre ohne Leerzeichen am Rand und zeigt sie danach in der Überschrift", async () => {
+      vi.mocked(updatePatient).mockResolvedValue({ success: true, data: detail("A-neu") });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "  A-neu " } });
+      fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
+      await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("A-neu"));
+      expect(updatePatient).toHaveBeenCalledWith(
+        expect.objectContaining({ id: P1, chiffre: "A-neu", therapyType: "langzeittherapie", startDate: "2026-01-05", isActive: true })
+      );
+    });
+
+    it("speichert die Chiffre mit Enter; das Formular hat nur „Chiffre speichern“ als Submit-Knopf", async () => {
+      vi.mocked(updatePatient).mockResolvedValue({ success: false, error: "egal" });
+      render(<PatientDetailClient {...props} />);
+      const feld = chiffreFeld();
+      expect(submitButtons(feld.form!).map((b) => b.textContent)).toEqual(["Chiffre speichern"]);
+      fireEvent.change(feld, { target: { value: "A-2" } });
+      pressEnter(feld);
+      await waitFor(() => expect(updatePatient).toHaveBeenCalledWith(expect.objectContaining({ chiffre: "A-2" })));
+      expect(updatePatient).toHaveBeenCalledTimes(1);
+    });
+
+    it("zeigt eine schon vergebene Chiffre als Meldung am Feld und behält die alte Überschrift", async () => {
+      vi.mocked(updatePatient).mockResolvedValue({
+        success: false,
+        error: "Diese Chiffre ist schon vergeben",
+        fieldErrors: { chiffre: ["Diese Chiffre ist schon vergeben"] },
+      });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "B-7" } });
+      fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
+      await waitFor(() => expect(chiffreFeld().getAttribute("aria-invalid")).toBe("true"));
+      expect(document.getElementById("chiffre-fehler")?.textContent).toBe("Diese Chiffre ist schon vergeben");
+      expect(chiffreFeld().getAttribute("aria-describedby")).toBe("chiffre-fehler chiffre-hinweis");
+      // Nur einmal, am Feld – nicht zusätzlich als Sammelmeldung „chiffre: …“.
+      expect(card("Chiffre").textContent?.match(/schon vergeben/g)).toHaveLength(1);
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("A-1");
+      expect(chiffreFeld().value).toBe("B-7");
+    });
+
+    it("zeigt andere Fehler beim Speichern der Chiffre in der Chiffre-Karte", async () => {
+      vi.mocked(updatePatient).mockResolvedValue({ success: false, error: "Patient:in nicht gefunden" });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "A-2" } });
+      fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
+      await waitFor(() => expect(card("Chiffre").contains(screen.getByRole("alert"))).toBe(true));
+      expect(screen.getByRole("alert").textContent).toContain("Patient:in nicht gefunden");
+    });
+
+    it("lehnt eine leere Chiffre ohne Serveraufruf mit Meldung am Feld ab", () => {
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "   " } });
+      fireEvent.click(screen.getByRole("button", { name: "Chiffre speichern" }));
+      expect(document.getElementById("chiffre-fehler")?.textContent).toBe("Chiffre ist erforderlich");
+      expect(chiffreFeld().getAttribute("aria-invalid")).toBe("true");
+      expect(updatePatient).not.toHaveBeenCalled();
+    });
+
+    it("schickt beim Speichern des Antrags die gespeicherte Chiffre, nicht einen ungespeicherten Entwurf", async () => {
+      vi.mocked(updatePatient).mockResolvedValue({ success: false, error: "egal" });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "Entwurf" } });
+      fireEvent.click(screen.getByRole("button", { name: "Antrag speichern" }));
+      await waitFor(() => expect(updatePatient).toHaveBeenCalledWith(expect.objectContaining({ chiffre: "A-1" })));
+    });
+  });
 });

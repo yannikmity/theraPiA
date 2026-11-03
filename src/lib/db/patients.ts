@@ -1,7 +1,7 @@
 import { query, type Db } from "../db";
 import { Patient, PatientId } from "@/types";
 import { mapPatientRow, PatientRow } from "../db-mappers";
-import { NotFoundError } from "../errors";
+import { NotFoundError, ValidationError } from "../errors";
 import { getCurrentUserId } from "./get-current-user";
 
 const PATIENT_COLUMNS =
@@ -55,27 +55,39 @@ export async function addPatient(patient: Patient): Promise<void> {
   );
 }
 
-export async function updatePatient(patient: Patient): Promise<void> {
-  const userId = await getCurrentUserId();
-  const result = await query(
-    `UPDATE patients
-     SET chiffre = $1, therapy_type = $2, start_date = $3, end_date = $4, is_active = $5,
-         antragsdatum = $6, beantragte_stunden = $7, genehmigungsdatum = $10, sprechstunden_ambulanz = $11
-     WHERE id = $8 AND user_id = $9`,
-    [
-      patient.chiffre,
-      patient.therapyType,
-      patient.startDate,
-      patient.endDate,
-      patient.isActive,
-      patient.antragsdatum,
-      patient.beantragteStunden,
-      patient.id,
-      userId,
-      patient.genehmigungsdatum,
-      patient.sprechstundenAmbulanz,
-    ]
-  );
+export const MELDUNG_CHIFFRE_VERGEBEN = "Diese Chiffre ist schon vergeben";
+
+// Die Chiffre ist je Account eindeutig (UNIQUE(user_id, chiffre)). Eine Kollision beim Umbenennen (23505) wird zur
+// Meldung am Feld statt zum Serverfehler (#74); andere Fehler gehen weiter.
+export async function updatePatient(db: Db, userId: string, patient: Patient): Promise<void> {
+  let result;
+  try {
+    result = await db.query(
+      `UPDATE patients
+       SET chiffre = $1, therapy_type = $2, start_date = $3, end_date = $4, is_active = $5,
+           antragsdatum = $6, beantragte_stunden = $7, genehmigungsdatum = $10, sprechstunden_ambulanz = $11
+       WHERE id = $8 AND user_id = $9`,
+      [
+        patient.chiffre,
+        patient.therapyType,
+        patient.startDate,
+        patient.endDate,
+        patient.isActive,
+        patient.antragsdatum,
+        patient.beantragteStunden,
+        patient.id,
+        userId,
+        patient.genehmigungsdatum,
+        patient.sprechstundenAmbulanz,
+      ]
+    );
+  } catch (error) {
+    const { code, constraint } = error as { code?: string; constraint?: string };
+    if (code === "23505" && constraint === "patients_user_id_chiffre_key") {
+      throw new ValidationError(MELDUNG_CHIFFRE_VERGEBEN, { chiffre: [MELDUNG_CHIFFRE_VERGEBEN] });
+    }
+    throw error;
+  }
 
   if (result.rowCount === 0) {
     throw new NotFoundError("Patient:in");
