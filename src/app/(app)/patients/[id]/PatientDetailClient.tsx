@@ -20,6 +20,7 @@ import type { Ausbildungsregeln } from "@/lib/ausbildungsregeln/model";
 import RatioIndicator from "@/components/RatioIndicator";
 import { ActionError, errorAt, type ScopedActionError } from "@/components/ActionError";
 import { runAction } from "@/lib/run-action";
+import type { ActionResult } from "@/lib/action-result";
 import { MELDUNG_CHIFFRE_PFLICHT } from "@/lib/constants";
 import { track, trackFailure } from "@/lib/analytics/track";
 import { SectionHeader, FormField, ConfirmButton, fieldErrorId } from "@/components/ui";
@@ -31,6 +32,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { QuickCaptureLink } from "@/components/QuickCaptureLink";
 import {
   updatePatient,
+  renamePatient,
   updateTherapySession,
   deleteTherapySession,
   deletePatient,
@@ -89,22 +91,38 @@ export function PatientDetailClient({
     setSupervisionSessions(data.supervisionSessions);
   }
 
-  // Alle Änderungen an der Patient:in gehen durch eine Action mit dem vollen Datensatz; `changes` überschreibt die
-  // Felder, die die jeweilige Stelle ändert. Der Fehler landet an genau dieser Stelle (scope).
-  async function savePatient(
-    scope: "chiffre" | "antrag" | "status",
-    changes: Partial<
-      Pick<Patient, "chiffre" | "endDate" | "isActive" | "antragsdatum" | "beantragteStunden" | "genehmigungsdatum" | "sprechstundenAmbulanz">
-    >
-  ) {
-    if (!patient || savingRef.current) return;
+  // Änderungen an der Patient:in: gemeinsame Sperre gegen doppeltes Absenden, der Fehler landet an genau dieser Stelle
+  // (scope).
+  async function runPatientAction(scope: "chiffre" | "antrag" | "status", call: () => Promise<ActionResult<PatientDetailData>>) {
+    if (savingRef.current) return;
     savingRef.current = true;
     setIsSaving(true);
     setError(null);
-    const result = await runAction(() =>
+    const result = await runAction(call);
+    savingRef.current = false;
+    setIsSaving(false);
+    if (result.success) {
+      applyData(result.data);
+      // Das Feld zeigt danach die gespeicherte Chiffre (ohne Leerzeichen am Rand), nicht die Eingabe.
+      if (scope === "chiffre") setChiffre(result.data.patient?.chiffre ?? "");
+    } else {
+      trackFailure("patient", "update", result);
+      setError({ scope, result });
+    }
+  }
+
+  // Antrag und Status gehen mit allen Feldern außer der Chiffre an die Action; `changes` überschreibt die Felder, die
+  // die jeweilige Stelle ändert. Die Chiffre ändert nur renamePatient (#74).
+  function savePatient(
+    scope: "antrag" | "status",
+    changes: Partial<
+      Pick<Patient, "endDate" | "isActive" | "antragsdatum" | "beantragteStunden" | "genehmigungsdatum" | "sprechstundenAmbulanz">
+    >
+  ) {
+    if (!patient) return;
+    return runPatientAction(scope, () =>
       updatePatient({
         id: patient.id,
-        chiffre: patient.chiffre,
         therapyType: patient.therapyType,
         startDate: patient.startDate,
         endDate: patient.endDate,
@@ -116,16 +134,6 @@ export function PatientDetailClient({
         ...changes,
       })
     );
-    savingRef.current = false;
-    setIsSaving(false);
-    if (result.success) {
-      applyData(result.data);
-      // Das Feld zeigt danach die gespeicherte Chiffre (ohne Leerzeichen am Rand), nicht die Eingabe.
-      if (scope === "chiffre") setChiffre(result.data.patient?.chiffre ?? "");
-    } else {
-      trackFailure("patient", "update", result);
-      setError({ scope, result });
-    }
   }
 
   const handleComplete = () => savePatient("status", { endDate: format(new Date(), "yyyy-MM-dd"), isActive: false });
@@ -148,7 +156,8 @@ export function PatientDetailClient({
       setError({ scope: "chiffre", result: { success: false, error: MELDUNG_CHIFFRE_PFLICHT, fieldErrors: { chiffre: [MELDUNG_CHIFFRE_PFLICHT] } } });
       return;
     }
-    void savePatient("chiffre", { chiffre: neu });
+    if (!patient) return;
+    void runPatientAction("chiffre", () => renamePatient({ id: patient.id, chiffre: neu }));
   };
 
   async function handleUpdateSession(session: TherapySession, values: TherapySessionFormValues) {
@@ -275,7 +284,11 @@ export function PatientDetailClient({
               id="chiffre"
               type="text"
               value={chiffre}
-              onChange={(e) => setChiffre(e.target.value)}
+              onChange={(e) => {
+                setChiffre(e.target.value);
+                // Eine Meldung zur Chiffre gilt der vorigen Eingabe; Fehler anderer Karten bleiben stehen.
+                if (chiffreError) setError(null);
+              }}
               placeholder="z. B. M.K."
               maxLength={50}
               autoComplete="off"

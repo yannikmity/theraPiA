@@ -32,9 +32,10 @@ export const addPatientSchema = z.object({
   startDate: isoDate,
 });
 
+// Die Chiffre gehört nicht dazu: Sie ändert nur renamePatientSchema, damit ein veralteter Tab eine inzwischen
+// geänderte Chiffre nicht zurücksetzt (#74).
 export const updatePatientSchema = z.object({
   id: z.string().uuid(),
-  chiffre,
   therapyType: z.enum(["kurzzeittherapie", "langzeittherapie"]),
   startDate: isoDate,
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
@@ -46,6 +47,12 @@ export const updatePatientSchema = z.object({
 }).refine((p) => !p.genehmigungsdatum || !p.antragsdatum || p.genehmigungsdatum >= p.antragsdatum, {
   message: "Die Genehmigung kann nicht vor dem Antrag liegen",
   path: ["genehmigungsdatum"],
+});
+
+// Umbenennen schreibt nur die Chiffre, keine anderen Felder aus einem womöglich veralteten Seitenstand (#74).
+export const renamePatientSchema = z.object({
+  id: z.string().uuid(),
+  chiffre,
 });
 
 // Session schemas

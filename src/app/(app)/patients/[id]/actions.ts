@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import {
   getPatient,
   updatePatient as updatePatientDB,
+  renamePatient as renamePatientDB,
   getTherapySessions,
   getSupervisionSessions,
   getSupervisors,
@@ -15,6 +16,7 @@ import { Patient, TherapySession, SupervisionSession, Supervisor } from "@/types
 import { createAction } from "@/lib/safe-action";
 import {
   updatePatientSchema,
+  renamePatientSchema,
   updateTherapySessionSchema,
   deleteTherapySessionSchema,
   deleteByIdSchema,
@@ -50,22 +52,18 @@ export const updatePatient: (
 ) => Promise<ActionResult<PatientDetailData>> = createAction({
   schema: updatePatientSchema,
   handler: async (input, userId) => {
-    const existing = await getPatient(input.id);
-    const patient: Patient = {
-      id: input.id as Patient["id"],
-      chiffre: input.chiffre,
-      therapyType: input.therapyType,
-      startDate: input.startDate,
-      endDate: input.endDate,
-      isActive: input.isActive,
-      createdAt: existing?.createdAt ?? new Date().toISOString(),
-      antragsdatum: input.antragsdatum,
-      beantragteStunden: input.beantragteStunden,
-      genehmigungsdatum: input.genehmigungsdatum,
-      sprechstundenAmbulanz: input.sprechstundenAmbulanz,
-    };
-    await updatePatientDB(db, userId, patient);
-    return loadPatientDetailData(patient.id);
+    await updatePatientDB(db, userId, { ...input, id: input.id as Patient["id"] });
+    return loadPatientDetailData(input.id);
+  },
+});
+
+export const renamePatient: (
+  input: z.infer<typeof renamePatientSchema>
+) => Promise<ActionResult<PatientDetailData>> = createAction({
+  schema: renamePatientSchema,
+  handler: async (input, userId) => {
+    await renamePatientDB(db, userId, input.id, input.chiffre);
+    return loadPatientDetailData(input.id);
   },
 });
 

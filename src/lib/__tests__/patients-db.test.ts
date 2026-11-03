@@ -4,14 +4,13 @@ import { createTestDb, TEST_DATABASE_URL } from "./helpers/test-db";
 import { seedOwnershipFixture, countRows } from "./helpers/fixtures";
 
 vi.mock("../auth", () => ({ auth: vi.fn() }));
-import { deletePatient, updatePatient } from "../db/patients";
+import { deletePatient, renamePatient, updatePatient } from "../db/patients";
 import { MELDUNG_CHIFFRE_VERGEBEN } from "../constants";
 import { loadUserData } from "../db/user-data";
 import { supervisionsCsv, therapySessionsCsv } from "../export/csv-files";
 import { buildNachweis } from "../nachweis";
 import { standardRegelwerk } from "../ausbildungsregeln/resolve";
 import { ValidationError, NotFoundError } from "../errors";
-import type { Db } from "../db";
 
 describe.skipIf(!TEST_DATABASE_URL)("Patient:innen löschen", () => {
   let cleanup: (() => Promise<void>) | undefined;
@@ -69,16 +68,10 @@ describe.skipIf(!TEST_DATABASE_URL)("Chiffre umbenennen (#74)", () => {
     return { db: t.client, f };
   }
 
-  // Aktueller Datensatz der Patient:in mit neuer Chiffre – alle anderen Felder bleiben, wie sie sind.
-  async function umbenannt(db: Db, userId: string, patientId: string, chiffre: string) {
-    const patient = (await loadUserData(db, userId)).patients.find((p) => p.id === patientId)!;
-    return { ...patient, chiffre };
-  }
-
   it("ändert die Chiffre; Sitzungen, Supervisionsbezug, CSV-Exporte und Nachweis zeigen danach den neuen Wert", async () => {
     const { db, f } = await setup();
 
-    await updatePatient(db, f.a.userId, await umbenannt(db, f.a.userId, f.a.patientId, "A-neu"));
+    await renamePatient(db, f.a.userId, f.a.patientId, "A-neu");
 
     const data = await loadUserData(db, f.a.userId);
     expect(data.patients.map((p) => [p.id, p.chiffre])).toEqual([[f.a.patientId, "A-neu"]]);
@@ -103,7 +96,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Chiffre umbenennen (#74)", () => {
       [f.a.userId]
     );
 
-    const versuch = updatePatient(db, f.a.userId, await umbenannt(db, f.a.userId, rows[0].id, "A-1"));
+    const versuch = renamePatient(db, f.a.userId, rows[0].id, "A-1");
 
     await expect(versuch).rejects.toBeInstanceOf(ValidationError);
     await expect(versuch).rejects.toMatchObject({
@@ -117,7 +110,7 @@ describe.skipIf(!TEST_DATABASE_URL)("Chiffre umbenennen (#74)", () => {
   it("erlaubt eine Chiffre, die nur ein anderer Account verwendet", async () => {
     const { db, f } = await setup();
 
-    await updatePatient(db, f.a.userId, await umbenannt(db, f.a.userId, f.a.patientId, "B-1"));
+    await renamePatient(db, f.a.userId, f.a.patientId, "B-1");
 
     expect((await loadUserData(db, f.a.userId)).patients.map((p) => p.chiffre)).toEqual(["B-1"]);
     expect((await loadUserData(db, f.b.userId)).patients.map((p) => p.chiffre)).toEqual(["B-1"]);
@@ -126,17 +119,42 @@ describe.skipIf(!TEST_DATABASE_URL)("Chiffre umbenennen (#74)", () => {
   it("lässt die eigene Chiffre unverändert speichern, ohne Kollision mit sich selbst", async () => {
     const { db, f } = await setup();
 
-    await updatePatient(db, f.a.userId, await umbenannt(db, f.a.userId, f.a.patientId, "A-1"));
+    await renamePatient(db, f.a.userId, f.a.patientId, "A-1");
 
     expect((await loadUserData(db, f.a.userId)).patients.map((p) => p.chiffre)).toEqual(["A-1"]);
   });
 
   it("weist fremde Patient:innen zurück und benennt nichts um", async () => {
     const { db, f } = await setup();
-    const fremd = await umbenannt(db, f.b.userId, f.b.patientId, "gekapert");
-
-    await expect(updatePatient(db, f.a.userId, fremd)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(renamePatient(db, f.a.userId, f.b.patientId, "gekapert")).rejects.toBeInstanceOf(NotFoundError);
 
     expect((await loadUserData(db, f.b.userId)).patients.map((p) => p.chiffre)).toEqual(["B-1"]);
+  });
+
+  // Ein veralteter Tab darf beim Umbenennen nichts anderes zurückschreiben – und beim Speichern der übrigen Felder
+  // nicht die Chiffre.
+  it("ändert nur die Chiffre; inzwischen gespeicherte Antrags- und Statusfelder bleiben", async () => {
+    const { db, f } = await setup();
+    await db.query(
+      `UPDATE patients SET antragsdatum = '2026-02-01', beantragte_stunden = 60, genehmigungsdatum = '2026-02-20',
+              sprechstunden_ambulanz = 2, end_date = '2026-10-01', is_active = false, therapy_type = 'langzeittherapie'
+       WHERE id = $1`,
+      [f.a.patientId]
+    );
+    const vorher = (await loadUserData(db, f.a.userId)).patients[0];
+
+    await renamePatient(db, f.a.userId, f.a.patientId, "A-neu");
+
+    expect((await loadUserData(db, f.a.userId)).patients[0]).toEqual({ ...vorher, chiffre: "A-neu" });
+  });
+
+  it("lässt eine inzwischen geänderte Chiffre stehen, wenn ein veralteter Tab die übrigen Felder speichert", async () => {
+    const { db, f } = await setup();
+    const veraltet = (await loadUserData(db, f.a.userId)).patients[0];
+    await renamePatient(db, f.a.userId, f.a.patientId, "A-neu");
+
+    await updatePatient(db, f.a.userId, { ...veraltet, beantragteStunden: 40 });
+
+    expect((await loadUserData(db, f.a.userId)).patients[0]).toMatchObject({ chiffre: "A-neu", beantragteStunden: 40 });
   });
 });

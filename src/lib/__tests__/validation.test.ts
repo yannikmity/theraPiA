@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   addPatientSchema,
   updatePatientSchema,
+  renamePatientSchema,
   addTherapySessionSchema,
   addTherapySessionsSchema,
   updateTherapySessionSchema,
@@ -149,19 +150,34 @@ describe("updatePatientSchema", () => {
     expect(meldungen(updatePatientSchema.safeParse({ ...basis, beantragteStunden }))).toEqual([meldung]);
   });
 
+  // Die Chiffre ändert nur renamePatientSchema (#74); ein veralteter Tab soll sie hierüber nicht zurücksetzen.
+  it("nimmt keine Chiffre an", () => {
+    expect(updatePatientSchema.parse({ ...basis, chiffre: "anders" })).not.toHaveProperty("chiffre");
+  });
+});
+
+describe("renamePatientSchema", () => {
+  const meldungen = (r: { success: boolean; error?: { issues: { message: string }[] } }) =>
+    r.success ? [] : r.error!.issues.map((i) => i.message);
+  const id = "550e8400-e29b-41d4-a716-446655440000";
+
   // Umbenennen prüft wie das Anlegen (#74): Pflichtfeld, höchstens 50 Zeichen, Meldungen auf Deutsch.
   it.each([
     ["", "Chiffre ist erforderlich"],
     ["   ", "Chiffre ist erforderlich"],
     ["x".repeat(51), "Chiffre darf höchstens 50 Zeichen lang sein"],
-  ])("meldet die Chiffre „%s“ beim Bearbeiten wie beim Anlegen: „%s“", (chiffre, meldung) => {
-    expect(meldungen(updatePatientSchema.safeParse({ ...basis, chiffre }))).toEqual([meldung]);
+  ])("meldet die Chiffre „%s“ beim Umbenennen wie beim Anlegen: „%s“", (chiffre, meldung) => {
+    expect(meldungen(renamePatientSchema.safeParse({ id, chiffre }))).toEqual([meldung]);
     expect(meldungen(addPatientSchema.safeParse({ chiffre, therapyType: "langzeittherapie", startDate: "2024-01-15" }))).toEqual([meldung]);
   });
 
-  it("entfernt Leerzeichen am Rand der Chiffre und lässt genau 50 Zeichen zu (#74)", () => {
-    expect(updatePatientSchema.parse({ ...basis, chiffre: "  A-2  " }).chiffre).toBe("A-2");
-    expect(updatePatientSchema.safeParse({ ...basis, chiffre: "x".repeat(50) }).success).toBe(true);
+  it("entfernt Leerzeichen am Rand der Chiffre und lässt genau 50 Zeichen zu", () => {
+    expect(renamePatientSchema.parse({ id, chiffre: "  A-2  " })).toEqual({ id, chiffre: "A-2" });
+    expect(renamePatientSchema.safeParse({ id, chiffre: "x".repeat(50) }).success).toBe(true);
+  });
+
+  it("verlangt eine gültige ID", () => {
+    expect(renamePatientSchema.safeParse({ id: "keine-uuid", chiffre: "A-2" }).success).toBe(false);
   });
 });
 

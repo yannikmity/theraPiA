@@ -56,30 +56,41 @@ export async function addPatient(patient: Patient): Promise<void> {
   );
 }
 
-// Die Chiffre ist je Account eindeutig (UNIQUE(user_id, chiffre)). Eine Kollision beim Umbenennen (23505) wird zur
-// Meldung am Feld statt zum Serverfehler (#74); andere Fehler gehen weiter.
-export async function updatePatient(db: Db, userId: string, patient: Patient): Promise<void> {
+// Alle Felder außer der Chiffre; die ändert nur renamePatient. So setzt ein veralteter Tab beim Speichern von Antrag
+// oder Status eine inzwischen geänderte Chiffre nicht zurück (#74).
+export type PatientUpdate = Omit<Patient, "chiffre" | "createdAt">;
+
+export async function updatePatient(db: Db, userId: string, patient: PatientUpdate): Promise<void> {
+  const result = await db.query(
+    `UPDATE patients
+     SET therapy_type = $1, start_date = $2, end_date = $3, is_active = $4,
+         antragsdatum = $5, beantragte_stunden = $6, genehmigungsdatum = $7, sprechstunden_ambulanz = $8
+     WHERE id = $9 AND user_id = $10`,
+    [
+      patient.therapyType,
+      patient.startDate,
+      patient.endDate,
+      patient.isActive,
+      patient.antragsdatum,
+      patient.beantragteStunden,
+      patient.genehmigungsdatum,
+      patient.sprechstundenAmbulanz,
+      patient.id,
+      userId,
+    ]
+  );
+
+  if (result.rowCount === 0) {
+    throw new NotFoundError("Patient:in");
+  }
+}
+
+// Schreibt nur die Chiffre (#74). Sie ist je Account eindeutig (UNIQUE(user_id, chiffre)); eine Kollision (23505) wird
+// zur Meldung am Feld statt zum Serverfehler, andere Fehler gehen weiter.
+export async function renamePatient(db: Db, userId: string, id: PatientId | string, chiffre: string): Promise<void> {
   let result;
   try {
-    result = await db.query(
-      `UPDATE patients
-       SET chiffre = $1, therapy_type = $2, start_date = $3, end_date = $4, is_active = $5,
-           antragsdatum = $6, beantragte_stunden = $7, genehmigungsdatum = $10, sprechstunden_ambulanz = $11
-       WHERE id = $8 AND user_id = $9`,
-      [
-        patient.chiffre,
-        patient.therapyType,
-        patient.startDate,
-        patient.endDate,
-        patient.isActive,
-        patient.antragsdatum,
-        patient.beantragteStunden,
-        patient.id,
-        userId,
-        patient.genehmigungsdatum,
-        patient.sprechstundenAmbulanz,
-      ]
-    );
+    result = await db.query("UPDATE patients SET chiffre = $1 WHERE id = $2 AND user_id = $3", [chiffre, id, userId]);
   } catch (error) {
     const { code, constraint } = error as { code?: string; constraint?: string };
     if (code === "23505" && constraint === "patients_user_id_chiffre_key") {
