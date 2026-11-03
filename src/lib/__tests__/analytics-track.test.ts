@@ -95,11 +95,13 @@ describe("track", () => {
       mod.track("nachweis_printed", { supervisor: true });
       mod.track("export_downloaded", { entity: "json" });
       mod.track("account_deleted");
-      mod.track("quick_capture_used", { source: "dashboard" });
+      mod.track("quick_capture_used", { source: "dashboard", type: "supervision" });
       mod.track("last_week_suggestions_applied", { count: 3 });
       mod.track("dashboard_forecast_viewed");
       // @ts-expect-error nur die festen Einstiegspunkte, kein Pfad
-      mod.track("quick_capture_used", { source: "/patients/[id]" });
+      mod.track("quick_capture_used", { source: "/patients/[id]", type: "therapie" });
+      // @ts-expect-error nur Therapie oder Supervision
+      mod.track("quick_capture_used", { source: "patient", type: "gruppe" });
       // @ts-expect-error count ist eine Zahl, keine Liste von IDs
       mod.track("last_week_suggestions_applied", { count: [ID] });
       // @ts-expect-error die Prognose-Ansicht hat keine Daten
@@ -220,7 +222,7 @@ describe("track", () => {
       nachweis_printed: ["supervisor"],
       export_downloaded: ["entity"],
       account_deleted: [],
-      quick_capture_used: ["source"],
+      quick_capture_used: ["source", "type"],
       last_week_suggestions_applied: ["count"],
       dashboard_forecast_viewed: [],
     });

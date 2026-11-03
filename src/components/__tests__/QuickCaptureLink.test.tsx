@@ -19,7 +19,17 @@ describe("QuickCaptureLink", () => {
     expect(link.getAttribute("href")).toBe(`/sessions/new?patient=${ID}`);
     expect(link.textContent).toContain("Sitzung");
     fireEvent.click(link);
-    expect(vi.mocked(track).mock.calls).toEqual([["quick_capture_used", { source: "patient" }]]);
+    expect(vi.mocked(track).mock.calls).toEqual([["quick_capture_used", { source: "patient", type: "therapie" }]]);
+  });
+
+  it("Supervision: öffnet die Supervisions-Erfassung mit vorgewählter Patient:in (#77)", () => {
+    const { container } = render(<QuickCaptureLink patientId={ID} chiffre="A-1" source="patient" type="supervision" />);
+    container.addEventListener("click", (e) => e.preventDefault());
+    const link = screen.getByRole("link", { name: "Supervision für A-1 erfassen" });
+    expect(link.getAttribute("href")).toBe(`/sessions/new?type=supervision&patient=${ID}`);
+    expect(link.textContent).toContain("Supervision");
+    fireEvent.click(link);
+    expect(vi.mocked(track).mock.calls).toEqual([["quick_capture_used", { source: "patient", type: "supervision" }]]);
   });
 
   it("compact: nur das Plus, die Beschriftung steht im aria-label", () => {

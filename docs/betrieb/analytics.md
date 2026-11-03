@@ -41,7 +41,7 @@ Bei jedem Seitenaufruf (auch bei Navigation innerhalb der App) und bei jedem Ere
 | `nachweis_printed` | Druckdialog für den Nachweis geöffnet | `supervisor`: `true` (auf eine Supervisor:in gefiltert) oder `false` |
 | `export_downloaded` | Download unter Profil → Meine Daten oder (Ausgaben) unter Finanzen gestartet | `entity`: `therapy_sessions`, `supervisions`, `group_sessions`, `patients`, `expenses` (CSV) oder `json` (Datenexport) |
 | `account_deleted` | Eigener Account gelöscht (gesendet vor dem Abmelden) | – |
-| `quick_capture_used` | Schnelleinstieg „+ Sitzung“ mit vorgewählter Patient:in angetippt | `source`: `dashboard` (Patient:innen-Zeile auf dem Dashboard) oder `patient` (Kopf der Patient:innen-Seite) |
+| `quick_capture_used` | Schnelleinstieg „+ Sitzung“ oder „Supervision“ mit vorgewählter Patient:in angetippt | `source`: `dashboard` (Patient:innen-Zeile auf dem Dashboard) oder `patient` (Kopf der Patient:innen-Seite); `type`: `therapie` („+ Sitzung“) oder `supervision` („Supervision“, nur Patient:innen-Seite) |
 | `last_week_suggestions_applied` | Vorschläge „Wie letzte Woche“ gespeichert | `count`: Anzahl der gespeicherten Sitzungen (Zahl, keine IDs) |
 | `dashboard_forecast_viewed` | Annahmen der Quartalsprognose auf dem Dashboard aufgeklappt | – |
 

@@ -9,7 +9,7 @@ import { ActionError, errorAt, type ScopedActionError } from "@/components/Actio
 import { track, trackFailure } from "@/lib/analytics/track";
 import { runAction } from "@/lib/run-action";
 import { countNoun } from "@/lib/format";
-import { supervisionCases } from "@/lib/calculations";
+import { supervisionCaseOptions } from "@/lib/calculations";
 import type { Ausbildungsregeln } from "@/lib/ausbildungsregeln/model";
 import { DURATION_MAX_MINUTES, DURATION_MIN_MINUTES, durationError } from "@/components/forms/duration";
 import {
@@ -47,6 +47,8 @@ interface NewSessionClientProps {
   initialType: CaptureType;
   /** Vorbelegte Patient:in (Adresse, sonst zuletzt genutzt); "" ohne aktive Patient:innen. */
   initialPatientId: string;
+  /** Patient:in aus der Adresse (?patient=): in der Supervision vorausgewählt und oben (#77). */
+  initialCasePatientId?: string;
   /** Letzte Kategorie je Patient:in – die Vorbelegung folgt der letzten Sitzung. */
   categoryByPatient: Record<string, SessionCategory>;
   /** „Wie letzte Woche“: Sitzungen der Vorwoche, um sieben Tage verschoben (siehe quick-capture.ts). */
@@ -78,6 +80,7 @@ export function NewSessionClient({
   today,
   initialType,
   initialPatientId,
+  initialCasePatientId,
   categoryByPatient,
   suggestions,
   regeln,
@@ -121,20 +124,21 @@ export function NewSessionClient({
   // Sechs Dauer-Chips (Gesprächsziffer) passen auf dem Handy nicht in eine Zeile: dort drei pro Zeile, ab sm eine Zeile.
   const durationChipWidth = presets.length > 4 ? "flex-[1_1_calc(33.333%-0.5rem)] sm:flex-1" : undefined;
 
-  // Fälle mit offenen Sitzungen bis zum Datum der Supervision – spätere können nicht besprochen worden sein.
-  // Laufende Fälle zuerst: Abgeschlossene tragen oft viele alte offene Sitzungen und stünden sonst über den
-  // vorausgewählten laufenden. Stabile Sortierung, innerhalb der Gruppen bleibt die Reihenfolge erhalten.
+  // Fälle mit offenen Sitzungen bis zum Datum der Supervision – spätere können nicht besprochen worden sein – und
+  // laufende Patient:innen ohne offene Sitzung (#77). Laufende Fälle zuerst: Abgeschlossene tragen oft viele alte
+  // offene Sitzungen und stünden sonst über den vorausgewählten laufenden. Die Patient:in aus der Adresse steht oben.
   const cases = useMemo(
     () =>
-      [...supervisionCases(initialUnsupervisedSessions, supervisionPatients, date, regeln)].sort(
-        (a, b) => Number(b.patient.isActive) - Number(a.patient.isActive)
-      ),
-    [initialUnsupervisedSessions, supervisionPatients, date, regeln]
+      supervisionCaseOptions(initialUnsupervisedSessions, supervisionPatients, date, regeln, initialCasePatientId),
+    [initialUnsupervisedSessions, supervisionPatients, date, regeln, initialCasePatientId]
   );
   // „SV fällig“ und Vorauswahl nur für laufende Fälle: Abgeschlossene tragen oft viele alte, nie zugeordnete
   // Sitzungen und wären sonst bei jeder Supervision vorausgewählt. Sie bleiben wählbar (Abschluss-Supervision).
   const isDue = (c: (typeof cases)[number]) => c.due && c.patient.isActive;
-  const selectedPatientIds = chosenPatientIds ?? cases.filter(isDue).map((c) => c.patient.id);
+  // Einstieg von der Patient:innen-Seite (?patient=): genau diese Patient:in vorausgewählt, nicht zusätzlich die fälligen.
+  const requestedCase = cases.find((c) => c.patient.id === initialCasePatientId);
+  const selectedPatientIds =
+    chosenPatientIds ?? (requestedCase ? [requestedCase.patient.id] : cases.filter(isDue).map((c) => c.patient.id));
   const selectedCases = cases.filter((c) => selectedPatientIds.includes(c.patient.id));
   // Dauer je Fall für die Gesamt-Zeile; bei ungültiger freier Dauer keine Zeile.
   const perCaseMinutes = customDuration ? (durationError(customText) ? undefined : Number(customText)) : duration;
@@ -616,7 +620,9 @@ export function NewSessionClient({
                     <span className="font-mono font-medium text-foreground">{c.patient.chiffre}</span>
                     {!c.patient.isActive && <span className="ml-2 text-xs text-muted-foreground">abgeschlossen</span>}
                   </span>
-                  <span className="text-xs text-muted-foreground">{sitzungen(c.sessionIds.length)} offen</span>
+                  <span className="text-xs text-muted-foreground">
+                    {c.sessionIds.length > 0 ? `${sitzungen(c.sessionIds.length)} offen` : "keine Sitzung offen"}
+                  </span>
                   {isDue(c) && <SupervisionDueBadge />}
                 </label>
               );

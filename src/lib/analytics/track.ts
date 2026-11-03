@@ -34,6 +34,8 @@ export type SaveMode = "new" | "edit";
 export type ExportEntity = "therapy_sessions" | "supervisions" | "group_sessions" | "patients" | "expenses" | "json";
 // Einstiegspunkte des Schnelleinstiegs „+ Sitzung“ (Dashboard-Zeile, Kopf der Patient:innen-Seite).
 export type QuickCaptureSource = "dashboard" | "patient";
+// Was der Schnelleinstieg öffnet: Therapie-Erfassung („+ Sitzung“) oder Supervision (Patient:innen-Seite, #77).
+export type QuickCaptureType = "therapie" | "supervision";
 
 // Erlaubte Daten je Event: nur feste Kataloge, Booleans und Anzahlen – nie IDs, Chiffren, Namen, Fehlermeldungen oder
 // Element-Beschriftungen. `undefined` = Event ohne Daten. Der Compiler lehnt alles andere an den Aufrufstellen ab.
@@ -50,7 +52,7 @@ export type EventProps = {
   nachweis_printed: { supervisor: boolean };
   export_downloaded: { entity: ExportEntity };
   account_deleted: undefined;
-  quick_capture_used: { source: QuickCaptureSource };
+  quick_capture_used: { source: QuickCaptureSource; type: QuickCaptureType };
   last_week_suggestions_applied: { count: number };
   dashboard_forecast_viewed: undefined;
 };
@@ -79,7 +81,7 @@ export const EVENT_FIELDS: EventFields = {
   nachweis_printed: ["supervisor"],
   export_downloaded: ["entity"],
   account_deleted: [],
-  quick_capture_used: ["source"],
+  quick_capture_used: ["source", "type"],
   last_week_suggestions_applied: ["count"],
   dashboard_forecast_viewed: [],
 };

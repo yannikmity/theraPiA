@@ -294,8 +294,51 @@ describe("NewSessionClient", () => {
   it("beschriftet die Fallauswahl der Supervision als Gruppe (fieldset/legend)", () => {
     render(<NewSessionClient {...props} initialType="supervision" />);
     const group = screen.getByRole("group", { name: "Besprochene Patient:innen" });
-    expect(within(group).getAllByRole("checkbox")).toHaveLength(1);
+    expect(within(group).getAllByRole("checkbox")).toHaveLength(2);
     expect(group.textContent).toContain("1 Sitzung offen");
+    expect(group.textContent).toContain("keine Sitzung offen");
+  });
+
+  it("Supervision: laufende Patient:in ohne offene Sitzung ist wählbar und speichert einen Anteil ohne Zuordnung (#77)", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    render(<NewSessionClient {...props} initialType="supervision" />);
+    const box = screen.getByRole("checkbox", { name: /A-2/ });
+    expect(box.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(box);
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(addSupervisionSession).toHaveBeenCalledTimes(1));
+    expect(firstCall()).toMatchObject({
+      durationMinutes: 50,
+      linkedTherapySessionIds: [],
+      caseShares: [{ patientId: P2, minutes: 50 }],
+    });
+  });
+
+  it("Supervision von der Detailseite: genau diese Patient:in vorausgewählt und oben, auch wenn andere fällig sind (#77)", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    const five = ["a", "b", "c", "d", "e"].map((x, i) => open(x, P1, `2026-09-0${i + 1}`));
+    render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={five} initialCasePatientId={P2} />);
+    const boxes = screen.getAllByRole("checkbox");
+    expect(boxes[0].getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("checkbox", { name: /A-2/ })).toBe(boxes[0]);
+    expect(screen.getByRole("checkbox", { name: /A-1/ }).getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByText("SV fällig")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(firstCall().caseShares).toEqual([{ patientId: P2, minutes: 50 }]));
+  });
+
+  it("Supervision: eine unbekannte Patient:in aus der Adresse ändert die Vorauswahl nicht", () => {
+    const five = ["a", "b", "c", "d", "e"].map((x, i) => open(x, P1, `2026-09-0${i + 1}`));
+    render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={five} initialCasePatientId="fremd" />);
+    expect(screen.getByRole("checkbox", { name: /A-1/ }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("checkbox", { name: /A-2/ }).getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("„+ Sitzung“ und dann Supervision: die Patient:in aus der Adresse bleibt vorausgewählt (#77)", () => {
+    render(<NewSessionClient {...props} initialPatientId={P1} initialCasePatientId={P1} />);
+    fireEvent.click(chip("Supervision"));
+    expect(screen.getByRole("checkbox", { name: /A-1/ }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("checkbox", { name: /A-2/ }).getAttribute("aria-checked")).toBe("false");
   });
 
   it("Supervision: Dauer gilt je Fall – 25 Min und zwei Fälle ergeben 50 Min", async () => {
@@ -352,8 +395,10 @@ describe("NewSessionClient", () => {
     const sessions = [open("alt", P1, "2026-07-20"), open("neu", P1, "2026-09-24"), open("spaet", P2, "2026-09-24")];
     render(<NewSessionClient {...props} initialType="supervision" initialUnsupervisedSessions={sessions} />);
     fireEvent.change(screen.getByLabelText("Datum"), { target: { value: "2026-07-22" } });
-    expect(screen.queryByRole("checkbox", { name: /A-2/ })).toBeNull();
+    // A-2 bleibt als laufende Patient:in wählbar (#77), ihre spätere Sitzung wird aber nicht zugeordnet.
+    expect(screen.getByRole("checkbox", { name: /A-2/ }).closest("label")?.textContent).toContain("keine Sitzung offen");
     fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-2/ }));
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(firstCall().linkedTherapySessionIds).toEqual(["alt"]));
   });
@@ -445,9 +490,11 @@ describe("NewSessionClient", () => {
     const names = within(group)
       .getAllByRole("checkbox")
       .map((c) => c.closest("label")?.textContent ?? "");
-    expect(names).toHaveLength(2);
+    // Laufende ohne offene Sitzung (A-2, #77) stehen zwischen laufenden mit offenen und abgeschlossenen.
+    expect(names).toHaveLength(3);
     expect(names[0]).toContain("A-1");
-    expect(names[1]).toContain("A-3");
+    expect(names[1]).toContain("A-2");
+    expect(names[2]).toContain("A-3");
   });
 
   it("Therapie: die Auswahl der Patient:in zeigt nur aktive Fälle", () => {
