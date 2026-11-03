@@ -92,8 +92,13 @@ export function PatientDetailClient({
   if (!patient) return null;
 
   // Alle Actions liefern den kompletten Seitenstand zurück, damit Stunden, Verhältnis und
-  // SV-Markierungen nach jeder Änderung stimmen.
-  function applyData(data: PatientDetailData) {
+  // SV-Markierungen nach jeder Änderung stimmen. Ein unbearbeitetes Chiffre-Feld übernimmt dabei den Serverstand, etwa
+  // eine in einem anderen Tab geänderte Chiffre; ein Entwurf bleibt stehen. `renamed`: nach dem Umbenennen zeigt das
+  // Feld immer die gespeicherte Chiffre (ohne Leerzeichen am Rand).
+  function applyData(data: PatientDetailData, renamed = false) {
+    const gespeichert = patient?.chiffre;
+    const neu = data.patient?.chiffre ?? "";
+    setChiffre((feld) => (renamed || feld === gespeichert ? neu : feld));
     setPatient(data.patient);
     setTherapySessions(data.therapySessions);
     setSupervisionSessions(data.supervisionSessions);
@@ -110,13 +115,7 @@ export function PatientDetailClient({
     savingRef.current = false;
     setIsSaving(false);
     if (result.success) {
-      const gespeichert = patient?.chiffre;
-      applyData(result.data);
-      // Nach dem Umbenennen zeigt das Feld die gespeicherte Chiffre (ohne Leerzeichen am Rand). Nach anderen Aktionen
-      // übernimmt ein unbearbeitetes Feld den Serverstand, etwa eine in einem anderen Tab geänderte Chiffre; ein
-      // Entwurf bleibt stehen.
-      const neu = result.data.patient?.chiffre ?? "";
-      setChiffre((feld) => (scope === "chiffre" || feld === gespeichert ? neu : feld));
+      applyData(result.data, scope === "chiffre");
     } else {
       trackFailure("patient", "update", result);
       setError({ scope, result });

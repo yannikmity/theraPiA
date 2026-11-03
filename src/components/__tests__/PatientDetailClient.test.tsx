@@ -303,6 +303,15 @@ describe("PatientDetailClient", () => {
       expect(chiffreFeld().value).toBe("A-anderer-tab");
     });
 
+    it("übernimmt die Chiffre aus einem anderen Tab auch nach dem Bearbeiten einer Sitzung", async () => {
+      vi.mocked(updateTherapySession).mockResolvedValue({ success: true, data: detail("A-anderer-tab") });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.click(screen.getAllByRole("button", { name: "Sitzung bearbeiten" })[0]);
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("A-anderer-tab"));
+      expect(chiffreFeld().value).toBe("A-anderer-tab");
+    });
+
     it("lässt einen ungespeicherten Chiffre-Entwurf stehen, wenn der Antrag gespeichert wird", async () => {
       vi.mocked(updatePatient).mockResolvedValue({ success: true, data: detail("A-anderer-tab") });
       render(<PatientDetailClient {...props} />);
