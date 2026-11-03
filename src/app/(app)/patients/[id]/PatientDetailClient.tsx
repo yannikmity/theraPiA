@@ -243,9 +243,6 @@ export function PatientDetailClient({
       <PageHeader
         title={<span className="font-mono">{patient.chiffre}</span>}
         backHref="/patients"
-        actions={
-          patient.isActive ? <QuickCaptureLink patientId={patient.id} chiffre={patient.chiffre} source="patient" /> : undefined
-        }
         subtitle={
           <div className="flex items-center gap-2">
             <Badge variant="primary-soft">
@@ -255,6 +252,20 @@ export function PatientDetailClient({
           </div>
         }
       />
+
+      {/* Schnelleinstiege in eigener Zeile (#77): neben Chiffre und Badges passen zwei Knöpfe am Handy nicht. */}
+      {patient.isActive && (
+        <div className="flex gap-2">
+          <QuickCaptureLink patientId={patient.id} chiffre={patient.chiffre} source="patient" className="flex-1 sm:flex-none" />
+          <QuickCaptureLink
+            patientId={patient.id}
+            chiffre={patient.chiffre}
+            source="patient"
+            type="supervision"
+            className="flex-1 sm:flex-none"
+          />
+        </div>
+      )}
 
       {/* wrap-anywhere: lange Zahlen (z. B. ungerundete Stunden) brechen in der Kachel um statt die Seite zu verbreitern. */}
       <div className="grid grid-cols-2 gap-3">

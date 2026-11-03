@@ -149,6 +149,30 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervision: Anteil je Fall", () => {
     expect(await stand(db, f.a.userId, supervision.id, A, B)).toEqual({ a: 0.4, b: 1, gesamt: 70, summeAnteile: 70 });
   });
 
+  it("speichert eine Supervision mit Anteil ohne verknüpfte Sitzung (Patient:in ohne offene Sitzung, #77)", async () => {
+    const { db, f, A, B } = await setup();
+    const ohneSitzung: SupervisionSession = {
+      id: newSupervisionSessionId(crypto.randomUUID()),
+      supervisorId: newSupervisorId(f.a.supervisorId),
+      date: "2026-02-03",
+      durationMinutes: 50,
+      kind: "individual",
+      setting: "einzel",
+      linkedTherapySessionIds: [],
+      linkedGroupSessionIds: [],
+      groupId: null,
+      caseShares: [{ patientId: B, minutes: 50 }],
+    };
+    await insertSupervisionSession(db, f.a.userId, ohneSitzung);
+    const data = await loadUserData(db, f.a.userId);
+    const sv = data.supervisionSessions.find((s) => s.id === ohneSitzung.id);
+    expect(sv?.linkedTherapySessionIds).toEqual([]);
+    expect(sv?.caseShares).toEqual([{ patientId: B, minutes: 50 }]);
+    // B: 25 Min aus der ersten Supervision plus 50 Min ohne Sitzung; A bleibt bei 25 Min.
+    expect(supervisionHoursForPatient(data.supervisionSessions, B)).toBe(1.5);
+    expect(supervisionHoursForPatient(data.supervisionSessions, A)).toBe(0.5);
+  });
+
   it("weist fehlende, fremde und nicht aufgehende Anteile zurück, bevor etwas geschrieben wird", async () => {
     const { db, f, A, B, supervision } = await setup();
     const neu = () => ({ ...supervision, id: newSupervisionSessionId(crypto.randomUUID()) });

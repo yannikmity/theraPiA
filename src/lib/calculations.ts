@@ -176,6 +176,29 @@ export function supervisionCases(
   return cases.sort((a, b) => b.openUnits - a.openUnits || a.patient.chiffre.localeCompare(b.patient.chiffre));
 }
 
+// Fallauswahl beim Erfassen einer Supervision (#77): die Fälle mit offenen Sitzungen und dazu laufende Patient:innen
+// ohne offene Sitzung – eine Patient:in lässt sich auch besprechen, wenn seit der letzten Supervision keine neue Sitzung
+// erfasst ist; gespeichert wird dann nur ihr Anteil. Abgeschlossene ohne offene Sitzung bleiben weg. Reihenfolge:
+// laufende mit, laufende ohne offene Sitzung, abgeschlossene; `first` (Einstieg von der Patient:innen-Seite) ganz oben.
+export function supervisionCaseOptions(
+  unsupervisedSessions: TherapySession[],
+  patients: Patient[],
+  upTo: string,
+  regeln: Ausbildungsregeln,
+  first?: string
+): SupervisionCase[] {
+  const cases = supervisionCases(unsupervisedSessions, patients, upTo, regeln);
+  const withSessions = new Set(cases.map((c) => c.patient.id));
+  const withoutSessions = patients
+    .filter((p) => p.isActive && !withSessions.has(p.id))
+    .sort((a, b) => a.chiffre.localeCompare(b.chiffre))
+    .map((patient): SupervisionCase => ({ patient, sessionIds: [], openUnits: 0, due: false }));
+  const active = cases.filter((c) => c.patient.isActive);
+  const closed = cases.filter((c) => !c.patient.isActive);
+  const options = [...active, ...withoutSessions, ...closed];
+  return [...options.filter((c) => c.patient.id === first), ...options.filter((c) => c.patient.id !== first)];
+}
+
 // Markierung „SV fällig“ in Dashboard und Patient:innen-Liste – ohne Datumsgrenze, alle offenen Sitzungen zählen.
 export function supervisionDuePatientIds(
   therapySessions: TherapySession[],

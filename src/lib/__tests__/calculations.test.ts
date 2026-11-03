@@ -26,6 +26,7 @@ import {
   financeTotals,
   sessionHoursByCategory,
   supervisionCases,
+  supervisionCaseOptions,
   supervisionDuePatientIds,
   supervisionHoursBySetting,
   lastSettingBySupervisor,
@@ -692,6 +693,40 @@ describe("supervisionCases", () => {
   it("sortiert nach offenen Einheiten, bei Gleichstand nach Chiffre", () => {
     const open = [session("t-1", "p-1", "2026-07-01"), session("t-2", "p-2", "2026-07-01")];
     expect(supervisionCases(open, [p1, p2], "2026-07-22", R).map((c) => c.patient.chiffre)).toEqual(["A-2", "B-1"]);
+  });
+});
+
+describe("supervisionCaseOptions", () => {
+  const laufend = makePatient({ id: newPatientId("p-1"), chiffre: "B-1" });
+  const ohneOffene = makePatient({ id: newPatientId("p-2"), chiffre: "A-2" });
+  const ohneOffene2 = makePatient({ id: newPatientId("p-3"), chiffre: "A-3" });
+  const abgeschlossen = makePatient({ id: newPatientId("p-4"), chiffre: "C-1", isActive: false });
+  const abgeschlossenOhne = makePatient({ id: newPatientId("p-5"), chiffre: "C-2", isActive: false });
+  const session = (id: string, patientId: string, date: string) =>
+    makeTherapySession({ id: newTherapySessionId(id), patientId: newPatientId(patientId), date, durationMinutes: 50 });
+  const alle = [abgeschlossenOhne, abgeschlossen, ohneOffene2, ohneOffene, laufend];
+  const open = [session("t-1", "p-1", "2026-07-01"), session("t-4", "p-4", "2026-07-01"), session("t-4b", "p-4", "2026-07-02")];
+  const chiffren = (first?: string) =>
+    supervisionCaseOptions(open, alle, "2026-07-22", R, first ? newPatientId(first) : undefined).map((c) => c.patient.chiffre);
+
+  it("bietet laufende Fälle ohne offene Sitzung mit an – ohne Sitzungen, nicht fällig, hinter denen mit offenen", () => {
+    const options = supervisionCaseOptions(open, alle, "2026-07-22", R);
+    expect(options.map((c) => [c.patient.chiffre, c.sessionIds, c.openUnits, c.due])).toEqual([
+      ["B-1", ["t-1"], 1, false],
+      ["A-2", [], 0, false],
+      ["A-3", [], 0, false],
+      ["C-1", ["t-4b", "t-4"], 2, false],
+    ]);
+  });
+
+  it("lässt abgeschlossene Fälle ohne offene Sitzung weg, auch wenn ihre Sitzungen nach dem Datum liegen", () => {
+    expect(supervisionCaseOptions([session("t-9", "p-5", "2026-09-01")], [abgeschlossenOhne], "2026-07-22", R)).toEqual([]);
+  });
+
+  it("stellt die angefragte Patient:in an den Anfang, unbekannte IDs ändern nichts", () => {
+    expect(chiffren("p-2")).toEqual(["A-2", "B-1", "A-3", "C-1"]);
+    expect(chiffren("p-4")).toEqual(["C-1", "B-1", "A-2", "A-3"]);
+    expect(chiffren("p-9")).toEqual(["B-1", "A-2", "A-3", "C-1"]);
   });
 });
 

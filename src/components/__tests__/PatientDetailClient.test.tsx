@@ -70,6 +70,29 @@ describe("PatientDetailClient", () => {
     push.mockReset();
   });
 
+  it("bietet im Kopf „+ Sitzung“ und „Supervision“ für diese Patient:in an (#77)", () => {
+    render(<PatientDetailClient {...props} />);
+    expect(screen.getByRole("link", { name: "Sitzung für A-1 erfassen" }).getAttribute("href")).toBe(`/sessions/new?patient=${P1}`);
+    expect(screen.getByRole("link", { name: "Supervision für A-1 erfassen" }).getAttribute("href")).toBe(
+      `/sessions/new?type=supervision&patient=${P1}`
+    );
+  });
+
+  it("stellt beide Schnelleinstiege in eine eigene Zeile unter den Kopf – neben Chiffre und Badges ist am Handy kein Platz (#77)", () => {
+    render(<PatientDetailClient {...props} />);
+    const row = screen.getByRole("link", { name: "Supervision für A-1 erfassen" }).parentElement as HTMLElement;
+    expect(within(row).getByRole("link", { name: "Sitzung für A-1 erfassen" })).toBeDefined();
+    expect(within(row).queryByRole("heading")).toBeNull();
+    // Die Zeile steht auf Seitenebene (neben den Kacheln), nicht im Kopf neben der Überschrift.
+    expect(row.previousElementSibling?.contains(screen.getByRole("heading", { level: 1 }))).toBe(true);
+    expect(within(row.parentElement as HTMLElement).getByText("Behandlungsstunden")).toBeDefined();
+  });
+
+  it("zeigt bei abgeschlossenen Patient:innen keinen Schnelleinstieg", () => {
+    render(<PatientDetailClient {...props} initialPatient={{ ...patient, isActive: false }} />);
+    expect(screen.queryByRole("link", { name: /erfassen$/ })).toBeNull();
+  });
+
   it("zeigt den Fehler beim Löschen der Patient:in in der Karte der Aktion, nicht oben auf der Seite", async () => {
     vi.mocked(deletePatient).mockResolvedValue({ success: false, error: "Patient:in nicht gefunden" });
     render(<PatientDetailClient {...props} />);

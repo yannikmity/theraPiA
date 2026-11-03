@@ -31,6 +31,7 @@ export default async function NewSessionPage({ searchParams }: { searchParams: P
         today={today}
         initialType={resolveInitialType(params.type)}
         initialPatientId={resolveInitialPatientId(params.patient, data.patients, data.lastUsedPatientId)}
+        initialCasePatientId={typeof params.patient === "string" ? params.patient : undefined}
         categoryByPatient={data.categoryByPatient}
         suggestions={data.suggestions}
         regeln={data.regeln}
