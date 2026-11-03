@@ -286,7 +286,7 @@ Alle Befehle im Ordner der Installation ausführen (`cd ~/therapia`).
 
 ## 8. Feedback aus dem Widget
 
-Angemeldete Personen können in der App über den Knopf „Feedback“ Rückmeldungen zu einzelnen Elementen geben – mit Text, Bewertung und (abwählbar) einem Screenshot des sichtbaren Bildschirms. Admins lesen sie unter Profil → Administration → Feedback. Technisch liegt jedes Feedback als Markdown-Datei (`<id>.md`, Metadaten im Kopf) und ggf. `<id>.png` im Docker-Volume `feedback_data` (im Container `/data/feedback`). Das Volume ist **nicht** Teil des Datenbank-Backups.
+Angemeldete Personen können in der App über den Knopf „Feedback“ Rückmeldungen zu einzelnen Elementen geben – mit Text, Bewertung und (auf Wunsch) einem Screenshot des sichtbaren Bildschirms. Admins lesen sie unter Profil → Administration → Feedback. Technisch liegt jedes Feedback als Markdown-Datei (`<id>.md`, Metadaten im Kopf) und ggf. `<id>.png` im Docker-Volume `feedback_data` (im Container `/data/feedback`). Das Volume ist **nicht** Teil des Datenbank-Backups.
 
 - **Ansehen auf dem Server:** `docker compose exec app ls -l /data/feedback` und `docker compose exec app cat /data/feedback/<id>.md`.
 - **Herunterladen:** `docker compose cp app:/data/feedback ./feedback-export` (Ordner danach wie Backups behandeln: vertraulich, Screenshots können Chiffren zeigen).
