@@ -36,7 +36,8 @@ export function FeedbackWidget({ userName }: { userName: string }) {
   const [sentiment, setSentiment] = useState<Sentiment | "">("");
   const [text, setText] = useState("");
   const [shot, setShot] = useState<string | null>(null);
-  const [shotOn, setShotOn] = useState(true);
+  // Screenshot nur auf Wunsch: er kann Chiffren und Sitzungsdaten zeigen (Gesundheitsbezug).
+  const [shotOn, setShotOn] = useState(false);
   const [shotState, setShotState] = useState<ShotState>("busy");
   const [status, setStatus] = useState<Status>("input");
   const [savedWithShot, setSavedWithShot] = useState(false);
@@ -54,7 +55,7 @@ export function FeedbackWidget({ userName }: { userName: string }) {
     setSentiment("");
     setText("");
     setShot(null);
-    setShotOn(true);
+    setShotOn(false);
     setStatus("input");
     setError("");
     // Fokus zurück zum Auslöser, sobald er wieder gerendert ist.
@@ -78,7 +79,7 @@ export function FeedbackWidget({ userName }: { userName: string }) {
     setText("");
     setError("");
     setShot(null);
-    setShotOn(true);
+    setShotOn(false);
     setShotState("busy");
     // Screenshot sofort beim Anpinnen: der Seitenzustand ist dann genau das, was die Person sieht.
     captureViewport(el).then((dataUrl) => {
@@ -320,7 +321,7 @@ export function FeedbackWidget({ userName }: { userName: string }) {
                     {shotState === "too-large" && "zu groß, wird nicht angehängt"}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">Screenshot kann Chiffren zeigen – bei Bedarf abwählen.</p>
+                <p className="text-xs text-muted-foreground">Screenshot kann Chiffren zeigen – nur anhängen, wenn er hilft.</p>
                 {shotOn && shot && (
                   // eslint-disable-next-line @next/next/no-img-element -- Vorschau einer Data-URL, kein Bild-Optimierer
                   <img src={shot} alt="Vorschau des Screenshots" className="max-h-40 w-full rounded-lg border border-border object-cover object-left-top" />
