@@ -32,6 +32,12 @@ async function pinHeading() {
   await waitFor(() => expect(screen.getByRole("dialog", { name: "Feedback geben" })).toBeDefined());
 }
 
+function enableScreenshot() {
+  const checkbox = screen.getByRole("checkbox");
+  expect(checkbox.getAttribute("aria-checked")).toBe("false");
+  fireEvent.click(checkbox);
+}
+
 describe("FeedbackWidget", () => {
   const fetchMock = vi.fn();
   beforeEach(() => {
@@ -55,6 +61,7 @@ describe("FeedbackWidget", () => {
     const dialog = screen.getByRole("dialog", { name: "Feedback geben" });
     expect(dialog.textContent).toContain("Dashboard");
     expect(dialog.textContent).toContain("als PiA Beispiel");
+    enableScreenshot();
     await screen.findByAltText("Vorschau des Screenshots");
 
     const save = screen.getByRole("button", { name: "Direkt speichern" }) as HTMLButtonElement;
@@ -83,11 +90,12 @@ describe("FeedbackWidget", () => {
     expect(Object.keys(body)).not.toContain("user");
   });
 
-  it("schickt ohne Häkchen keinen Screenshot", async () => {
+  it("hängt standardmäßig keinen Screenshot an und zeigt keine Vorschau", async () => {
     renderPage();
     await pinHeading();
-    await screen.findByAltText("Vorschau des Screenshots");
-    fireEvent.click(screen.getByRole("checkbox"));
+    expect(screen.getByRole("checkbox").getAttribute("aria-checked")).toBe("false");
+    await waitFor(() => expect(captureViewport).toHaveBeenCalled());
+    expect(screen.queryByAltText("Vorschau des Screenshots")).toBeNull();
     fireEvent.change(screen.getByLabelText("Feedback-Text"), { target: { value: "ok" } });
     fireEvent.click(screen.getByRole("radio", { name: /Gefällt mir/ }));
     fireEvent.click(screen.getByRole("button", { name: "Direkt speichern" }));
@@ -99,7 +107,6 @@ describe("FeedbackWidget", () => {
     fetchMock.mockResolvedValue(jsonResponse({ error: "Anfrage zu groß" }, 413));
     renderPage();
     await pinHeading();
-    await screen.findByAltText("Vorschau des Screenshots");
     fireEvent.change(screen.getByLabelText("Feedback-Text"), { target: { value: "bleibt" } });
     fireEvent.click(screen.getByRole("radio", { name: /Wunsch/ }));
     fireEvent.click(screen.getByRole("button", { name: "Direkt speichern" }));
@@ -151,6 +158,7 @@ describe("FeedbackWidget", () => {
       fireEvent.click(screen.getByRole("button", { name: "Feedback geben" }));
       fireEvent.click(screen.getByText("Erfassen"));
       await waitFor(() => expect(screen.getByRole("dialog").textContent).toContain("Erfassen"));
+      enableScreenshot();
       expect(resolvers).toHaveLength(2);
       resolvers[1]("data:image/png;base64,NEU");
       await waitFor(() => expect(screen.getByAltText("Vorschau des Screenshots").getAttribute("src")).toBe("data:image/png;base64,NEU"));
@@ -167,6 +175,7 @@ describe("FeedbackWidget", () => {
     vi.mocked(captureViewport).mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
     renderPage();
     await pinHeading();
+    enableScreenshot();
     fireEvent.change(screen.getByLabelText("Feedback-Text"), { target: { value: "gleich" } });
     fireEvent.click(screen.getByRole("radio", { name: /Wunsch/ }));
     const save = screen.getByRole("button", { name: "Direkt speichern" }) as HTMLButtonElement;
@@ -179,7 +188,7 @@ describe("FeedbackWidget", () => {
     renderPage();
     fireEvent.click(screen.getByRole("button", { name: "Feedback geben" }));
     fireEvent.click(screen.getByRole("button", { name: "Ganze Seite" }));
-    await screen.findByAltText("Vorschau des Screenshots");
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeDefined());
     expect(screen.getByRole("dialog").textContent).toContain("zu: Ganze Seite");
     expect(screen.getByRole("dialog").textContent).not.toContain("DashboardErfassen");
     fireEvent.change(screen.getByLabelText("Feedback-Text"), { target: { value: "Seite" } });
@@ -198,6 +207,8 @@ describe("FeedbackWidget", () => {
     fireEvent.change(screen.getByLabelText("Feedback-Text"), { target: { value: "ohne Bild" } });
     fireEvent.click(screen.getByRole("radio", { name: /Stört mich/ }));
     const save = screen.getByRole("button", { name: "Direkt speichern" }) as HTMLButtonElement;
+    expect(save.disabled).toBe(false);
+    enableScreenshot();
     expect(save.disabled).toBe(true);
     const checkbox = screen.getByRole("checkbox") as HTMLButtonElement;
     expect(checkbox.disabled).toBe(false);
@@ -213,7 +224,6 @@ describe("FeedbackWidget", () => {
     fetchMock.mockImplementationOnce(() => new Promise<Response>((resolve) => (respond = resolve)));
     renderPage();
     await pinHeading();
-    await screen.findByAltText("Vorschau des Screenshots");
     fireEvent.change(screen.getByLabelText("Feedback-Text"), { target: { value: "unterwegs" } });
     fireEvent.click(screen.getByRole("radio", { name: /Wunsch/ }));
     fireEvent.click(screen.getByRole("button", { name: "Direkt speichern" }));
@@ -248,7 +258,6 @@ describe("FeedbackWidget", () => {
     fetchMock.mockImplementationOnce(() => new Promise<Response>((resolve) => (respond = resolve)));
     renderPage();
     await pinHeading();
-    await screen.findByAltText("Vorschau des Screenshots");
     fireEvent.change(screen.getByLabelText("Feedback-Text"), { target: { value: "bleibt offen" } });
     fireEvent.click(screen.getByRole("radio", { name: /Wunsch/ }));
     fireEvent.click(screen.getByRole("button", { name: "Direkt speichern" }));
