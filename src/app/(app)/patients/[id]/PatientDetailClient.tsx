@@ -290,7 +290,9 @@ export function PatientDetailClient({
         <form noValidate aria-label="Chiffre ändern" onSubmit={handleSaveChiffre}>
           <SectionHeader>Chiffre</SectionHeader>
           {!chiffreMessage && <ActionError result={chiffreError} />}
-          <FormField label="Chiffre" htmlFor="chiffre" error={chiffreMessage}>
+          {/* Meldung hier statt über FormField: als Alert, damit sie auch nach Enter bzw. „Fertig“ angesagt wird – dann
+              hat das Feld den Fokus schon, und der Fokussprung allein liest nichts vor. */}
+          <FormField label="Chiffre" htmlFor="chiffre">
             <Input
               ref={chiffreRef}
               id="chiffre"
@@ -313,6 +315,11 @@ export function PatientDetailClient({
               aria-describedby={chiffreMessage ? `${fieldErrorId("chiffre")} chiffre-hinweis` : "chiffre-hinweis"}
               disabled={isSaving}
             />
+            {chiffreMessage && (
+              <p id={fieldErrorId("chiffre")} role="alert" className="text-xs text-destructive">
+                {chiffreMessage}
+              </p>
+            )}
           </FormField>
           <p id="chiffre-hinweis" className="text-xs text-muted-foreground">
             Nur Chiffren, keine Klarnamen. Sitzungen, Supervisionen und Exporte zeigen nach dem Speichern die neue Chiffre.

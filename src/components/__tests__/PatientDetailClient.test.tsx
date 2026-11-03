@@ -286,6 +286,23 @@ describe("PatientDetailClient", () => {
       await waitFor(() => expect(document.activeElement).toBe(chiffreFeld()));
     });
 
+    // Bei Enter bzw. „Fertig“ hat das Feld den Fokus schon; die Meldung muss dann selbst angesagt werden.
+    it("sagt eine vergebene Chiffre nach Enter im Feld als Alert an", async () => {
+      vi.mocked(renamePatient).mockResolvedValue({
+        success: false,
+        error: MELDUNG_CHIFFRE_VERGEBEN,
+        fieldErrors: { chiffre: [MELDUNG_CHIFFRE_VERGEBEN] },
+      });
+      render(<PatientDetailClient {...props} />);
+      const feld = chiffreFeld();
+      feld.focus();
+      fireEvent.change(feld, { target: { value: "B-7" } });
+      pressEnter(feld);
+      await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(MELDUNG_CHIFFRE_VERGEBEN));
+      expect(screen.getByRole("alert").id).toBe("chiffre-fehler");
+      expect(document.activeElement).toBe(chiffreFeld());
+    });
+
     it("setzt bei einer leeren Chiffre den Fokus aufs Feld", async () => {
       render(<PatientDetailClient {...props} />);
       fireEvent.change(chiffreFeld(), { target: { value: "" } });
