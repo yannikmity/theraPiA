@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
@@ -73,6 +73,7 @@ export function PatientDetailClient({
   const savingRef = useRef(false);
   const [error, setError] = useState<ScopedActionError | null>(null);
   const [chiffre, setChiffre] = useState(initialPatient?.chiffre ?? "");
+  const chiffreRef = useRef<HTMLInputElement>(null);
   const [antragsdatum, setAntragsdatum] = useState(initialPatient?.antragsdatum ?? "");
   const [beantragteStunden, setBeantragteStunden] = useState(
     initialPatient?.beantragteStunden?.toString() ?? ""
@@ -80,6 +81,13 @@ export function PatientDetailClient({
   const [genehmigungsdatum, setGenehmigungsdatum] = useState(initialPatient?.genehmigungsdatum ?? "");
   const [sprechstundenAmbulanz, setSprechstundenAmbulanz] = useState(String(initialPatient?.sprechstundenAmbulanz ?? 0));
   const router = useRouter();
+
+  // Meldung zur Chiffre (vergeben, leer): Fokus aufs Feld, damit Screenreader Feld und Meldung gleich vorlesen. Läuft
+  // nach dem Rendern, wenn das Feld nicht mehr gesperrt ist.
+  useEffect(() => {
+    const result = errorAt(error, "chiffre");
+    if (result && !result.success && result.fieldErrors?.chiffre) chiffreRef.current?.focus();
+  }, [error]);
 
   if (!patient) return null;
 
@@ -102,9 +110,13 @@ export function PatientDetailClient({
     savingRef.current = false;
     setIsSaving(false);
     if (result.success) {
+      const gespeichert = patient?.chiffre;
       applyData(result.data);
-      // Das Feld zeigt danach die gespeicherte Chiffre (ohne Leerzeichen am Rand), nicht die Eingabe.
-      if (scope === "chiffre") setChiffre(result.data.patient?.chiffre ?? "");
+      // Nach dem Umbenennen zeigt das Feld die gespeicherte Chiffre (ohne Leerzeichen am Rand). Nach anderen Aktionen
+      // übernimmt ein unbearbeitetes Feld den Serverstand, etwa eine in einem anderen Tab geänderte Chiffre; ein
+      // Entwurf bleibt stehen.
+      const neu = result.data.patient?.chiffre ?? "";
+      setChiffre((feld) => (scope === "chiffre" || feld === gespeichert ? neu : feld));
     } else {
       trackFailure("patient", "update", result);
       setError({ scope, result });
@@ -281,8 +293,10 @@ export function PatientDetailClient({
           {!chiffreMessage && <ActionError result={chiffreError} />}
           <FormField label="Chiffre" htmlFor="chiffre" error={chiffreMessage}>
             <Input
+              ref={chiffreRef}
               id="chiffre"
               type="text"
+              required
               value={chiffre}
               onChange={(e) => {
                 setChiffre(e.target.value);

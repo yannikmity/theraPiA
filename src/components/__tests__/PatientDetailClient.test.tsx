@@ -266,6 +266,52 @@ describe("PatientDetailClient", () => {
       expect(renamePatient).not.toHaveBeenCalled();
     });
 
+    it("kennzeichnet das Feld als Pflichtfeld", () => {
+      render(<PatientDetailClient {...props} />);
+      expect(chiffreFeld().required).toBe(true);
+    });
+
+    // Der Fokus springt aufs Feld, damit Screenreader Feld und Meldung (aria-describedby) gleich vorlesen.
+    it("setzt bei einer vergebenen Chiffre den Fokus aufs Feld", async () => {
+      vi.mocked(renamePatient).mockResolvedValue({
+        success: false,
+        error: MELDUNG_CHIFFRE_VERGEBEN,
+        fieldErrors: { chiffre: [MELDUNG_CHIFFRE_VERGEBEN] },
+      });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "B-7" } });
+      const knopf = screen.getByRole("button", { name: "Chiffre speichern" });
+      knopf.focus();
+      fireEvent.click(knopf);
+      await waitFor(() => expect(document.activeElement).toBe(chiffreFeld()));
+    });
+
+    it("setzt bei einer leeren Chiffre den Fokus aufs Feld", async () => {
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "" } });
+      const knopf = screen.getByRole("button", { name: "Chiffre speichern" });
+      knopf.focus();
+      fireEvent.click(knopf);
+      await waitFor(() => expect(document.activeElement).toBe(chiffreFeld()));
+    });
+
+    it("übernimmt eine in einem anderen Tab geänderte Chiffre ins unbearbeitete Feld", async () => {
+      vi.mocked(updatePatient).mockResolvedValue({ success: true, data: detail("A-anderer-tab") });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.click(screen.getByRole("button", { name: "Antrag speichern" }));
+      await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("A-anderer-tab"));
+      expect(chiffreFeld().value).toBe("A-anderer-tab");
+    });
+
+    it("lässt einen ungespeicherten Chiffre-Entwurf stehen, wenn der Antrag gespeichert wird", async () => {
+      vi.mocked(updatePatient).mockResolvedValue({ success: true, data: detail("A-anderer-tab") });
+      render(<PatientDetailClient {...props} />);
+      fireEvent.change(chiffreFeld(), { target: { value: "Entwurf" } });
+      fireEvent.click(screen.getByRole("button", { name: "Antrag speichern" }));
+      await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("A-anderer-tab"));
+      expect(chiffreFeld().value).toBe("Entwurf");
+    });
+
     it("schickt beim Speichern des Antrags keine Chiffre mit, auch keinen ungespeicherten Entwurf", async () => {
       vi.mocked(updatePatient).mockResolvedValue({ success: false, error: "egal" });
       render(<PatientDetailClient {...props} />);
