@@ -6,7 +6,7 @@ import { gespraechsziffernKontingent, probatorikKontingent, sprechstundenKonting
 const P = newPatientId("p-1");
 const patient: Patient = {
   id: P, chiffre: "A-1", therapyType: "langzeittherapie", startDate: "2026-01-01", endDate: null, isActive: true,
-  createdAt: "2026-01-01T00:00:00.000Z", antragsdatum: null, beantragteStunden: null, genehmigungsdatum: null, sprechstundenAmbulanz: 0,
+  createdAt: "2026-01-01T00:00:00.000Z", antragsdatum: null, beantragteStunden: null, beantragteBezugspersonStunden: null, genehmigungsdatum: null, sprechstundenAmbulanz: 0,
 };
 let n = 0;
 const s = (category: SessionCategory, date: string, durationMinutes: number, patientId = P): TherapySession => ({

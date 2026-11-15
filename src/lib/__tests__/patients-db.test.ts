@@ -157,4 +157,13 @@ describe.skipIf(!TEST_DATABASE_URL)("Chiffre umbenennen (#74)", () => {
 
     expect((await loadUserData(db, f.a.userId)).patients[0]).toMatchObject({ chiffre: "A-neu", beantragteStunden: 40 });
   });
+
+  it("speichert beantragte Bezugspersonenstunden getrennt und liest sie zurück", async () => {
+    const { db, f } = await setup();
+    const vorher = (await loadUserData(db, f.a.userId)).patients[0];
+
+    await updatePatient(db, f.a.userId, { ...vorher, beantragteStunden: 12, beantragteBezugspersonStunden: 3 });
+
+    expect((await loadUserData(db, f.a.userId)).patients[0]).toMatchObject({ beantragteStunden: 12, beantragteBezugspersonStunden: 3 });
+  });
 });

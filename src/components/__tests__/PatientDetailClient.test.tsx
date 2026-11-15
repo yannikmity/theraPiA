@@ -14,18 +14,28 @@ vi.mock("../../app/(app)/patients/[id]/actions", () => ({
   updateTherapySession: vi.fn(),
   deleteTherapySession: vi.fn(),
   deletePatient: vi.fn(),
+  deleteSupervisionFromPatient: vi.fn(),
 }));
 
 import { PatientDetailClient } from "../../app/(app)/patients/[id]/PatientDetailClient";
 import { pressEnter, submitButtons } from "../../lib/__tests__/helpers/form-submit";
 import {
   deletePatient,
+  deleteSupervisionFromPatient,
   deleteTherapySession,
   renamePatient,
   updatePatient,
   updateTherapySession,
 } from "../../app/(app)/patients/[id]/actions";
-import { newPatientId, newTherapySessionId, type Patient, type TherapySession } from "@/types";
+import {
+  newPatientId,
+  newSupervisionSessionId,
+  newSupervisorId,
+  newTherapySessionId,
+  type Patient,
+  type SupervisionSession,
+  type TherapySession,
+} from "@/types";
 import { standardRegelwerk } from "../../lib/ausbildungsregeln/resolve";
 import { MELDUNG_CHIFFRE_PFLICHT, MELDUNG_CHIFFRE_VERGEBEN } from "../../lib/constants";
 
@@ -40,6 +50,7 @@ const patient: Patient = {
   createdAt: "2026-01-05T08:00:00.000Z",
   antragsdatum: null,
   beantragteStunden: null,
+  beantragteBezugspersonStunden: null,
   genehmigungsdatum: null,
   sprechstundenAmbulanz: 0,
 };
@@ -68,6 +79,58 @@ describe("PatientDetailClient", () => {
     vi.mocked(renamePatient).mockReset();
     vi.mocked(updateTherapySession).mockReset();
     push.mockReset();
+  });
+
+  it("Antrag: beantragte Bezugspersonenstunden getrennt speichern, Rest als eigene Kachel", async () => {
+    const mitAntrag: Patient = {
+      ...patient,
+      antragsdatum: "2026-09-01",
+      beantragteStunden: 12,
+      beantragteBezugspersonStunden: 3,
+    };
+    const sessions = [session("t-1", "2026-09-14"), { ...session("t-2", "2026-09-21"), category: "bezugsperson" as const }];
+    vi.mocked(updatePatient).mockResolvedValue({
+      success: true,
+      data: { patient: mitAntrag, therapySessions: sessions, supervisionSessions: [], supervisors: [] },
+    });
+    render(<PatientDetailClient {...props} initialPatient={mitAntrag} initialTherapySessions={sessions} />);
+    expect(screen.getByText("Behandlungsstunden übrig (Antrag)").previousElementSibling?.textContent).toBe("11,0");
+    expect(screen.getByText("Bezugspersonenstunden übrig (Antrag)").previousElementSibling?.textContent).toBe("2,0");
+
+    fireEvent.change(screen.getByLabelText("Beantragte Bezugspersonenstunden"), { target: { value: "15" } });
+    fireEvent.click(screen.getByRole("button", { name: "Antrag speichern" }));
+    await waitFor(() =>
+      expect(updatePatient).toHaveBeenCalledWith(expect.objectContaining({ beantragteStunden: 12, beantragteBezugspersonStunden: 15 }))
+    );
+  });
+
+  it("Zugeordnete Supervision: Bearbeiten führt in das Formular der Supervisionsseite, Löschen geht direkt hier", async () => {
+    const sv: SupervisionSession = {
+      id: newSupervisionSessionId("550e8400-e29b-41d4-a716-4466554400a1"),
+      supervisorId: newSupervisorId("s-1"),
+      date: "2026-09-22",
+      durationMinutes: 50,
+      kind: "individual",
+      setting: "einzel",
+      linkedTherapySessionIds: [newTherapySessionId("t-1")],
+      linkedGroupSessionIds: [],
+      groupId: null,
+      caseShares: [{ patientId: newPatientId(P1), minutes: 50 }],
+    };
+    vi.mocked(deleteSupervisionFromPatient).mockResolvedValue({
+      success: true,
+      data: { patient, therapySessions: props.initialTherapySessions, supervisionSessions: [], supervisors: [] },
+    });
+    render(<PatientDetailClient {...props} initialSupervisionSessions={[sv]} />);
+    const svCard = card("Zugeordnete Supervisionen (1)");
+    expect(within(svCard).getByRole("link", { name: "Supervision vom 22.09.2026 bearbeiten" }).getAttribute("href")).toBe(
+      `/supervision?bearbeiten=${sv.id}&patient=${P1}`
+    );
+
+    fireEvent.click(within(svCard).getByRole("button", { name: "Supervision vom 22.09.2026 löschen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ja, löschen" }));
+    await waitFor(() => expect(deleteSupervisionFromPatient).toHaveBeenCalledWith({ id: sv.id, patientId: P1 }));
+    await waitFor(() => expect(screen.queryByRole("heading", { name: /Zugeordnete Supervisionen/ })).toBeNull());
   });
 
   it("bietet im Kopf „+ Sitzung“ und „Supervision“ für diese Patient:in an (#77)", () => {

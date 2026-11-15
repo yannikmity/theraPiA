@@ -156,6 +156,8 @@ export function patientsCsv(data: UserData): string {
       p.sprechstundenAmbulanz,
       sessions.length,
       formatHours(minutes),
+      // Neue Spalte am Ende, damit Auswertungen nach Spaltenposition weiter passen.
+      p.beantragteBezugspersonStunden,
     ];
   });
   return toCsv(
@@ -171,6 +173,7 @@ export function patientsCsv(data: UserData): string {
       "Sprechstunden durch Ambulanzleitung",
       "Sitzungen (Anzahl)",
       "Sitzungen (Stunden)",
+      "Beantragte Bezugspersonenstunden",
     ],
     rows
   );

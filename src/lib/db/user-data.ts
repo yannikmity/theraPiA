@@ -71,7 +71,7 @@ export async function loadUserData(db: Db, userId: string): Promise<UserData> {
 
   const patients = await db.query(
     `SELECT id, chiffre, therapy_type, start_date, end_date, is_active, created_at, antragsdatum, beantragte_stunden,
-            genehmigungsdatum, sprechstunden_ambulanz
+            beantragte_bezugsperson_stunden, genehmigungsdatum, sprechstunden_ambulanz
      FROM patients WHERE user_id = $1 ORDER BY chiffre, created_at`,
     [userId]
   );

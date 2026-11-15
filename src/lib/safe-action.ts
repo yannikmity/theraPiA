@@ -54,8 +54,24 @@ export function createAction<TSchema extends z.ZodTypeAny, TResult>(
       if (error instanceof AppError) {
         return fail(error.message);
       }
-      console.error("Unexpected action error:", error);
+      console.error("Unexpected action error:", describeForLog(error));
       return fail(UNEXPECTED_ERROR_MESSAGE);
     }
   };
+}
+
+// Datenbankfehler (pg, erkennbar am fünfstelligen SQLSTATE-Code) nur mit Code und Bezeichnern loggen: `detail` und
+// `message` enthalten oft die Eingabe, etwa eine Chiffre bei Unique-Verletzungen oder den Wert bei Typfehlern.
+export function describeForLog(error: unknown): unknown {
+  if (error && typeof error === "object" && typeof (error as { code?: unknown }).code === "string") {
+    const { code, constraint, table, column, routine, severity, stack } = error as Record<string, unknown>;
+    // pg-Fehler tragen severity (ERROR, FATAL …); Node-Codes wie EPIPE haben sie nicht und gehen unverändert durch.
+    if (typeof severity === "string" && /^[0-9A-Z]{5}$/.test(code as string)) {
+      // Nur die Aufrufzeilen des Stacks („at …“): die message davor kann mehrzeilig sein und Eingaben enthalten.
+      const frames =
+        typeof stack === "string" ? stack.split("\n").filter((line) => /^\s+at /.test(line)).join("\n") : undefined;
+      return { pgCode: code, constraint, table, column, routine, stack: frames };
+    }
+  }
+  return error;
 }

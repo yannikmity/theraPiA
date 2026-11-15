@@ -137,6 +137,7 @@ export function SupervisorsClient({ initialSupervisors }: SupervisorsClientProps
               <Input
                 id="supervisor-cost"
                 type="number"
+                inputMode="decimal"
                 value={costPerHour}
                 onChange={(e) => setCostPerHour(e.target.value)}
                 placeholder="z. B. 80"

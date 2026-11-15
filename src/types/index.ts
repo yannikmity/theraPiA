@@ -34,6 +34,7 @@ export interface Patient {
   createdAt: string;
   antragsdatum: string | null; // ISO date - Datum der LZT/KZT-Beantragung
   beantragteStunden: number | null; // beantragte Behandlungsstunden à 50 Min (Antrags-Kontingent), ganze Zahl
+  beantragteBezugspersonStunden: number | null; // beantragte Bezugspersonenstunden à 50 Min (eigenes Kontingent)
   genehmigungsdatum: string | null; // ISO date – ab hier zählt das Antrags-Kontingent (#66); null = ab Antragsdatum
   sprechstundenAmbulanz: number; // Sprechstunden-Termine dieses Falls, die die Ambulanzleitung übernimmt (0–10)
 }

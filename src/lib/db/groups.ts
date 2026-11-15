@@ -50,7 +50,7 @@ export async function addGroup(group: Group): Promise<void> {
   );
 }
 
-export async function updateGroup(group: Group): Promise<void> {
+export async function updateGroup(group: Omit<Group, "createdAt">): Promise<void> {
   const userId = await getCurrentUserId();
   const result = await query(
     `UPDATE groups

@@ -7,8 +7,20 @@ export interface Db {
 
 let pool: Pool | undefined;
 
+// Zeitlimits: Eine blockierte Datenbank lässt Anfragen nach 10 s (Verbindung) bzw. 30 s (Statement) scheitern statt
+// unbegrenzt hängen. Der error-Handler fängt Fehler von Leerlauf-Verbindungen (z. B. DB-Neustart) ab, die sonst als
+// unbehandeltes Ereignis den Prozess beenden können; der Pool baut beim nächsten Zugriff eine neue Verbindung auf.
 function getPool(): Pool {
-  pool ??= new Pool({ connectionString: process.env.DATABASE_URL });
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      connectionTimeoutMillis: 10_000,
+      statement_timeout: 30_000,
+    });
+    pool.on("error", (error: Error & { code?: string }) => {
+      console.error("Postgres: Leerlauf-Verbindung verloren", error.code ?? error.message);
+    });
+  }
   return pool;
 }
 

@@ -143,6 +143,7 @@ export function FinancesClient({
               <Input
                 id="income-per-hour"
                 type="number"
+                inputMode="decimal"
                 value={settings.incomePerHour || ""}
                 onChange={(e) => setSettings({ ...settings, incomePerHour: Number(e.target.value) })}
                 step="0.01"
@@ -179,6 +180,7 @@ export function FinancesClient({
                 <Input
                   id={`cost-${sv.id}`}
                   type="number"
+                  inputMode="decimal"
                   value={settings.supervisionCosts[sv.id as SupervisorId] || ""}
                   onChange={(e) =>
                     setSettings({

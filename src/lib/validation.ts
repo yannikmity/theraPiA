@@ -12,7 +12,17 @@ import {
 // date.ts): direkte Aufrufe bekommen dieselben deutschen Texte wie die Oberfläche statt Zods englischer Standardtexte (#57).
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 // abort: ein leeres Datum meldet nur „Bitte ein Datum angeben“, nicht zusätzlich das Format.
-const isoDate = z.string().min(1, { error: "Bitte ein Datum angeben", abort: true }).regex(ISO_DATE, "Ungültiges Datumsformat");
+// Kalenderprüfung: „2026-02-31“ passt aufs Muster, die Datenbank lehnt es ab – dann käme nur der allgemeine Fehler.
+function isCalendarDate(value: string): boolean {
+  const [y, m, d] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+const isoDate = z
+  .string()
+  .min(1, { error: "Bitte ein Datum angeben", abort: true })
+  .regex(ISO_DATE, { error: "Ungültiges Datumsformat", abort: true })
+  .refine(isCalendarDate, "Ungültiges Datum");
 const durationMinutes = z
   .number({ error: "Bitte eine Dauer angeben" })
   .int("Dauer in ganzen Minuten eingeben")
@@ -38,11 +48,16 @@ export const updatePatientSchema = z.object({
   id: z.string().uuid(),
   therapyType: z.enum(["kurzzeittherapie", "langzeittherapie"]),
   startDate: isoDate,
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  endDate: isoDate.nullable(),
   isActive: z.boolean(),
-  antragsdatum: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  antragsdatum: isoDate.nullable(),
   beantragteStunden: z.number().int("Ganze Zahl eingeben").positive("Mindestens 1 Behandlungsstunde").nullable(),
-  genehmigungsdatum: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  beantragteBezugspersonStunden: z
+    .number()
+    .int("Ganze Zahl eingeben")
+    .positive("Mindestens 1 Bezugspersonenstunde")
+    .nullable(),
+  genehmigungsdatum: isoDate.nullable(),
   sprechstundenAmbulanz: z.number().int("Ganze Zahl eingeben").min(0, "Mindestens 0").max(10, "Höchstens 10 Sprechstunden je Fall"),
 }).refine((p) => !p.genehmigungsdatum || !p.antragsdatum || p.genehmigungsdatum >= p.antragsdatum, {
   message: "Die Genehmigung kann nicht vor dem Antrag liegen",
@@ -85,6 +100,9 @@ export const deleteTherapySessionSchema = z.object({
   id: z.string().uuid(),
   patientId: z.string().uuid(),
 });
+
+// Supervision von der Patient:innen-Seite löschen: ID der Supervision plus Patient:in für den neuen Seitenstand.
+export const deleteSupervisionFromPatientSchema = deleteTherapySessionSchema;
 
 // Doppelte IDs würden beim Einfügen der Verknüpfungen am Primärschlüssel scheitern.
 const uniqueUuidsRequired = z.array(z.string().uuid()).transform((ids) => [...new Set(ids)]);
@@ -161,10 +179,13 @@ export const addGroupSupervisionSessionSchema = addSupervisionSessionSchema.safe
 
 // Group schemas
 export const addGroupSchema = z.object({
-  name: z.string().min(1, "Name ist erforderlich").max(100),
+  name: z.string().min(1, "Name ist erforderlich").max(100, "Höchstens 100 Zeichen"),
   startDate: isoDate,
-  plannedSessionCount: z.number().int().positive(),
-  avgKids: z.number().min(0).nullable(),
+  plannedSessionCount: z
+    .number({ error: "Bitte eine Zahl angeben" })
+    .int("Ganze Zahl eingeben")
+    .positive("Mindestens 1 Doppelstunde"),
+  avgKids: z.number({ error: "Bitte eine Zahl angeben" }).min(0, "Mindestens 0").nullable(),
 });
 
 export const updateGroupSchema = addGroupSchema.extend({

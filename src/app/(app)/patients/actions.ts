@@ -48,6 +48,7 @@ export const addPatient: (
       createdAt: new Date().toISOString(),
       antragsdatum: null,
       beantragteStunden: null,
+      beantragteBezugspersonStunden: null,
       genehmigungsdatum: null,
       sprechstundenAmbulanz: 0,
     };

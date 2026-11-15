@@ -85,10 +85,10 @@ export function GroupsClient({ initialGroups, initialGroupSessions, ebmStaffeln 
               <Input id="group-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={isSaving} />
             </FormField>
             <FormField label="Geplante Sitzungen" htmlFor="group-planned">
-              <Input id="group-planned" type="number" value={plannedSessionCount} onChange={(e) => setPlannedSessionCount(Number(e.target.value))} min={1} disabled={isSaving} />
+              <Input id="group-planned" type="number" inputMode="numeric" value={plannedSessionCount} onChange={(e) => setPlannedSessionCount(Number(e.target.value))} min={1} disabled={isSaving} />
             </FormField>
             <FormField label="Kinder (Ø)" htmlFor="group-kids">
-              <Input id="group-kids" type="number" value={avgKids} onChange={(e) => setAvgKids(Number(e.target.value))} min={0} disabled={isSaving} />
+              <Input id="group-kids" type="number" inputMode="numeric" value={avgKids} onChange={(e) => setAvgKids(Number(e.target.value))} min={0} disabled={isSaving} />
             </FormField>
             <Button type="submit" className="w-full" loading={isSaving}>
               Anlegen

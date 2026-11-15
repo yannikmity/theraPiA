@@ -6,7 +6,7 @@ import { getCurrentUserId } from "./get-current-user";
 import { MELDUNG_CHIFFRE_VERGEBEN } from "../constants";
 
 const PATIENT_COLUMNS =
-  "id, chiffre, therapy_type, start_date, end_date, is_active, created_at, antragsdatum, beantragte_stunden, genehmigungsdatum, sprechstunden_ambulanz";
+  "id, chiffre, therapy_type, start_date, end_date, is_active, created_at, antragsdatum, beantragte_stunden, beantragte_bezugsperson_stunden, genehmigungsdatum, sprechstunden_ambulanz";
 
 export async function getPatients(): Promise<Patient[]> {
   const userId = await getCurrentUserId();
@@ -34,12 +34,26 @@ export async function getPatient(id: PatientId | string): Promise<Patient | unde
   return mapPatientRow(result.rows[0] as PatientRow);
 }
 
+// Eine schon vergebene Chiffre (23505 auf UNIQUE(user_id, chiffre)) wird wie beim Umbenennen zur Meldung am Feld statt
+// zum Serverfehler mit der Chiffre im Log.
 export async function addPatient(patient: Patient): Promise<void> {
   const userId = await getCurrentUserId();
+  try {
+    await insertPatient(userId, patient);
+  } catch (error) {
+    const { code, constraint } = error as { code?: string; constraint?: string };
+    if (code === "23505" && constraint === "patients_user_id_chiffre_key") {
+      throw new ValidationError(MELDUNG_CHIFFRE_VERGEBEN, { chiffre: [MELDUNG_CHIFFRE_VERGEBEN] });
+    }
+    throw error;
+  }
+}
+
+async function insertPatient(userId: string, patient: Patient): Promise<void> {
   await query(
     `INSERT INTO patients (id, user_id, chiffre, therapy_type, start_date, end_date, is_active, antragsdatum, beantragte_stunden,
-                           genehmigungsdatum, sprechstunden_ambulanz)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                           beantragte_bezugsperson_stunden, genehmigungsdatum, sprechstunden_ambulanz)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [
       patient.id,
       userId,
@@ -50,6 +64,7 @@ export async function addPatient(patient: Patient): Promise<void> {
       patient.isActive,
       patient.antragsdatum,
       patient.beantragteStunden,
+      patient.beantragteBezugspersonStunden,
       patient.genehmigungsdatum,
       patient.sprechstundenAmbulanz,
     ]
@@ -64,8 +79,9 @@ export async function updatePatient(db: Db, userId: string, patient: PatientUpda
   const result = await db.query(
     `UPDATE patients
      SET therapy_type = $1, start_date = $2, end_date = $3, is_active = $4,
-         antragsdatum = $5, beantragte_stunden = $6, genehmigungsdatum = $7, sprechstunden_ambulanz = $8
-     WHERE id = $9 AND user_id = $10`,
+         antragsdatum = $5, beantragte_stunden = $6, genehmigungsdatum = $7, sprechstunden_ambulanz = $8,
+         beantragte_bezugsperson_stunden = $9
+     WHERE id = $10 AND user_id = $11`,
     [
       patient.therapyType,
       patient.startDate,
@@ -75,6 +91,7 @@ export async function updatePatient(db: Db, userId: string, patient: PatientUpda
       patient.beantragteStunden,
       patient.genehmigungsdatum,
       patient.sprechstundenAmbulanz,
+      patient.beantragteBezugspersonStunden,
       patient.id,
       userId,
     ]

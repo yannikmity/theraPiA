@@ -7,10 +7,11 @@ vi.mock("../../app/(app)/groups/[id]/actions", () => ({
   updateGroupSession: vi.fn(),
   deleteGroupSession: vi.fn(),
   addGroupSupervisionSession: vi.fn(),
+  updateGroupAction: vi.fn(),
 }));
 
 import { GroupDetailClient } from "../../app/(app)/groups/[id]/GroupDetailClient";
-import { addGroupSession, addGroupSupervisionSession, updateGroupSession } from "../../app/(app)/groups/[id]/actions";
+import { addGroupSession, addGroupSupervisionSession, updateGroupAction, updateGroupSession } from "../../app/(app)/groups/[id]/actions";
 import { pressEnter, submitButtons } from "../../lib/__tests__/helpers/form-submit";
 import { newGroupId, newGroupSessionId, newSupervisorId, type Group, type GroupSession, type Supervisor } from "@/types";
 import { resolveRegelwerk, standardRegelwerk } from "../../lib/ausbildungsregeln/resolve";
@@ -51,6 +52,35 @@ describe("GroupDetailClient", () => {
     vi.mocked(updateGroupSession).mockReset();
     vi.mocked(addGroupSupervisionSession).mockReset();
     vi.mocked(addGroupSession).mockReset();
+  });
+
+  it("bearbeitet Name, Startdatum und geplante Doppelstunden nachträglich und zeigt den neuen Stand", async () => {
+    const changed: Group = { ...group, name: "PT-Gruppe", startDate: "2026-02-02", plannedSessionCount: 40 };
+    vi.mocked(updateGroupAction).mockResolvedValue({
+      success: true,
+      data: { group: changed, groupSessions: props.initialGroupSessions, supervisionSessions: [], supervisedGroupSessionIds: [], supervisors },
+    });
+    render(<GroupDetailClient {...props} />);
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const form = screen.getByRole("form", { name: "Gruppe bearbeiten" });
+    fireEvent.change(within(form).getByLabelText("Name"), { target: { value: " PT-Gruppe " } });
+    fireEvent.change(within(form).getByLabelText("Startdatum"), { target: { value: "2026-02-02" } });
+    fireEvent.change(within(form).getByLabelText("Geplante Doppelstunden"), { target: { value: "40" } });
+    fireEvent.change(within(form).getByLabelText("Kinder im Schnitt"), { target: { value: "" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Gruppe speichern" }));
+
+    await waitFor(() =>
+      expect(updateGroupAction).toHaveBeenCalledWith({
+        id: group.id,
+        name: "PT-Gruppe",
+        startDate: "2026-02-02",
+        plannedSessionCount: 40,
+        avgKids: null,
+        isActive: true,
+      })
+    );
+    await waitFor(() => expect(screen.queryByRole("form", { name: "Gruppe bearbeiten" })).toBeNull());
+    expect(screen.getByText("Seit 02.02.2026 · 40 Doppelstunden geplant")).toBeTruthy();
   });
 
   it("beschriftet die Doppelstunden-Zuordnung der Gruppen-Supervision als Gruppe (fieldset/legend)", () => {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { BookOpen, Pencil, Plus, Trash2 } from "lucide-react";
@@ -21,6 +22,10 @@ import { SupervisionSessionEditForm, type LinkOption, type SupervisionFormValues
 
 interface SupervisionClientProps {
   initialData: SupervisionData;
+  // Von der Patient:innen-Seite: diese Supervision gleich im Bearbeiten-Formular öffnen …
+  initialEditingId?: string;
+  // … und nach dem Speichern bzw. mit „Zurück“ wieder dorthin.
+  returnHref?: string;
 }
 
 // Nachfrage beim Löschen: „1 Zuordnung(en)“ → sauberer Singular/Plural (#28).
@@ -30,9 +35,15 @@ function zuordnungenEntfernt(n: number): string {
     : `${n} Zuordnungen werden entfernt, die Sitzungen selbst bleiben bestehen.`;
 }
 
-export function SupervisionClient({ initialData }: SupervisionClientProps) {
+export function SupervisionClient({ initialData, initialEditingId, returnHref }: SupervisionClientProps) {
   const [data, setData] = useState(initialData);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(initialEditingId ?? null);
+  const router = useRouter();
+
+  // Direkt geöffnetes Formular ins Bild holen: in einer langen Liste stünde es sonst weit unten.
+  useEffect(() => {
+    if (initialEditingId) document.getElementById(`sv-${initialEditingId}`)?.scrollIntoView?.({ block: "start" });
+  }, [initialEditingId]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<ScopedActionError | null>(null);
 
@@ -92,6 +103,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
       track("supervision_saved", { mode: "edit", kind: sv.kind });
       setData(result.data);
       setEditingId(null);
+      if (returnHref) router.push(returnHref);
     } else {
       trackFailure("supervision", "update", result);
       setError({ scope: `sv:${sv.id}`, result });
@@ -116,7 +128,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
     <div className="mx-auto max-w-3xl space-y-4">
       <PageHeader
         title="Supervisionen"
-        backHref="/profile"
+        backHref={returnHref ?? "/profile"}
         subtitle={
           // Mit dem Knopf daneben wird der Kopf am Handy schmal – die Einheiten nicht am Bindestrich umbrechen.
           <>
@@ -145,7 +157,7 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
           <div className="divide-y divide-border">
             {sessions.map((sv) =>
               editingId === sv.id ? (
-                <div key={sv.id}>
+                <div key={sv.id} id={`sv-${sv.id}`} className="scroll-mt-20">
                   <SupervisionSessionEditForm
                     session={sv}
                     supervisors={data.supervisors}
@@ -155,6 +167,8 @@ export function SupervisionClient({ initialData }: SupervisionClientProps) {
                     onSave={(values) => handleSave(sv, values)}
                     onCancel={() => {
                       setEditingId(null);
+                      // Direkteinstieg: Parameter aus der Adresse nehmen, sonst öffnet ein Neuladen das Formular erneut.
+                      if (sv.id === initialEditingId) router.replace(returnHref ? `/supervision?patient=${returnHref.split("/").pop()}` : "/supervision");
                       setError(null);
                     }}
                   />

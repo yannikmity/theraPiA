@@ -75,6 +75,7 @@ const p = (id: string, chiffre: string, antragsdatum: string | null, beantragteS
   createdAt: "2026-04-01T08:00:00.000Z",
   antragsdatum,
   beantragteStunden,
+  beantragteBezugspersonStunden: null,
   genehmigungsdatum: null,
   sprechstundenAmbulanz: 0,
 });

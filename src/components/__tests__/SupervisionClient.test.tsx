@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+// Echtes next/navigation (runAction nutzt unstable_rethrow), nur der Router ist gemockt.
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useRouter: () => ({ push, refresh: vi.fn() }),
+}));
 vi.mock("../../lib/analytics/track", () => ({ track: vi.fn(), trackFailure: vi.fn() }));
 vi.mock("../../app/(app)/supervision/actions", () => ({
   updateSupervisionSessionAction: vi.fn(),
@@ -42,6 +48,7 @@ const data = (linked: string[]): SupervisionData => ({
       createdAt: "2026-01-05T08:00:00.000Z",
       antragsdatum: null,
       beantragteStunden: null,
+      beantragteBezugspersonStunden: null,
       genehmigungsdatum: null,
       sprechstundenAmbulanz: 0,
     },
@@ -153,4 +160,15 @@ describe("SupervisionClient", () => {
     render(<SupervisionClient initialData={data(["t-1"])} />);
     expect(screen.getByText(/Einzeltherapie · Einzel · 1 zugeordnet/)).toBeDefined();
   });
+
+  it("öffnet von der Patient:innen-Seite aus direkt das Formular und kehrt nach dem Speichern dorthin zurück", async () => {
+    const d = data(["t-1"]);
+    vi.mocked(updateSupervisionSessionAction).mockResolvedValue({ success: true, data: d });
+    render(<SupervisionClient initialData={d} initialEditingId="sv-1" returnHref="/patients/p-1" />);
+    expect(screen.getByRole("link", { name: /Zurück/ }).getAttribute("href")).toBe("/patients/p-1");
+    fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
+    await waitFor(() => expect(updateSupervisionSessionAction).toHaveBeenCalled());
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/patients/p-1"));
+  });
 });
+
