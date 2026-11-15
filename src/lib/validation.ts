@@ -29,7 +29,7 @@ const durationMinutes = z
   .min(1, "Dauer muss mindestens 1 Minute sein")
   .max(480, "Dauer darf höchstens 480 Minuten sein");
 const notes = z.string().max(2000);
-const sessionCategory = z.enum(["sprechstunde", "probatorik", "behandlung", "bezugsperson", "gespraechsziffer"]);
+const sessionCategory = z.enum(["sprechstunde", "probatorik", "anamnese", "behandlung", "bezugsperson", "gespraechsziffer", "exploration"]);
 const supervisionKind = z.enum(["individual", "group"]);
 const supervisionSetting = z.enum(["einzel", "gruppe"]);
 // Anlegen und Umbenennen prüfen gleich (#74); Leerzeichen am Rand zählen nicht zur Chiffre.
@@ -129,6 +129,14 @@ const sharesWithinDuration = (s: SupervisionShares) => sharesSum(s) <= s.duratio
 const GROUP_SHARES = { error: "Eine Gruppensupervision hat keine Dauer je Patient:in", path: ["caseShares"] };
 const UNIQUE_SHARES = { error: "Jede Patient:in nur einmal angeben", path: ["caseShares"] };
 const SHARES_SUM = { error: "Die Gesamtdauer muss der Summe der Dauern je Patient:in entsprechen", path: ["durationMinutes"] };
+// Personen in der SV-Gruppe (nur Setting „gruppe“): teilt die Kosten, nicht die angerechnete Zeit.
+const gruppengroesse = z
+  .number({ error: "Bitte eine Zahl angeben" })
+  .int("Ganze Zahl eingeben")
+  .min(2, "Mindestens 2 Personen")
+  .max(10, "Höchstens 10 Personen")
+  .nullable();
+
 const SHARES_MAX = { error: "Die Summe der Dauern je Patient:in darf die Gesamtdauer nicht überschreiten", path: ["durationMinutes"] };
 
 export const addSupervisionSessionSchema = z
@@ -138,6 +146,7 @@ export const addSupervisionSessionSchema = z
     durationMinutes,
     kind: supervisionKind.default("individual"),
     setting: supervisionSetting.default("einzel"),
+    gruppengroesse: gruppengroesse.optional(),
     linkedTherapySessionIds: uniqueUuids,
     linkedGroupSessionIds: uniqueUuids,
     caseShares: caseShares.default([]),
@@ -156,6 +165,7 @@ export const updateSupervisionSessionSchema = z
     durationMinutes,
     kind: supervisionKind,
     setting: supervisionSetting,
+    gruppengroesse: gruppengroesse.optional(),
     linkedTherapySessionIds: uniqueUuidsRequired,
     linkedGroupSessionIds: uniqueUuidsRequired,
     caseShares,
@@ -225,6 +235,10 @@ export const addSupervisorSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich").max(100),
   costPerHour: z.number().min(0, "Muss 0 oder positiv sein").nullable(),
 });
+
+export const mergeSupervisorsSchema = z
+  .object({ fromId: z.string().uuid("Bitte auswählen"), toId: z.string().uuid("Bitte auswählen") })
+  .refine((v) => v.fromId !== v.toId, { message: "Bitte zwei verschiedene Supervisor:innen wählen", path: ["toId"] });
 
 export const updateSupervisorSchema = z.object({
   id: z.string().uuid(),

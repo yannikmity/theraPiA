@@ -281,6 +281,7 @@ describe("NewSessionClient", () => {
         durationMinutes: 50,
         kind: "individual",
         setting: "einzel",
+        gruppengroesse: null,
         linkedTherapySessionIds: ["t-9"],
         linkedGroupSessionIds: [],
         caseShares: [{ patientId: P1, minutes: 50 }],
@@ -650,7 +651,7 @@ describe("NewSessionClient", () => {
     // Radix ToggleGroup rendert ohne role="group"; der Container trägt aria-label="Kategorie".
     const gruppe = screen.getByLabelText("Kategorie");
     expect(within(gruppe).getAllByRole("radio").map((r) => r.textContent)).toEqual([
-      "Sprechstunde", "Probatorik", "Behandlung", "Bezugsperson", "Gesprächsziffer",
+      "Sprechstunde", "Probatorik", "Anamnese", "Behandlung", "Bezugsperson", "Gesprächsziffer", "Vertiefte Exploration",
     ]);
   });
 
@@ -791,5 +792,30 @@ describe("NewSessionClient", () => {
       expect(addTherapySession).not.toHaveBeenCalled();
       expect(screen.getByText("Dauer muss mindestens 1 Minute sein")).toBeDefined();
     });
+  });
+
+  it("zeigt beim Erfassen das Kontingent der gewählten Kategorie, ausgeschöpft als Hinweis", () => {
+    render(
+      <NewSessionClient
+        {...props}
+        kontingenteByPatient={{ [P2]: { probatorik: { genutzt: 6, verfuegbar: 6 }, anamnese: { genutzt: 0, verfuegbar: 1 } } }}
+      />
+    );
+    expect(screen.getByText("Probatorik: 6 von 6 genutzt – Kontingent ausgeschöpft")).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "Anamnese" }));
+    expect(screen.getByText("Anamnese: 0 von 1 genutzt")).toBeTruthy();
+  });
+
+  it("SV-Gruppe: fragt die Personen ab und speichert sie für die Kosten", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    render(<NewSessionClient {...props} initialType="supervision" />);
+    fireEvent.click(screen.getByRole("radio", { name: "Gruppe" }));
+    fireEvent.click(screen.getByRole("radio", { name: "3" }));
+    expect(screen.getByText(/bezahlt nur dein Anteil \(1\/3\)/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(addSupervisionSession).toHaveBeenCalledWith(expect.objectContaining({ setting: "gruppe", gruppengroesse: 3 }))
+    );
   });
 });

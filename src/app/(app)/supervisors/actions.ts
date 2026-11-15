@@ -1,14 +1,16 @@
 "use server";
 
 import { v4 as uuidv4 } from "uuid";
+import { withTransaction } from "@/lib/db";
 import {
   getSupervisors,
   addSupervisor as addSupervisorDB,
   updateSupervisor as updateSupervisorDB,
+  mergeSupervisors as mergeSupervisorsDB,
 } from "@/lib/db/index";
 import { Supervisor, newSupervisorId } from "@/types";
 import { createAction } from "@/lib/safe-action";
-import { addSupervisorSchema, updateSupervisorSchema } from "@/lib/validation";
+import { addSupervisorSchema, mergeSupervisorsSchema, updateSupervisorSchema } from "@/lib/validation";
 import { ActionResult } from "@/lib/action-result";
 import { z } from "zod";
 
@@ -49,6 +51,16 @@ export const updateSupervisorAction: (
       isActive: input.isActive,
     };
     await updateSupervisorDB(supervisor);
+    return loadSupervisorsData();
+  },
+});
+
+export const mergeSupervisorsAction: (
+  input: z.infer<typeof mergeSupervisorsSchema>
+) => Promise<ActionResult<SupervisorsData>> = createAction({
+  schema: mergeSupervisorsSchema,
+  handler: async (input, userId) => {
+    await withTransaction((tx) => mergeSupervisorsDB(tx, userId, input.fromId, input.toId));
     return loadSupervisorsData();
   },
 });

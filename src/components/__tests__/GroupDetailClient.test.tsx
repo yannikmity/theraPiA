@@ -229,4 +229,33 @@ describe("GroupDetailClient", () => {
       expect(addGroupSupervisionSession).toHaveBeenCalledTimes(1);
     });
   });
+
+  it("bearbeitet eine Doppelstunde: Datum, Kinder, Notiz", async () => {
+    vi.mocked(updateGroupSession).mockResolvedValue({
+      success: true,
+      data: { group, groupSessions: props.initialGroupSessions, supervisionSessions: [], supervisedGroupSessionIds: [], supervisors },
+    });
+    render(<GroupDetailClient {...props} />);
+    fireEvent.click(screen.getByRole("button", { name: "Doppelstunde vom 07.09.2026 bearbeiten" }));
+    const form = screen.getByRole("form", { name: "Doppelstunde vom 07.09.2026 bearbeiten" });
+    fireEvent.change(within(form).getByLabelText("Datum"), { target: { value: "2026-09-08" } });
+    fireEvent.change(within(form).getByLabelText("Anwesende Kinder"), { target: { value: "6" } });
+    fireEvent.change(within(form).getByLabelText("Notiz"), { target: { value: "Ausflug" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Doppelstunde speichern" }));
+    await waitFor(() =>
+      expect(updateGroupSession).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "gs-1", date: "2026-09-08", childCount: 6, notes: "Ausflug", status: "durchgefuehrt" })
+      )
+    );
+  });
+
+  it("lässt ein geleertes Kinder-Feld leer statt eine führende Null zu erzeugen", () => {
+    render(<GroupDetailClient {...props} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Neu" })[0]);
+    const kids = screen.getByLabelText("Anwesende Kinder") as HTMLInputElement;
+    fireEvent.change(kids, { target: { value: "" } });
+    expect(kids.value).toBe("");
+    fireEvent.change(kids, { target: { value: "7" } });
+    expect(kids.value).toBe("7");
+  });
 });

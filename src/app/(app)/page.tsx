@@ -13,10 +13,15 @@ import { SectionHeader } from "@/components/ui";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { formatDecimal } from "@/lib/csv";
 
 // Drei Alltagsfragen auf einen Blick (#6): Geld zum Quartalsende, Behandlungsstunden, Supervision – danach Erfassen,
 // Fachkunde Gruppe, Patient:innen mit Schnelleinstieg „+ Sitzung“ (#5) und die letzten Einträge. Laden, Rechnen und
 // Formatieren in loadDashboard (load-dashboard.ts), im try; Renderfehler fängt error.tsx (#56).
+function restText(rest: number, art: string): string {
+  return rest < -0.05 ? `${formatDecimal(-rest, 1)} ${art} über dem Antrag` : `noch ${formatDecimal(Math.max(rest, 0), 1)} ${art}`;
+}
+
 export default async function Dashboard() {
   await requireSession();
 
@@ -41,17 +46,21 @@ export default async function Dashboard() {
     categoryHours,
     unsupervisedCount,
     forecast,
+    forecastMitPlanung,
     groupCounts,
     ambulanzzeitLeft,
     recentEntries,
     patientRatios,
+    groupSupervisionH,
+    activeGroups,
+    antragErinnerungen,
   } = data;
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <PageHeader title="Dashboard" className="md:col-span-2" />
 
-      <QuarterForecastCard forecast={forecast} incomePerHour={settings.incomePerHour} />
+      <QuarterForecastCard forecast={forecast} incomePerHour={settings.incomePerHour} mitPlanung={forecastMitPlanung} />
 
       <TherapyHoursCard hours={therapyH} target={regeln.behandlungsstundenZiel} categoryHours={categoryHours} />
 
@@ -88,7 +97,46 @@ export default async function Dashboard() {
         <p className="text-xs text-muted-foreground">
           Noch {Math.max(ambulanzzeitLeft, 0)} Doppelstunden Ambulanzzeit übrig
         </p>
+        {/* Supervision der Gruppenfachkunde zählt gesondert, nicht zu den SV-Einheiten oben. */}
+        <p className="text-sm text-muted-foreground">
+          Supervision Gruppe:{" "}
+          <span className="font-semibold text-foreground">{formatDecimal(groupSupervisionH, 1)} SV-Einheiten</span>
+        </p>
+        {activeGroups.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {activeGroups.map((g) => (
+              <Button key={g.id} asChild variant="outline" size="sm">
+                <Link href={`/groups/${g.id}`}>{g.name} öffnen</Link>
+              </Button>
+            ))}
+          </div>
+        ) : (
+          <Link href="/groups" className="text-sm font-medium text-primary hover:underline">
+            Gruppe anlegen
+          </Link>
+        )}
       </Card>
+      {antragErinnerungen.length > 0 && (
+        <Card role="region" aria-label="Anträge">
+          <SectionHeader>Anträge fast aufgebraucht</SectionHeader>
+          <p className="text-xs text-muted-foreground">Rechtzeitig neu beantragen oder den Abschluss planen.</p>
+          <div className="-mx-1">
+            {antragErinnerungen.map(({ patient, behandlung, bezugsperson }) => (
+              <Link
+                key={patient.id}
+                href={`/patients/${patient.id}`}
+                className="flex items-center justify-between gap-2 rounded-lg px-1 py-2 transition-colors hover:bg-muted"
+              >
+                <span className="font-mono text-sm font-medium text-foreground">{patient.chiffre}</span>
+                <span className="text-right text-xs text-muted-foreground">
+                  {behandlung !== null && <span className="block">{restText(behandlung, "Behandlungsstunden")}</span>}
+                  {bezugsperson !== null && <span className="block">{restText(bezugsperson, "Bezugspersonenstunden")}</span>}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {patientRatios.length > 0 && (
         <Card>

@@ -5,14 +5,24 @@ import type { SessionCategory, SupervisionKind, SupervisionSetting, GroupSession
 export const CATEGORY_LABELS: Record<SessionCategory, string> = {
   sprechstunde: "Sprechstunde",
   probatorik: "Probatorik",
+  anamnese: "Anamnese",
   behandlung: "Behandlung",
   bezugsperson: "Bezugsperson",
   gespraechsziffer: "Gesprächsziffer",
+  exploration: "Vertiefte Exploration",
 };
 
-// Reihenfolge wie im Fall (Sprechstunde → Probatorik → Behandlung), Gesprächsziffer zuletzt (#66). Einzige Kategorienliste
-// für Formulare, Dashboard und Nachweis.
-export const CATEGORY_ORDER: readonly SessionCategory[] = ["sprechstunde", "probatorik", "behandlung", "bezugsperson", "gespraechsziffer"];
+// Reihenfolge wie im Fall (Sprechstunde → Probatorik mit Anamnese → Behandlung), Ziffern zuletzt (#66). Einzige
+// Kategorienliste für Formulare, Dashboard und Nachweis.
+export const CATEGORY_ORDER: readonly SessionCategory[] = [
+  "sprechstunde",
+  "probatorik",
+  "anamnese",
+  "behandlung",
+  "bezugsperson",
+  "gespraechsziffer",
+  "exploration",
+];
 
 // Dashboard und Nachweis zeigen die drei ursprünglichen Kategorien immer, Sprechstunde und Gesprächsziffer nur mit
 // Stunden (#66) – sonst leere Kacheln bzw. Nullen.

@@ -479,8 +479,8 @@ describe("sessionHoursByCategory", () => {
     const sessions = cats.map((category, i) =>
       makeTherapySession({ id: newTherapySessionId(`ts-${i}`), category, durationMinutes: 50 * (i + 1) })
     );
-    expect(sessionHoursByCategory(sessions)).toEqual({ sprechstunde: 1, probatorik: 2, behandlung: 3, bezugsperson: 4, gespraechsziffer: 5 });
-    expect(sessionHoursByCategory([])).toEqual({ sprechstunde: 0, probatorik: 0, behandlung: 0, bezugsperson: 0, gespraechsziffer: 0 });
+    expect(sessionHoursByCategory(sessions)).toEqual({ sprechstunde: 1, probatorik: 2, behandlung: 3, bezugsperson: 4, gespraechsziffer: 5, anamnese: 0, exploration: 0 });
+    expect(sessionHoursByCategory([])).toEqual({ sprechstunde: 0, probatorik: 0, behandlung: 0, bezugsperson: 0, gespraechsziffer: 0, anamnese: 0, exploration: 0 });
   });
 });
 

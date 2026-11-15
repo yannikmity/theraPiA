@@ -25,10 +25,12 @@ describe("QuarterForecastCard", () => {
   it("zeigt Prognose, bisher, Einnahmen minus Supervision und legt die Rechnung offen", () => {
     render(<QuarterForecastCard forecast={forecast} incomePerHour={85} />);
     const region = screen.getByRole("region", { name: "Honorar 2026 Q3" });
-    expect(region.textContent).toContain("Prognose zum Quartalsende (30.09.2026)");
-    expect(screen.getByText("881 EUR")).toBeDefined();
-    expect(region.textContent).toContain("Bisher 831 EUR aus 13 Sitzungen");
-    expect(region.textContent).toContain("Einnahmen 921 EUR − Supervision 90 EUR");
+    // Stand groß, Prognose klein daneben (Pilot-Feedback).
+    expect(region.textContent).toContain("Stand heute im Quartal");
+    expect(screen.getByText("831 EUR")).toBeDefined();
+    expect(region.textContent).toContain("aus 13 Sitzungen · Einnahmen 921 EUR − Supervision 90 EUR");
+    expect(region.textContent).toContain("Prognose zum 30.09.2026: 881 EUR");
+    expect(region.textContent).toContain("nach dem Schnitt der letzten 8 Wochen");
     // 1,4 × 0,4 = 0,56 → 0,6 geht auf; 0,6 × 85 = 51 ≠ 50 (exakt 50,09) → ≈
     expect(region.textContent).toContain("Schnitt der letzten 8 Wochen: 1,4 Sitzungen pro Woche × 0,4 verbleibende Wochen = 0,6 Sitzungen × 85,00 EUR je Sitzung ≈ 50 EUR");
     expect(region.textContent).toContain("Ergebnis bisher 831 EUR + 50 EUR = 881 EUR");
@@ -36,7 +38,7 @@ describe("QuarterForecastCard", () => {
     expect(region.textContent).toContain("Künftige Supervisionskosten und Doppelstunden sind nicht eingerechnet");
     expect(region.textContent).toContain("Behandlungsstunden (à 50 Min) × Honorarsatz");
     expect(region.textContent).not.toContain("abzüglich");
-    expect(screen.getByRole("link", { name: "Geplante Sitzungen pro Woche in Finanzen anpassen" }).getAttribute("href")).toBe("/finances");
+    expect(screen.getByRole("link", { name: "Planung zum Vergleich in Finanzen eintragen" }).getAttribute("href")).toBe("/finances");
   });
 
   it("erklärt „≈“ nur, wenn es vorkommt", () => {
@@ -255,5 +257,13 @@ describe("QuarterForecastCard", () => {
     expect(screen.getByRole("region", { name: "Honorar 2026 Q3" }).textContent).toContain(
       "Geplant: 1,1 Sitzungen pro Woche × 1,0 verbleibende Wochen = 1,1 Sitzungen × 45,45 EUR je Sitzung = 50 EUR"
     );
+  });
+
+  it("zeigt die Planung aus Finanzen nur zum Vergleich neben der Prognose nach Schnitt", () => {
+    const geplant = { ...forecast, planned: { sessionsPerWeek: 15, source: "einstellung" as const }, forecastProfit: 2000 };
+    render(<QuarterForecastCard forecast={forecast} incomePerHour={85} mitPlanung={geplant} />);
+    const region = screen.getByRole("region", { name: "Honorar 2026 Q3" });
+    expect(region.textContent).toContain("Prognose zum 30.09.2026: 881 EUR");
+    expect(region.textContent).toContain("Mit deiner Planung (15,0 pro Woche): 2.000 EUR");
   });
 });

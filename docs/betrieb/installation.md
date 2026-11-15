@@ -208,6 +208,10 @@ Danach den Health-Check aus [Abschnitt 2](#2-installation) aufrufen und den Fehl
 
 **Update mit Sprechstunde, Gesprächsziffern und Kontingenten (Migration 007):** erweitert die Kategorie-Prüfung von `therapy_sessions` und ergänzt `patients.genehmigungsdatum` (NULL) und `patients.sprechstunden_ambulanz` (0); bestehende Daten unverändert. Additiv im Sinne von [Abschnitt 5.3](#53-zurück-zur-vorigen-version-rollback) – eine ältere Version läuft weiter, zeigt Sitzungen der neuen Kategorien dort aber ohne Bezeichnung und kann sie nicht bearbeiten; in den Behandlungsstunden zählen sie weiterhin.
 
+**Update mit Anamnese und Vertiefter Exploration (Migration 013):** erweitert nur die Kategorie-Prüfung von `therapy_sessions` um `anamnese` und `exploration`; bestehende Daten unverändert. Additiv im Sinne von [Abschnitt 5.3](#53-zurück-zur-vorigen-version-rollback) – eine ältere Version zeigt Sitzungen der neuen Kategorien ohne Bezeichnung, in den Behandlungsstunden zählen sie weiterhin.
+
+**Update mit Personenzahl der SV-Gruppe (Migration 014):** ergänzt `supervision_sessions.gruppengroesse` (NULL); bestehende Supervisionen rechnen weiter mit vollen Kosten. Additiv – eine ältere Version ignoriert die Spalte und rechnet für alle Supervisionen wieder volle Kosten.
+
 **Bestehende Datenbank aus dem Entwicklungs-Setup übernehmen.** Wer theraPiA bisher lokal mit dem `docker-compose.yml` aus dem Hauptverzeichnis des Repositorys genutzt hat (vor Admin-Bereich und Einladungslinks), kann diese Datenbank in die neue Instanz umziehen: Auf dem alten Rechner die Datenbank sichern mit `docker exec therapia_postgres pg_dump --no-owner --no-privileges -U therapia_user therapia | gzip > umzug.sql.gz`, die Datei in den Ordner `~/therapia` auf dem Server kopieren (z. B. mit `scp`) und wie in Abschnitt 6 unter „Wiederherstellen“ mit `BACKUP=umzug.sql.gz` einspielen. Danach `umzug.sql.gz` löschen. Beim Start wendet die App die fehlenden Migrationen an; dabei gilt:
 
 - Alle Nutzer:innen müssen sich einmal neu anmelden. Das ist beabsichtigt.

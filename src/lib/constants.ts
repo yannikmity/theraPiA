@@ -54,8 +54,12 @@ export const DEFAULT_SUPERVISION_MINUTES = 50;
 export const DURATION_PRESETS_MINUTES = [25, 50, 75, 100];
 // Gesprächsziffern werden in 10-Minuten-Schritten abgerechnet (#66); alle anderen Kategorien im 25er-Raster (#64).
 export const GESPRAECHSZIFFER_PRESETS_MINUTES = [10, 20, 30, 40, 50];
+// Vertiefte Exploration: Ziffern à 20 Min.
+export const EXPLORATION_PRESETS_MINUTES = [20, 40];
 export function durationPresetsFor(category: SessionCategory | null): number[] {
-  return category === "gespraechsziffer" ? GESPRAECHSZIFFER_PRESETS_MINUTES : DURATION_PRESETS_MINUTES;
+  if (category === "gespraechsziffer") return GESPRAECHSZIFFER_PRESETS_MINUTES;
+  if (category === "exploration") return EXPLORATION_PRESETS_MINUTES;
+  return DURATION_PRESETS_MINUTES;
 }
 
 // Kontingente je Fall (#66), bundesweit nach Psychotherapie-Richtlinie/EBM – deshalb fest statt pflegbar.
@@ -64,6 +68,11 @@ export const SPRECHSTUNDE_MINUTEN = 25;
 export const PROBATORIK_JE_FALL = 6; // Sitzungen à UNIT_MINUTES
 export const GESPRAECHSZIFFERN_JE_QUARTAL = 15; // je Fall, à GESPRAECHSZIFFER_MINUTEN
 export const GESPRAECHSZIFFER_MINUTEN = 10;
+export const ANAMNESE_JE_FALL = 1; // Sitzungen à UNIT_MINUTES, einmal zu Beginn
+export const EXPLORATIONEN_JE_QUARTAL = 2; // je Fall, à EXPLORATION_MINUTEN
+export const EXPLORATION_MINUTEN = 20;
+// Dashboard erinnert, wenn vom Antrag höchstens so viele Stunden (Behandlung bzw. Bezugsperson) übrig sind.
+export const ANTRAG_ERINNERUNG_AB_STUNDEN = 5;
 
 export const LAST_WEEK_SHIFT_DAYS = 7;
 export const MAX_SESSIONS_PER_BATCH = 50;

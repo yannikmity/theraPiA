@@ -7,7 +7,7 @@ const stunden = (werte: Partial<Record<string, number>> = {}) => ({
   probatorik: 0,
   behandlung: 0,
   bezugsperson: 0,
-  gespraechsziffer: 0,
+  gespraechsziffer: 0, anamnese: 0, exploration: 0,
   ...werte,
 });
 
@@ -17,7 +17,7 @@ describe("sichtbareKategorien (#66)", () => {
   });
 
   it("nimmt Sprechstunde und Gesprächsziffer mit Stunden in Kategorie-Reihenfolge dazu", () => {
-    expect(sichtbareKategorien(stunden({ sprechstunde: 1, gespraechsziffer: 0.2 }))).toEqual([
+    expect(sichtbareKategorien(stunden({ sprechstunde: 1, gespraechsziffer: 0.2, anamnese: 0, exploration: 0 }))).toEqual([
       "sprechstunde",
       "probatorik",
       "behandlung",

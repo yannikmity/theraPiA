@@ -68,6 +68,7 @@ export interface SupervisionSessionRow {
   kind: string;
   setting: string;
   group_id?: string | null;
+  gruppengroesse?: number | null;
   // jsonb_agg aus supervision_cases (#40); fehlt bei Abfragen ohne Anteile
   case_shares?: { patientId: string; minutes: number }[];
 }
@@ -147,6 +148,7 @@ export function mapSupervisionSessionRow(
     linkedGroupSessionIds,
     caseShares: (row.case_shares ?? []).map((c) => ({ patientId: c.patientId as PatientId, minutes: c.minutes })),
     groupId: (row.group_id ?? null) as GroupId | null,
+    gruppengroesse: row.gruppengroesse ?? null,
   };
 }
 

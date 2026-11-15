@@ -12,7 +12,7 @@ import {
   insertTherapySession,
   therapySessionExists,
 } from "@/lib/db/index";
-import { getUnsupervisedSessions, lastSettingBySupervisor } from "@/lib/calculations";
+import { getUnsupervisedSessions, lastGruppengroesseBySupervisor, lastSettingBySupervisor, quarterOf } from "@/lib/calculations";
 import { getCurrentRegelwerk } from "@/lib/db/regelwerk";
 import type { Ausbildungsregeln } from "@/lib/ausbildungsregeln/model";
 import {
@@ -36,6 +36,8 @@ import {
   GroupSessionId,
 } from "@/types";
 import { createAction } from "@/lib/safe-action";
+import { kontingenteJeKategorie, type KategorieKontingente } from "@/lib/kontingente";
+import { EXPLORATION_MINUTEN, GESPRAECHSZIFFER_MINUTEN } from "@/lib/constants";
 import { addTherapySessionSchema, addTherapySessionsSchema, addSupervisionSessionSchema } from "@/lib/validation";
 import { ActionResult } from "@/lib/action-result";
 import { z } from "zod";
@@ -51,6 +53,12 @@ export interface SessionsData {
   suggestions: LastWeekSuggestion[];
   regeln: Ausbildungsregeln;
   settingBySupervisor: Record<string, SupervisionSetting>;
+  /** Kontingente je aktiver Patient:in und Kategorie zum heutigen Tag – Hinweis beim Erfassen. */
+  kontingenteByPatient: Record<string, KategorieKontingente>;
+  /** Genutzte Gesprächs- und Explorationsziffern je Patient:in und Quartal – Hinweis für ein nachgetragenes Datum. */
+  quartalsZiffern: Record<string, Record<string, { gespraechsziffer: number; exploration: number }>>;
+  /** Gruppengröße der letzten SV-Gruppe je Supervisor:in – Vorgabe beim Erfassen. */
+  gruppengroesseBySupervisor: Record<string, number>;
 }
 
 // Alles für die Erfassen-Seite aus einem Ladevorgang. `today` (YYYY-MM-DD, Europe/Berlin) kommt von der Seite,
@@ -74,7 +82,26 @@ export async function loadSessionsData(today: string): Promise<SessionsData> {
     suggestions: lastWeekSuggestions(therapySessions, patients, today),
     regeln: regelwerk.regeln,
     settingBySupervisor: lastSettingBySupervisor(supervisionSessions),
+    kontingenteByPatient: Object.fromEntries(
+      patients.filter((p) => p.isActive).map((p) => [p.id, kontingenteJeKategorie(p, therapySessions, today)])
+    ),
+    quartalsZiffern: quartalsZiffernJePatient(therapySessions),
+    gruppengroesseBySupervisor: lastGruppengroesseBySupervisor(supervisionSessions),
   };
+}
+
+// Ziffern je Patient:in und Quartal (Anzahl = Minuten / Minuten je Ziffer), damit der Hinweis beim Erfassen dem
+// gewählten Datum folgt statt dem heutigen Quartal.
+function quartalsZiffernJePatient(sessions: TherapySession[]) {
+  const result: Record<string, Record<string, { gespraechsziffer: number; exploration: number }>> = {};
+  for (const s of sessions) {
+    if (s.category !== "gespraechsziffer" && s.category !== "exploration") continue;
+    const q = quarterOf(s.date);
+    const byQ = (result[s.patientId] ??= {});
+    const entry = (byQ[q] ??= { gespraechsziffer: 0, exploration: 0 });
+    entry[s.category] += s.durationMinutes / (s.category === "gespraechsziffer" ? GESPRAECHSZIFFER_MINUTEN : EXPLORATION_MINUTEN);
+  }
+  return result;
 }
 
 export const addTherapySession: (
@@ -148,6 +175,7 @@ export const addSupervisionSession: (
       durationMinutes: input.durationMinutes,
       kind: input.kind,
       setting: input.setting,
+      gruppengroesse: input.gruppengroesse ?? null,
       linkedTherapySessionIds: input.linkedTherapySessionIds as TherapySessionId[],
       linkedGroupSessionIds: input.linkedGroupSessionIds as GroupSessionId[],
       caseShares: input.caseShares.map((c) => ({ patientId: c.patientId as PatientId, minutes: c.minutes })),

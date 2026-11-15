@@ -2,7 +2,7 @@ import type { GroupSession, TherapySession } from "@/types";
 import type { UserData } from "../db/user-data";
 import { compareNatural } from "../collation";
 import { toCsv, formatDecimal, formatHours, type CsvValue } from "../csv";
-import { minutesToUnits, quarterOf } from "../calculations";
+import { bezahlteMinuten, minutesToUnits, quarterOf } from "../calculations";
 import {
   CATEGORY_LABELS,
   GROUP_SESSION_STATUS_LABELS,
@@ -192,8 +192,10 @@ export function expensesCsv(data: UserData, options: CsvExportOptions = {}): str
   const rows: CsvValue[][] = sessions.map((sv) => {
     const supervisor = supervisorById.get(sv.supervisorId);
     const costPerUnit = supervisor?.costPerHour ?? 0;
+    // In der SV-Gruppe zahlt man nur den eigenen Anteil (bezahlteMinuten); die Spalte Dauer bleibt die angerechnete Zeit.
     const units = minutesToUnits(sv.durationMinutes);
-    const cents = Math.round(units * costPerUnit * 100);
+    const paidUnits = minutesToUnits(bezahlteMinuten(sv));
+    const cents = Math.round(paidUnits * costPerUnit * 100);
     totalCents += cents;
     return [
       sv.date,
@@ -205,9 +207,11 @@ export function expensesCsv(data: UserData, options: CsvExportOptions = {}): str
       formatDecimal(units),
       euro(costPerUnit),
       euro(cents / 100),
+      sv.gruppengroesse ?? null,
+      formatDecimal(paidUnits),
     ];
   });
-  rows.push(["Summe", "", "", "", "", "", "", "", euro(totalCents / 100)]);
+  rows.push(["Summe", "", "", "", "", "", "", "", euro(totalCents / 100), "", ""]);
   return toCsv(
     [
       "Datum",
@@ -219,6 +223,8 @@ export function expensesCsv(data: UserData, options: CsvExportOptions = {}): str
       "SV-Einheiten",
       "Kosten je SV-Einheit (EUR)",
       "Betrag (EUR)",
+      "Personen in der SV-Gruppe",
+      "SV-Einheiten bezahlt",
     ],
     rows
   );

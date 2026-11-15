@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 
-vi.mock("../../app/(app)/supervisors/actions", () => ({ addSupervisor: vi.fn(), updateSupervisorAction: vi.fn() }));
+vi.mock("../../app/(app)/supervisors/actions", () => ({ addSupervisor: vi.fn(), updateSupervisorAction: vi.fn(), mergeSupervisorsAction: vi.fn() }));
 
 import { SupervisorsClient } from "../../app/(app)/supervisors/SupervisorsClient";
 import { pressEnter, submitButtons } from "../../lib/__tests__/helpers/form-submit";
-import { addSupervisor, updateSupervisorAction } from "../../app/(app)/supervisors/actions";
+import { addSupervisor, mergeSupervisorsAction, updateSupervisorAction } from "../../app/(app)/supervisors/actions";
 import { newSupervisorId, type Supervisor } from "@/types";
 
 const supervisors: Supervisor[] = [
@@ -77,5 +77,17 @@ describe("SupervisorsClient", () => {
       expect(updateSupervisorAction).toHaveBeenCalledWith({ id: "s-1", name: "Supervision Eins", costPerHour: 80, isActive: true })
     );
     expect(addSupervisor).toHaveBeenCalledTimes(1);
+  });
+
+  it("führt doppelte Einträge nach Nachfrage zusammen und zeigt danach nur noch einen", async () => {
+    vi.mocked(mergeSupervisorsAction).mockResolvedValue({ success: true, data: { supervisors: [supervisors[0]] } });
+    render(<SupervisorsClient initialSupervisors={supervisors} />);
+    fireEvent.click(screen.getByRole("button", { name: "Doppelte Einträge zusammenführen" }));
+    fireEvent.change(screen.getByLabelText("Diesen Eintrag auflösen"), { target: { value: "s-2" } });
+    fireEvent.change(screen.getByLabelText("Supervisionen übernehmen in"), { target: { value: "s-1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Zusammenführen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ja, zusammenführen" }));
+    await waitFor(() => expect(mergeSupervisorsAction).toHaveBeenCalledWith({ fromId: "s-2", toId: "s-1" }));
+    await waitFor(() => expect(screen.queryByText("Supervision Zwei")).toBeNull());
   });
 });

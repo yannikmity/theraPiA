@@ -19,6 +19,7 @@ vi.mock("@/lib/db/index", () => ({
   getTherapySessions: async () => data.therapySessions,
   getSupervisionSessions: async () => data.supervisionSessions,
   getGroupSessions: async () => [],
+  getGroups: async () => [],
   getFinancialSettings: async () => ({ incomePerHour: 85, supervisionCosts: {}, plannedSessionsPerWeek: null }),
 }));
 vi.mock("@/lib/db/regelwerk", async () => {
@@ -89,4 +90,36 @@ describe("loadDashboard", () => {
     data.therapySessions = [{ ...therapy, date: "kaputt" }];
     await expect(loadDashboard()).rejects.toThrow(RangeError);
   });
+
+  it("zählt die Supervision der Gruppenfachkunde gesondert, nicht zu den SV-Einheiten und dem Verhältnis", async () => {
+    data.patients = [patient(P1, "A-1", true)];
+    data.therapySessions = [therapy];
+    const gruppe: SupervisionSession = {
+      ...supervision,
+      id: newSupervisionSessionId("sv-g"),
+      kind: "group",
+      durationMinutes: 100,
+      linkedTherapySessionIds: [],
+      caseShares: [],
+    };
+    data.supervisionSessions = [supervision, gruppe];
+    const d = await loadDashboard();
+    expect(d.supervisionH).toBe(1);
+    expect(d.groupSupervisionH).toBe(2);
+    expect(d.overallRatio.supervisionHours).toBe(1);
+  });
+
+  it("erinnert an fast aufgebrauchte Anträge, aber nicht an unberührte kleine Kontingente", async () => {
+    // Behandlung: 2 beantragt, 1 genutzt → 1 übrig (≤ ein Fünftel, aufgerundet). Bezugsperson: 3 beantragt, nichts
+    // genutzt → keine Erinnerung, obwohl 3 ≤ 5.
+    const knapp = { ...patient(P1, "A-1", true), antragsdatum: "2026-01-01", beantragteStunden: 2, beantragteBezugspersonStunden: 3 };
+    data.patients = [knapp];
+    data.therapySessions = [therapy];
+    data.supervisionSessions = [];
+    const d = await loadDashboard();
+    expect(d.antragErinnerungen).toEqual([{ patient: knapp, behandlung: 1, bezugsperson: null }]);
+    data.patients = [{ ...knapp, beantragteStunden: 60 }];
+    expect((await loadDashboard()).antragErinnerungen).toEqual([]);
+  });
 });
+

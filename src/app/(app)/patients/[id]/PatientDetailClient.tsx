@@ -15,7 +15,13 @@ import {
 } from "@/lib/calculations";
 import { formatDecimal } from "@/lib/csv";
 import { todayIso } from "@/lib/dates";
-import { gespraechsziffernKontingent, probatorikKontingent, sprechstundenKontingent } from "@/lib/kontingente";
+import {
+  anamneseKontingent,
+  explorationKontingent,
+  gespraechsziffernKontingent,
+  probatorikKontingent,
+  sprechstundenKontingent,
+} from "@/lib/kontingente";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import { Patient, TherapySession, SupervisionSession, Supervisor } from "@/types";
 import type { Ausbildungsregeln } from "@/lib/ausbildungsregeln/model";
@@ -327,7 +333,9 @@ export function PatientDetailClient({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <KontingentTile titel="Sprechstunde" einheit="Termine" kontingent={sprechstundenKontingent(patient, therapySessions)} />
         <KontingentTile titel="Probatorik" einheit="Sitzungen" kontingent={probatorikKontingent(patient, therapySessions)} />
+        <KontingentTile titel="Anamnese" einheit="Sitzungen" kontingent={anamneseKontingent(patient, therapySessions)} />
         <KontingentTile titel="Gesprächsziffern im Quartal" einheit="Ziffern" kontingent={gespraechsziffernKontingent(patient, therapySessions, todayIso())} />
+        <KontingentTile titel="Vertiefte Exploration im Quartal" einheit="Ziffern" kontingent={explorationKontingent(patient, therapySessions, todayIso())} />
       </div>
 
       {/* Chiffre nachträglich ändern (#74); Sitzungen, Supervisionen und Exporte hängen an der ID und folgen von selbst. */}

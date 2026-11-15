@@ -5,13 +5,14 @@ import { Plus, X, Pencil } from "lucide-react";
 import { Supervisor } from "@/types";
 import { ActionError, errorAt, type ScopedActionError } from "@/components/ActionError";
 import { runAction } from "@/lib/run-action";
-import { FormField, SectionHeader } from "@/components/ui";
+import { ConfirmButton, FormField, SectionHeader } from "@/components/ui";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { addSupervisor, updateSupervisorAction } from "./actions";
+import { addSupervisor, mergeSupervisorsAction, updateSupervisorAction } from "./actions";
 
 interface SupervisorsClientProps {
   initialSupervisors: Supervisor[];
@@ -22,6 +23,9 @@ export function SupervisorsClient({ initialSupervisors }: SupervisorsClientProps
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [mergeFrom, setMergeFrom] = useState("");
+  const [mergeTo, setMergeTo] = useState("");
+  const [showMerge, setShowMerge] = useState(false);
   const [costPerHour, setCostPerHour] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   // Sperre gegen doppeltes Absenden: greift sofort, noch bevor isSaving neu gerendert ist.
@@ -92,6 +96,32 @@ export function SupervisorsClient({ initialSupervisors }: SupervisorsClientProps
   function handleToggleActive(sv: Supervisor) {
     void saveSupervisor({ id: sv.id, name: sv.name, costPerHour: sv.costPerHour, isActive: !sv.isActive }, `supervisor:${sv.id}`);
   }
+
+  async function handleMerge() {
+    setIsSaving(true);
+    const result = await runAction(() => mergeSupervisorsAction({ fromId: mergeFrom, toId: mergeTo }));
+    setIsSaving(false);
+    if (result.success) {
+      setSupervisors(result.data.supervisors);
+      setMergeFrom("");
+      setMergeTo("");
+      setShowMerge(false);
+      setError(null);
+    } else {
+      setError({ scope: "merge", result });
+    }
+  }
+
+  // Unterschiedliche Kostensätze: Nach dem Zusammenführen rechnen auch vergangene Supervisionen mit dem Satz des Ziels.
+  const satz = (v: number | null) =>
+    v ? `${v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR` : "keine Kosten";
+  const fromSv = supervisors.find((s) => s.id === mergeFrom);
+  const toSv = supervisors.find((s) => s.id === mergeTo);
+  const mergeHinweis =
+    "Alle Supervisionen wandern mit, danach wird der erste Eintrag gelöscht." +
+    (fromSv && toSv && (fromSv.costPerHour || 0) !== (toSv.costPerHour || 0)
+      ? ` Achtung: Die Kostensätze unterscheiden sich (${satz(fromSv.costPerHour)} gegenüber ${satz(toSv.costPerHour)} je SV-Einheit). Auch vergangene Supervisionen rechnen danach mit dem zweiten Satz. Bei SV-Gruppen danach die Personenzahl in der Supervision eintragen.`
+      : " Bei SV-Gruppen danach die Personenzahl in der Supervision eintragen, damit nur der eigene Anteil als Kosten zählt.");
 
   const active = supervisors.filter((s) => s.isActive);
   const inactive = supervisors.filter((s) => !s.isActive);
@@ -216,6 +246,56 @@ export function SupervisorsClient({ initialSupervisors }: SupervisorsClientProps
             ))}
           </div>
         </section>
+      )}
+
+      {/* Doppelte Einträge (z. B. dieselbe Person einmal für Einzel, einmal für Gruppe) zusammenführen – das Setting
+          wählt man beim Erfassen jeder Supervision. */}
+      {supervisors.length > 1 && !showMerge && (
+        <Button variant="outline" size="sm" onClick={() => setShowMerge(true)}>
+          Doppelte Einträge zusammenführen
+        </Button>
+      )}
+      {supervisors.length > 1 && showMerge && (
+        <Card>
+          <SectionHeader>Doppelte Einträge zusammenführen</SectionHeader>
+          <p className="text-xs text-muted-foreground">
+            Einzel oder Gruppe wählst du bei jeder Supervision. Ist dieselbe Person doppelt angelegt, gehen hier alle
+            Supervisionen des ersten Eintrags an den zweiten; der erste Eintrag wird danach gelöscht.
+          </p>
+          <FormField label="Diesen Eintrag auflösen" htmlFor="merge-from">
+            <NativeSelect id="merge-from" value={mergeFrom} onChange={(e) => setMergeFrom(e.target.value)} disabled={isSaving} wrapperClassName="w-full">
+              <NativeSelectOption value="">Bitte wählen</NativeSelectOption>
+              {supervisors.map((s) => (
+                <NativeSelectOption key={s.id} value={s.id}>
+                  {s.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </FormField>
+          <FormField label="Supervisionen übernehmen in" htmlFor="merge-to">
+            <NativeSelect id="merge-to" value={mergeTo} onChange={(e) => setMergeTo(e.target.value)} disabled={isSaving} wrapperClassName="w-full">
+              <NativeSelectOption value="">Bitte wählen</NativeSelectOption>
+              {supervisors
+                .filter((s) => s.id !== mergeFrom)
+                .map((s) => (
+                  <NativeSelectOption key={s.id} value={s.id}>
+                    {s.name}
+                  </NativeSelectOption>
+                ))}
+            </NativeSelect>
+          </FormField>
+          <ActionError result={errorAt(error, "merge")} />
+          <ConfirmButton
+            label="Zusammenführen"
+            question={`„${supervisors.find((s) => s.id === mergeFrom)?.name ?? ""}“ in „${supervisors.find((s) => s.id === mergeTo)?.name ?? ""}“ zusammenführen?`}
+            description={mergeHinweis}
+            confirmLabel="Ja, zusammenführen"
+            onConfirm={() => void handleMerge()}
+            disabled={!mergeFrom || !mergeTo || isSaving}
+            loading={isSaving}
+            className="h-10 w-full border border-border px-4"
+          />
+        </Card>
       )}
 
       {supervisors.length === 0 && !showForm && (

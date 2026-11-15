@@ -171,8 +171,8 @@ export function FinancesClient({
               />
             </FormField>
             <p className="text-xs text-muted-foreground">
-              Das Dashboard rechnet die Quartalsprognose mit dieser Zahl; ohne Angabe mit dem Schnitt der letzten{" "}
-              {FORECAST_LOOKBACK_WEEKS} Wochen.
+              Die Quartalsprognose auf dem Dashboard rechnet immer mit dem Schnitt der letzten {FORECAST_LOOKBACK_WEEKS}{" "}
+              Wochen; diese Zahl erscheint dort nur als Vergleich („mit deiner Planung“).
             </p>
 
             {initialSupervisors.map((sv) => (

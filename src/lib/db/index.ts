@@ -1,6 +1,6 @@
 export { getCurrentUserId } from "./get-current-user";
 export { getPatients, getPatient, addPatient, updatePatient, renamePatient, deletePatient } from "./patients";
-export { getSupervisors, addSupervisor, updateSupervisor } from "./supervisors";
+export { getSupervisors, addSupervisor, updateSupervisor, mergeSupervisors } from "./supervisors";
 export {
   getTherapySessions,
   getTherapySessionsForPatient,

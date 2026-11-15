@@ -36,6 +36,9 @@ export default async function NewSessionPage({ searchParams }: { searchParams: P
         suggestions={data.suggestions}
         regeln={data.regeln}
         settingBySupervisor={data.settingBySupervisor}
+        kontingenteByPatient={data.kontingenteByPatient}
+        quartalsZiffern={data.quartalsZiffern}
+        gruppengroesseBySupervisor={data.gruppengroesseBySupervisor}
       />
     </ErrorBoundary>
   );

@@ -48,7 +48,9 @@ export function SupervisionClient({ initialData, initialEditingId, returnHref }:
   const [error, setError] = useState<ScopedActionError | null>(null);
 
   const sessions = [...data.supervisionSessions].sort((a, b) => b.date.localeCompare(a.date));
-  const totalHours = totalSupervisionHours(data.supervisionSessions);
+  // Getrennt wie auf dem Dashboard: Supervision der Einzeltherapie und der Gruppenfachkunde.
+  const totalHours = totalSupervisionHours(data.supervisionSessions.filter((s) => s.kind === "individual"));
+  const groupHours = totalSupervisionHours(data.supervisionSessions.filter((s) => s.kind === "group"));
 
   function supervisorName(id: string): string {
     return data.supervisors.find((s) => s.id === id)?.name ?? "Unbekannt";
@@ -93,6 +95,7 @@ export function SupervisionClient({ initialData, initialEditingId, returnHref }:
         durationMinutes: values.durationMinutes,
         kind: sv.kind,
         setting: values.setting,
+        gruppengroesse: values.gruppengroesse,
         linkedTherapySessionIds: sv.kind === "group" ? [] : values.linkedIds,
         linkedGroupSessionIds: sv.kind === "group" ? values.linkedIds : [],
         caseShares: sv.kind === "group" ? [] : values.caseShares,
@@ -134,6 +137,12 @@ export function SupervisionClient({ initialData, initialEditingId, returnHref }:
           <>
             {sessions.length} Supervisionen ·{" "}
             <span className="whitespace-nowrap">{formatDecimal(totalHours, 1)} SV-Einheiten</span>
+            {groupHours > 0 && (
+              <>
+                {" "}
+                · <span className="whitespace-nowrap">{formatDecimal(groupHours, 1)} Gruppenfachkunde</span>
+              </>
+            )}
           </>
         }
         actions={

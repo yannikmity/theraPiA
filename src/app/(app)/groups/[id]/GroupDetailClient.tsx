@@ -59,6 +59,12 @@ export function GroupDetailClient({
   const [supervisionSessions, setSupervisionSessions] = useState(initialSupervisionSessions);
   const [supervisedIds, setSupervisedIds] = useState(initialSupervisedGroupSessionIds);
   const [showSessionForm, setShowSessionForm] = useState(false);
+  // Doppelstunde bearbeiten: eine Zeile zur Zeit, Felder als Text.
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editKids, setEditKids] = useState("");
+  const [editAmbulanz, setEditAmbulanz] = useState(true);
+  const [editNotes, setEditNotes] = useState("");
   const [showSupervisionForm, setShowSupervisionForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   // Sperre gegen doppeltes Absenden: greift sofort, noch bevor isSaving neu gerendert ist.
@@ -68,7 +74,9 @@ export function GroupDetailClient({
   // New session form state
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [status, setStatus] = useState<GroupSessionStatus>("durchgefuehrt");
-  const [childCount, setChildCount] = useState(group.avgKids ?? 9);
+  // Als Text, damit ein geleertes Feld leer bleibt und keine führende Null entsteht („07“).
+  const [childCountText, setChildCountText] = useState(String(group.avgKids ?? 9));
+  const childCount = Number(childCountText) || 0;
   const [countsTowardAmbulanzzeit, setCountsTowardAmbulanzzeit] = useState(true);
 
   // New group supervision form state
@@ -151,6 +159,44 @@ export function GroupDetailClient({
     } else {
       trackFailure("supervision", "create", result);
       setError({ scope: "supervision-form", result });
+    }
+  }
+
+  function openSessionEdit(session: GroupSession) {
+    setEditingSessionId(session.id);
+    setEditDate(session.date);
+    setEditKids(session.childCount === null ? "" : String(session.childCount));
+    setEditAmbulanz(session.countsTowardAmbulanzzeit);
+    setEditNotes(session.notes);
+    setError(null);
+  }
+
+  async function handleSaveSessionEdit(e: React.FormEvent, session: GroupSession) {
+    e.preventDefault();
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
+    setError(null);
+    const result = await runAction(() =>
+      updateGroupSession({
+        id: session.id,
+        groupId: group.id,
+        date: editDate,
+        status: session.status,
+        childCount: session.status === "durchgefuehrt" ? (editKids.trim() === "" ? null : Number(editKids)) : null,
+        countsTowardAmbulanzzeit: editAmbulanz,
+        durationMinutes: session.durationMinutes,
+        notes: editNotes,
+      })
+    );
+    savingRef.current = false;
+    setIsSaving(false);
+    if (result.success) {
+      setSessions(result.data.groupSessions);
+      setEditingSessionId(null);
+    } else {
+      trackFailure("group_session", "update", result);
+      setError({ scope: `session:${session.id}`, result });
     }
   }
 
@@ -336,7 +382,7 @@ export function GroupDetailClient({
             </FormField>
             {status === "durchgefuehrt" && (
               <FormField label="Anwesende Kinder" htmlFor="gs-kids">
-                <Input id="gs-kids" type="number" inputMode="numeric" value={childCount} onChange={(e) => setChildCount(Number(e.target.value))} min={0} disabled={isSaving} />
+                <Input id="gs-kids" type="number" inputMode="numeric" value={childCountText} onChange={(e) => setChildCountText(e.target.value)} min={0} disabled={isSaving} />
                 {feeVorschau && (
                   <p className="text-xs text-muted-foreground">
                     Honorar-Anteil: {feeVorschau.share.toLocaleString("de-DE")} EUR
@@ -367,6 +413,50 @@ export function GroupDetailClient({
               .sort((a, b) => b.date.localeCompare(a.date))
               .map((session) => {
                 const isSupervised = supervisedIds.includes(session.id);
+                if (editingSessionId === session.id) {
+                  return (
+                    <form
+                      key={session.id}
+                      noValidate
+                      aria-label={`Doppelstunde vom ${format(parseISO(session.date), "dd.MM.yyyy")} bearbeiten`}
+                      onSubmit={(e) => handleSaveSessionEdit(e, session)}
+                      className="space-y-3 py-3"
+                    >
+                      <FormField label="Datum" htmlFor={`gs-edit-date-${session.id}`}>
+                        <Input id={`gs-edit-date-${session.id}`} type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} disabled={isSaving} />
+                      </FormField>
+                      {session.status === "durchgefuehrt" && (
+                        <FormField label="Anwesende Kinder" htmlFor={`gs-edit-kids-${session.id}`}>
+                          <Input id={`gs-edit-kids-${session.id}`} type="number" inputMode="numeric" min={0} value={editKids} onChange={(e) => setEditKids(e.target.value)} disabled={isSaving} />
+                        </FormField>
+                      )}
+                      <FormField label="Notiz" htmlFor={`gs-edit-notes-${session.id}`}>
+                        <Input id={`gs-edit-notes-${session.id}`} type="text" value={editNotes} onChange={(e) => setEditNotes(e.target.value)} maxLength={2000} disabled={isSaving} />
+                      </FormField>
+                      <label className="flex items-center gap-2 text-sm text-foreground">
+                        <Checkbox checked={editAmbulanz} onCheckedChange={(checked) => setEditAmbulanz(checked === true)} disabled={isSaving} />
+                        Zählt zur Ambulanzzeit
+                      </label>
+                      <ActionError result={errorAt(error, `session:${session.id}`)} />
+                      <div className="flex gap-2">
+                        <Button type="submit" loading={isSaving} className="flex-1">
+                          Doppelstunde speichern
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingSessionId(null);
+                            setError(null);
+                          }}
+                          disabled={isSaving}
+                        >
+                          Abbrechen
+                        </Button>
+                      </div>
+                    </form>
+                  );
+                }
                 return (
                   <div key={session.id} className="flex flex-wrap items-center gap-x-2 gap-y-2 py-2">
                     <div className="min-w-0 flex-1">
@@ -388,6 +478,16 @@ export function GroupDetailClient({
                         </NativeSelectOption>
                       ))}
                     </NativeSelect>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => openSessionEdit(session)}
+                      disabled={isSaving}
+                      aria-label={`Doppelstunde vom ${format(parseISO(session.date), "dd.MM.yyyy")} bearbeiten`}
+                    >
+                      <Pencil />
+                    </Button>
                     <ConfirmButton
                       ariaLabel="Doppelstunde löschen"
                       label={<Trash2 size={16} />}
