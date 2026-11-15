@@ -70,6 +70,18 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervisionen ändern und löschen", () => 
     expect(await linkedIds(db, f.a.supervisionId)).toEqual([second.id]);
   });
 
+  it("speichert die Personen der SV-Gruppe nur im Setting gruppe, sonst NULL", async () => {
+    const { db, f } = await setup();
+    const groesse = async () =>
+      (await db.query("SELECT gruppengroesse FROM supervision_sessions WHERE id = $1", [f.a.supervisionId])).rows[0].gruppengroesse;
+
+    await updateSupervisionSession(db, f.a.userId, { ...ownSupervision(f, []), gruppengroesse: 3 });
+    expect(await groesse()).toBe(3);
+
+    await updateSupervisionSession(db, f.a.userId, { ...ownSupervision(f, []), setting: "einzel", gruppengroesse: 3 });
+    expect(await groesse()).toBeNull();
+  });
+
   it("ersetzt bei einer Gruppensupervision die Doppelstunden-Verknüpfungen: alte weg, neue da", async () => {
     const { db, f } = await setup();
     const one = async (sql: string, params: unknown[]) => (await db.query(sql, params)).rows[0];

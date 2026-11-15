@@ -75,6 +75,18 @@ export function lastSettingBySupervisor(sessions: SupervisionSession[]): Record<
   return result;
 }
 
+// Vorgabe für „Personen in der SV-Gruppe“: die Gruppengröße der letzten Supervision im Setting „gruppe“ bei derselben
+// Supervisor:in; ohne gespeicherte Größe keine Vorgabe (Kosten für die ganze Dauer).
+export function lastGruppengroesseBySupervisor(sessions: SupervisionSession[]): Record<string, number> {
+  const result: Record<string, number> = {};
+  const gruppe = sessions.filter((s) => s.kind === "individual" && s.setting === "gruppe");
+  for (const sv of gruppe.sort((a, b) => a.date.localeCompare(b.date))) {
+    if (sv.gruppengroesse) result[sv.supervisorId] = sv.gruppengroesse;
+    else delete result[sv.supervisorId];
+  }
+  return result;
+}
+
 export function therapyHoursForPatient(
   sessions: TherapySession[],
   patientId: PatientId
@@ -247,6 +259,12 @@ export function linkableGroupSessions(
 }
 
 // Financial calculations
+// Bezahlte Minuten einer Supervision: in der SV-Gruppe nur der eigene Anteil (angerechnete Zeit / Gruppengröße),
+// sonst die ganze Dauer. Kosten = SV-Einheiten der bezahlten Minuten × Kosten je SV-Einheit.
+export function bezahlteMinuten(session: Pick<SupervisionSession, "durationMinutes" | "gruppengroesse">): number {
+  return session.gruppengroesse ? session.durationMinutes / session.gruppengroesse : session.durationMinutes;
+}
+
 export function calculateQuarterlyFinances(
   therapySessions: TherapySession[],
   supervisionSessions: SupervisionSession[],
@@ -265,7 +283,7 @@ export function calculateQuarterlyFinances(
     const q = quarterOf(session.date);
     if (!quarters[q]) quarters[q] = { income: 0, costs: 0 };
     const cost = supervisionCosts[session.supervisorId] || 0;
-    quarters[q].costs += minutesToUnits(session.durationMinutes) * cost;
+    quarters[q].costs += minutesToUnits(bezahlteMinuten(session)) * cost;
   }
 
   return Object.entries(quarters)
@@ -438,7 +456,7 @@ export function financeTotals(
   let totalCosts = 0;
   for (const session of supervisionSessions) {
     const cost = supervisionCosts[session.supervisorId as SupervisorId] || 0;
-    totalCosts += minutesToUnits(session.durationMinutes) * cost;
+    totalCosts += minutesToUnits(bezahlteMinuten(session)) * cost;
   }
 
   return {

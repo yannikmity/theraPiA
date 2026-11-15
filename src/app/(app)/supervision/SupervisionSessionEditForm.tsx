@@ -25,6 +25,7 @@ export interface SupervisionFormValues {
   date: string;
   durationMinutes: number;
   setting: SupervisionSetting;
+  gruppengroesse: number | null;
   linkedIds: string[];
   caseShares: { patientId: string; minutes: number }[];
 }
@@ -60,6 +61,9 @@ export function SupervisionSessionEditForm({
 }: SupervisionSessionEditFormProps) {
   const [supervisorId, setSupervisorId] = useState<string>(session.supervisorId);
   const [setting, setSetting] = useState<SupervisionSetting>(session.setting);
+  const [gruppengroesse, setGruppengroesse] = useState(session.gruppengroesse ? String(session.gruppengroesse) : "");
+  // Nur bei Supervisionen von Einzeltherapien im Setting „gruppe“; leer = Kosten für die ganze Dauer.
+  const groesse = session.kind === "individual" && setting === "gruppe" && gruppengroesse !== "" ? Number(gruppengroesse) : null;
   const [date, setDate] = useState(session.date);
   const [duration, setDuration] = useState(String(session.durationMinutes));
   const [linkedIdsAll, setLinkedIds] = useState<string[]>(
@@ -118,7 +122,7 @@ export function SupervisionSessionEditForm({
         durationRef.current?.focus();
         return;
       }
-      void onSave({ supervisorId, date, durationMinutes: Number(duration), setting, linkedIds, caseShares: [] });
+      void onSave({ supervisorId, date, durationMinutes: Number(duration), setting, gruppengroesse: groesse, linkedIds, caseShares: [] });
       return;
     }
     const invalid = caseIds.find((id) => durationError(caseMinutes[id] ?? ""));
@@ -129,7 +133,7 @@ export function SupervisionSessionEditForm({
     if (caseTotal > DURATION_MAX_MINUTES) return;
     const caseShares = caseIds.map((id) => ({ patientId: id, minutes: Number(caseMinutes[id]) }));
     // caseTotal enthält die Zeit ohne Fall – sie bleibt beim Speichern erhalten.
-    void onSave({ supervisorId, date, durationMinutes: caseTotal, setting, linkedIds, caseShares });
+    void onSave({ supervisorId, date, durationMinutes: caseTotal, setting, gruppengroesse: groesse, linkedIds, caseShares });
   }
 
   return (
@@ -165,6 +169,24 @@ export function SupervisionSessionEditForm({
           ))}
         </NativeSelect>
       </FormField>
+      {session.kind === "individual" && setting === "gruppe" && (
+        <FormField label="Personen in der SV-Gruppe" htmlFor={idFor("gruppengroesse")}>
+          <NativeSelect
+            id={idFor("gruppengroesse")}
+            value={gruppengroesse}
+            onChange={(e) => setGruppengroesse(e.target.value)}
+            disabled={saving}
+            wrapperClassName="w-full"
+          >
+            <NativeSelectOption value="">Kosten für die ganze Dauer</NativeSelectOption>
+            {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+              <NativeSelectOption key={n} value={String(n)}>
+                {n} Personen – du zahlst 1/{n}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </FormField>
+      )}
       <FormField label="Datum" htmlFor={idFor("date")} error={dateMessage}>
         <Input
           ref={dateRef}

@@ -170,8 +170,8 @@ describe("Vorher = Nachher (#8): sichtbare Texte", () => {
     ];
     const ausgabe = {
       therapie: [
-        text(ui.therapieKarte(412.33, { sprechstunde: 0, probatorik: 20, behandlung: 380.33, bezugsperson: 12, gespraechsziffer: 0 })),
-        text(ui.therapieKarte(612, { sprechstunde: 0, probatorik: 0, behandlung: 612, bezugsperson: 0, gespraechsziffer: 0 })),
+        text(ui.therapieKarte(412.33, { sprechstunde: 0, probatorik: 20, behandlung: 380.33, bezugsperson: 12, gespraechsziffer: 0, anamnese: 0, exploration: 0 })),
+        text(ui.therapieKarte(612, { sprechstunde: 0, probatorik: 0, behandlung: 612, bezugsperson: 0, gespraechsziffer: 0, anamnese: 0, exploration: 0 })),
       ],
       supervision: supervisionFaelle.map(([a, b, u]) => text(ui.supervisionKarte(a, b, u))),
       verhaeltnis: verhaeltnisFaelle.flatMap(([a, b]) => [text(ui.verhaeltnis(a, b, false)), text(ui.verhaeltnis(a, b, true))]),

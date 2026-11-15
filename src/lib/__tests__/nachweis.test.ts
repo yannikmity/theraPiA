@@ -62,7 +62,7 @@ describe("buildNachweis ohne Supervisor:in", () => {
       therapyUnits: 3,
       therapyMinutes: 160,
       therapyHours: 3.2, // 160 Min ÷ 50
-      hoursByCategory: { sprechstunde: 0, probatorik: 1, behandlung: 1.2, bezugsperson: 1, gespraechsziffer: 0 },
+      hoursByCategory: { sprechstunde: 0, probatorik: 1, behandlung: 1.2, bezugsperson: 1, gespraechsziffer: 0, anamnese: 0, exploration: 0 },
       supervisionUnits: 2,
       supervisionMinutes: 150,
       supervisionHours: 3,
@@ -71,7 +71,7 @@ describe("buildNachweis ohne Supervisor:in", () => {
       groupSessionHours: 2, // 100 Min ÷ 50 – gesondert gezählt, nicht Teil der Behandlungsstunden
     });
     expect(totals.ratio).toMatchObject({ ratio: 1.1, status: "ok" }); // 3,2 / 3,0 = 1,07
-    expect(Object.keys(totals.hoursByCategory)).toEqual(["sprechstunde", "probatorik", "behandlung", "bezugsperson", "gespraechsziffer"]);
+    expect(Object.keys(totals.hoursByCategory)).toEqual(["sprechstunde", "probatorik", "anamnese", "behandlung", "bezugsperson", "gespraechsziffer", "exploration"]);
   });
 
   it("liefert leere Listen und ein unendliches Verhältnis, wenn im Zeitraum nichts liegt", () => {

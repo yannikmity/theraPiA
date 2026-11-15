@@ -46,6 +46,7 @@ describe("SupervisionSessionEditForm", () => {
     fireEvent.change(screen.getByLabelText("A-2"), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(onSave).toHaveBeenCalledWith({
+      gruppengroesse: null,
       supervisorId: "s-1",
       date: "2026-09-20",
       durationMinutes: 90,
@@ -220,6 +221,7 @@ describe("SupervisionSessionEditForm", () => {
     datum("2026-09-20");
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(onSave).toHaveBeenCalledWith({
+      gruppengroesse: null,
       supervisorId: "s-1",
       date: "2026-09-20",
       durationMinutes: 60,

@@ -19,6 +19,8 @@ import {
 } from "@/lib/constants";
 import { formatWeekdayDateDe } from "@/lib/dates";
 import { CATEGORY_LABELS, CATEGORY_ORDER, SUPERVISION_SETTING_LABELS, SUPERVISION_SETTING_ORDER } from "@/lib/labels";
+import { ausgeschoepft, type KategorieKontingente } from "@/lib/kontingente";
+import { quarterOf } from "@/lib/calculations";
 import type { CaptureType, LastWeekSuggestion } from "@/lib/quick-capture";
 import { FormField, SectionHeader, fieldErrorId } from "@/components/ui";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -33,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { cn } from "@/lib/utils";
+import { formatDecimal } from "@/lib/csv";
 import { addTherapySession, addTherapySessions, addSupervisionSession, type BatchSaveResult } from "./actions";
 
 interface NewSessionClientProps {
@@ -57,11 +60,22 @@ interface NewSessionClientProps {
   regeln: Ausbildungsregeln;
   /** Setting der letzten Supervision je Supervisor:in – Vorgabe für Einzel/Gruppe. */
   settingBySupervisor: Record<string, SupervisionSetting>;
+  /** Kontingente je Patient:in und Kategorie (heute) – Hinweis unter der Kategorie, kein Sperren. */
+  kontingenteByPatient?: Record<string, KategorieKontingente>;
+  /** Gesprächs- und Explorationsziffern je Patient:in und Quartal – Hinweis folgt dem gewählten Datum. */
+  quartalsZiffern?: Record<string, Record<string, { gespraechsziffer: number; exploration: number }>>;
+  /** Letzte Gruppengröße je Supervisor:in – Vorgabe für „Personen in der SV-Gruppe“. */
+  gruppengroesseBySupervisor?: Record<string, number>;
 }
 
 const CATEGORY_OPTIONS = CATEGORY_ORDER.map((value) => ({ value, label: CATEGORY_LABELS[value] }));
 
 const DEFAULT_CATEGORY: SessionCategory = "behandlung";
+const KONTINGENT_ZEITRAUM: Partial<Record<SessionCategory, string>> = {
+  gespraechsziffer: " im Quartal",
+  exploration: " im Quartal",
+};
+const formatKontingentZahl = (v: number) => (Number.isInteger(v) ? String(v) : formatDecimal(v, 1));
 const sitzungen = (n: number) => countNoun(n, "Sitzung", "Sitzungen");
 
 // Klassen für Auswahl-Chips (Radix ToggleGroup): Therapie blau, Supervision grün.
@@ -82,6 +96,9 @@ export function NewSessionClient({
   initialPatientId,
   initialCasePatientId,
   categoryByPatient,
+  kontingenteByPatient = {},
+  quartalsZiffern = {},
+  gruppengroesseBySupervisor = {},
   suggestions,
   regeln,
   settingBySupervisor,
@@ -102,6 +119,9 @@ export function NewSessionClient({
   const [chosenPatientIds, setChosenPatientIds] = useState<string[] | null>(null);
   // Die Patient:in aus der Adresse gilt nur bis zum ersten Speichern – „Weitere Stunde erfassen“ wählt sie nicht erneut vor.
   const [casePatientId, setCasePatientId] = useState(initialCasePatientId);
+  // SV-Gruppe: Personen, die Fälle vorstellen – teilt die Kosten (angerechnet wird die volle Zeit je Fall).
+  // "1" = keine geteilte Gruppe: Kosten für die ganze Dauer. Vorgabe aus der letzten SV-Gruppe derselben Supervisor:in.
+  const [gruppengroesse, setGruppengroesse] = useState(String(gruppengroesseBySupervisor[initialSupervisors[0]?.id ?? ""] ?? 1));
   const [setting, setSetting] = useState<SupervisionSetting>(
     settingBySupervisor[initialSupervisors[0]?.id ?? ""] ?? "einzel"
   );
@@ -155,6 +175,7 @@ export function NewSessionClient({
   function chooseSupervisor(id: string) {
     setSupervisorId(id);
     setSetting(settingBySupervisor[id] ?? "einzel");
+    setGruppengroesse(String(gruppengroesseBySupervisor[id] ?? 1));
   }
 
   // Wechsel in die Gesprächsziffer beginnt bei deren Vorgabe (10 Min) – 50 Min lägen zwar im Raster, sind dort aber
@@ -163,7 +184,7 @@ export function NewSessionClient({
     setCategory(next);
     if (customDuration) return;
     const nextPresets = durationPresetsFor(next);
-    if (next === "gespraechsziffer" && category !== "gespraechsziffer") setDuration(nextPresets[0]);
+    if ((next === "gespraechsziffer" || next === "exploration") && category !== next) setDuration(nextPresets[0]);
     else if (!nextPresets.includes(duration)) setDuration(DEFAULT_THERAPY_SESSION_MINUTES);
   }
 
@@ -171,6 +192,24 @@ export function NewSessionClient({
     setPatientId(id);
     changeCategory(categoryByPatient[id] ?? DEFAULT_CATEGORY);
   }
+
+  // Kontingent der gewählten Kategorie für diese Patient:in: nur Hinweis, Erfassen bleibt möglich (Überziehen wird
+  // auf der Patient:innen-Seite rot angezeigt).
+  const zifferQuartal = category === "gespraechsziffer" || category === "exploration" ? quarterOf(date || today) : null;
+  const basis = kontingenteByPatient[patientId]?.[category];
+  // Quartalsziffern zählen im Quartal des gewählten Datums (Nachtragen), die übrigen Kontingente je Fall.
+  const kontingent =
+    basis && zifferQuartal && (category === "gespraechsziffer" || category === "exploration")
+      ? { ...basis, genutzt: quartalsZiffern[patientId]?.[zifferQuartal]?.[category] ?? 0 }
+      : basis;
+  const kontingentHinweis = kontingent
+    ? {
+        voll: ausgeschoepft(kontingent),
+        text: `${CATEGORY_LABELS[category]}${KONTINGENT_ZEITRAUM[category] ?? ""}: ${formatKontingentZahl(kontingent.genutzt)} von ${kontingent.verfuegbar} genutzt${
+          ausgeschoepft(kontingent) ? " – Kontingent ausgeschöpft" : ""
+        }`,
+      }
+    : null;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -207,6 +246,7 @@ export function NewSessionClient({
             durationMinutes: supervisionTotal,
             kind: "individual",
             setting,
+            gruppengroesse: setting === "gruppe" && Number(gruppengroesse) >= 2 ? Number(gruppengroesse) : null,
             linkedTherapySessionIds: selectedCases.flatMap((c) => c.sessionIds),
             linkedGroupSessionIds: [],
             caseShares: selectedCases.map((c) => ({ patientId: c.patient.id, minutes })),
@@ -510,6 +550,36 @@ export function NewSessionClient({
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
+          {setting === "gruppe" && (
+            <>
+              <Label id="sv-gruppe-label">Personen in der SV-Gruppe</Label>
+              <ToggleGroup
+                type="single"
+                value={gruppengroesse}
+                onValueChange={(value) => value && setGruppengroesse(value)}
+                disabled={isSaving}
+                spacing={2}
+                aria-labelledby="sv-gruppe-label"
+                aria-describedby="sv-gruppe-hinweis"
+                className="w-full"
+              >
+                <ToggleGroupItem value="1" className={CHIP_OUTLINE}>
+                  Nicht geteilt
+                </ToggleGroupItem>
+                {/* Eine im Bearbeiten gesetzte Größe über 5 erscheint als eigener Chip, damit die Vorgabe sichtbar bleibt. */}
+                {["2", "3", "4", "5", ...(Number(gruppengroesse) > 5 ? [gruppengroesse] : [])].map((n) => (
+                  <ToggleGroupItem key={n} value={n} className={CHIP_OUTLINE}>
+                    {n}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+              <p id="sv-gruppe-hinweis" className="text-xs text-muted-foreground">
+                {Number(gruppengroesse) >= 2
+                  ? `Angerechnet wird die Dauer je Patient:in; bezahlt nur dein Anteil (1/${gruppengroesse}).`
+                  : "Kosten für die ganze Dauer. Wenn ihr in der Gruppe Fälle vorstellt, die Zahl der Personen wählen."}
+              </p>
+            </>
+          )}
         </div>
       )}
 
@@ -584,6 +654,7 @@ export function NewSessionClient({
             disabled={isSaving}
             spacing={1}
             aria-label="Kategorie"
+            aria-describedby={kontingentHinweis ? "kontingent-hinweis" : undefined}
             className="w-full flex-wrap rounded-xl bg-muted p-1"
           >
             {/* Drei Chips pro Zeile, die zweite Zeile teilen sich zwei gestreckte Chips. */}
@@ -597,6 +668,15 @@ export function NewSessionClient({
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
+          {kontingentHinweis && (
+            <p
+              id="kontingent-hinweis"
+              aria-live="polite"
+              className={cn("text-xs", kontingentHinweis.voll ? "font-medium text-destructive" : "text-muted-foreground")}
+            >
+              {kontingentHinweis.text}
+            </p>
+          )}
         </div>
       )}
 

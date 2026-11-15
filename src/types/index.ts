@@ -19,7 +19,14 @@ export const newGroupSessionId = (id: string) => id as GroupSessionId;
 export const newUserId = (id: string) => id as UserId;
 
 export type TherapyType = "kurzzeittherapie" | "langzeittherapie";
-export type SessionCategory = "sprechstunde" | "probatorik" | "behandlung" | "bezugsperson" | "gespraechsziffer";
+export type SessionCategory =
+  | "sprechstunde"
+  | "probatorik"
+  | "anamnese"
+  | "behandlung"
+  | "bezugsperson"
+  | "gespraechsziffer"
+  | "exploration";
 export type SupervisionKind = "individual" | "group";
 export type SupervisionSetting = "einzel" | "gruppe";
 export type GroupSessionStatus = "durchgefuehrt" | "ausgefallen" | "urlaub" | "geplant";
@@ -71,6 +78,9 @@ export interface SupervisionSession {
   // Gruppe, für die eine Gruppensupervision erfasst wurde (#47); null bei Einzelsupervisionen und ohne Gruppenbezug.
   // Geschrieben wird es nur beim Anlegen; Bearbeiten lässt die Gruppe unverändert.
   groupId: GroupId | null;
+  // SV-Gruppe (Setting „gruppe“): Anzahl Personen, die Fälle vorstellen. Angerechnet wird durationMinutes, bezahlt nur
+  // der eigene Anteil durationMinutes / gruppengroesse. null/fehlend = Kosten für die ganze Dauer.
+  gruppengroesse?: number | null;
 }
 
 export interface SupervisionCaseShare {

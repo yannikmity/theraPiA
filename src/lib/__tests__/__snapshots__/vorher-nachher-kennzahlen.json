@@ -47,9 +47,11 @@
     "kategorien": {
       "sprechstunde": 0,
       "probatorik": 2,
+      "anamnese": 0,
       "behandlung": 12.2,
       "bezugsperson": 0.5,
-      "gespraechsziffer": 0
+      "gespraechsziffer": 0,
+      "exploration": 0
     },
     "gruppe": {
       "durchgefuehrt": 6,
@@ -645,9 +647,11 @@
         "hoursByCategory": {
           "sprechstunde": 0,
           "probatorik": 2,
+          "anamnese": 0,
           "behandlung": 12.2,
           "bezugsperson": 0.5,
-          "gespraechsziffer": 0
+          "gespraechsziffer": 0,
+          "exploration": 0
         },
         "supervisionUnits": 4,
         "supervisionMinutes": 265,
@@ -847,9 +851,11 @@
         "hoursByCategory": {
           "sprechstunde": 0,
           "probatorik": 2,
+          "anamnese": 0,
           "behandlung": 2.2,
           "bezugsperson": 0,
-          "gespraechsziffer": 0
+          "gespraechsziffer": 0,
+          "exploration": 0
         },
         "supervisionUnits": 3,
         "supervisionMinutes": 195,

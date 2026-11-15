@@ -61,7 +61,7 @@ describe("TherapySessionEditForm", () => {
     render(<TherapySessionEditForm session={session} saving={false} onSave={onSave} onCancel={() => {}} />);
     const select = screen.getByLabelText("Kategorie") as HTMLSelectElement;
     expect(Array.from(select.options).map((o) => o.textContent)).toEqual([
-      "Sprechstunde", "Probatorik", "Behandlung", "Bezugsperson", "Gesprächsziffer",
+      "Sprechstunde", "Probatorik", "Anamnese", "Behandlung", "Bezugsperson", "Gesprächsziffer", "Vertiefte Exploration",
     ]);
     fireEvent.change(select, { target: { value: "gespraechsziffer" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));

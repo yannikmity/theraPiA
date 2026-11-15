@@ -10,6 +10,8 @@ import { ForecastAssumption } from "./ForecastAssumption";
 interface QuarterForecastCardProps {
   forecast: QuarterForecast;
   incomePerHour: number;
+  // Vergleich: Prognose mit der Planung aus Finanzen (geplante Sitzungen pro Woche), falls eingetragen.
+  mitPlanung?: QuarterForecast | null;
 }
 
 const sitzungen = (n: number) => countNoun(n, "Sitzung", "Sitzungen");
@@ -34,7 +36,7 @@ function remainingSessionsText(d: ForecastDisplay, remaining: QuarterForecast["r
 // „Wie viel Geld bekomme ich am Quartalsende?“ – bisher wie die Quartalsübersicht in Finanzen, dazu die exakte Prognose
 // mit offengelegter Rechnung. Die Faktoren stehen gerundet da; geht eine Gleichung gerundet nicht auf, steht „≈“ statt
 // „=“ und ein Satz erklärt das (#51). Ohne Honorarsatz gibt es keine Beträge, nur den Hinweis.
-export function QuarterForecastCard({ forecast, incomePerHour }: QuarterForecastCardProps) {
+export function QuarterForecastCard({ forecast, incomePerHour, mitPlanung = null }: QuarterForecastCardProps) {
   const { quarter, period, soFar, lookback, planned, remaining } = forecast;
   const d = forecastDisplay(forecast);
   const approx = d.sessionsSign === "≈" || d.incomeSign === "≈" || d.totalSign === "≈";
@@ -45,18 +47,27 @@ export function QuarterForecastCard({ forecast, incomePerHour }: QuarterForecast
       <SectionHeader>Honorar {quarter}</SectionHeader>
       {incomePerHour > 0 ? (
         <>
+          {/* Der aktuelle Stand steht groß, die Prognose klein darunter (Pilot-Feedback: Stand wichtiger als Prognose). */}
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
             <div>
-              <p className="text-xs text-muted-foreground">Prognose zum Quartalsende ({formatDateDe(period.to)})</p>
-              <p className="text-3xl font-bold wrap-anywhere text-primary">{formatEuro(d.forecastProfit)}</p>
+              <p className="text-xs text-muted-foreground">Stand heute im Quartal</p>
+              <p className="text-3xl font-bold wrap-anywhere text-primary">{formatEuro(d.soFarProfit)}</p>
+              <p className="text-sm text-muted-foreground">
+                aus {sitzungen(soFar.sessions)} · Einnahmen {formatEuro(soFar.income)} − Supervision {formatEuro(soFar.costs)}
+              </p>
             </div>
             <div className="text-sm text-muted-foreground">
               <p>
-                Bisher <span className="font-semibold text-foreground">{formatEuro(d.soFarProfit)}</span> aus {sitzungen(soFar.sessions)}
+                Prognose zum {formatDateDe(period.to)}:{" "}
+                <span className="font-semibold text-foreground">{formatEuro(d.forecastProfit)}</span>
               </p>
-              <p>
-                Einnahmen {formatEuro(soFar.income)} − Supervision {formatEuro(soFar.costs)}
-              </p>
+              <p>{planned.source === "einstellung" ? "nach deiner Planung" : `nach dem Schnitt der letzten ${lookback.weeks} Wochen`}</p>
+              {mitPlanung && (
+                <p>
+                  Mit deiner Planung ({formatDecimal(mitPlanung.planned.sessionsPerWeek, 1)} pro Woche):{" "}
+                  {formatEuro(forecastDisplay(mitPlanung).forecastProfit)}
+                </p>
+              )}
             </div>
           </div>
           <ForecastAssumption>
@@ -76,7 +87,7 @@ export function QuarterForecastCard({ forecast, incomePerHour }: QuarterForecast
               wie die Quartalsübersicht in Finanzen. Künftige Supervisionskosten und Doppelstunden sind nicht eingerechnet.
             </p>
             <Link href="/finances" className={link}>
-              Geplante Sitzungen pro Woche in Finanzen anpassen
+              Planung zum Vergleich in Finanzen eintragen
             </Link>
           </ForecastAssumption>
         </>

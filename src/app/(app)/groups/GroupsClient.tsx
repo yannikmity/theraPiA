@@ -30,8 +30,9 @@ export function GroupsClient({ initialGroups, initialGroupSessions, ebmStaffeln 
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [plannedSessionCount, setPlannedSessionCount] = useState(20);
-  const [avgKids, setAvgKids] = useState(9);
+  // Zahlenfelder als Text: ein geleertes Feld bleibt leer, keine führende Null („07“).
+  const [plannedSessionCount, setPlannedSessionCount] = useState("20");
+  const [avgKids, setAvgKids] = useState("9");
   const [isSaving, setIsSaving] = useState(false);
   // Sperre gegen doppeltes Absenden: greift sofort, noch bevor isSaving neu gerendert ist.
   const savingRef = useRef(false);
@@ -43,7 +44,12 @@ export function GroupsClient({ initialGroups, initialGroupSessions, ebmStaffeln 
     savingRef.current = true;
     setIsSaving(true);
     setError(null);
-    const result = await runAction(() => addGroup({ name: name.trim(), startDate, plannedSessionCount, avgKids }));
+    const result = await runAction(() => addGroup({
+        name: name.trim(),
+        startDate,
+        plannedSessionCount: Number(plannedSessionCount),
+        avgKids: avgKids.trim() === "" ? null : Number(avgKids),
+      }));
     savingRef.current = false;
     setIsSaving(false);
     if (result.success) {
@@ -85,10 +91,10 @@ export function GroupsClient({ initialGroups, initialGroupSessions, ebmStaffeln 
               <Input id="group-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={isSaving} />
             </FormField>
             <FormField label="Geplante Sitzungen" htmlFor="group-planned">
-              <Input id="group-planned" type="number" inputMode="numeric" value={plannedSessionCount} onChange={(e) => setPlannedSessionCount(Number(e.target.value))} min={1} disabled={isSaving} />
+              <Input id="group-planned" type="number" inputMode="numeric" value={plannedSessionCount} onChange={(e) => setPlannedSessionCount(e.target.value)} min={1} disabled={isSaving} />
             </FormField>
             <FormField label="Kinder (Ø)" htmlFor="group-kids">
-              <Input id="group-kids" type="number" inputMode="numeric" value={avgKids} onChange={(e) => setAvgKids(Number(e.target.value))} min={0} disabled={isSaving} />
+              <Input id="group-kids" type="number" inputMode="numeric" value={avgKids} onChange={(e) => setAvgKids(e.target.value)} min={0} disabled={isSaving} />
             </FormField>
             <Button type="submit" className="w-full" loading={isSaving}>
               Anlegen
