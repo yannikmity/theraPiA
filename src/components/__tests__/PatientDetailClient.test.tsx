@@ -235,6 +235,20 @@ describe("PatientDetailClient", () => {
     );
   });
 
+  // Pilot-Feedback 2026-11-15: iOS kann Datumsfelder nicht leeren.
+  it("entfernt Antrags- und Genehmigungsdatum per Knopf und speichert sie als leer", async () => {
+    vi.mocked(updatePatient).mockResolvedValue({ success: false, error: "egal" });
+    render(<PatientDetailClient {...props} initialPatient={{ ...patient, antragsdatum: "2026-02-01", genehmigungsdatum: "2026-02-20" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Genehmigungsdatum entfernen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Antragsdatum entfernen" }));
+    expect((screen.getByLabelText("Genehmigt am") as HTMLInputElement).value).toBe("");
+    expect(screen.queryByRole("button", { name: "Genehmigungsdatum entfernen" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Antrag speichern" }));
+    await waitFor(() =>
+      expect(updatePatient).toHaveBeenCalledWith(expect.objectContaining({ antragsdatum: null, genehmigungsdatum: null }))
+    );
+  });
+
   it("stapelt die Kontingent-Kacheln auf dem Handy und zeigt sie ab sm in drei Spalten (#66)", () => {
     render(<PatientDetailClient {...props} />);
     const grid = screen.getByText(/Termine übrig · Sprechstunde/).closest(".grid");

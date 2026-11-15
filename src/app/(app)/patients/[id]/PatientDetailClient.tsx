@@ -388,22 +388,52 @@ export function PatientDetailClient({
         <form noValidate aria-label="Antrag" onSubmit={handleSaveAntrag}>
           <SectionHeader>Antrag</SectionHeader>
           <FormField label="Antragsdatum" htmlFor="antragsdatum">
-            <Input
-              id="antragsdatum"
-              type="date"
-              value={antragsdatum ?? ""}
-              onChange={(e) => setAntragsdatum(e.target.value)}
-              disabled={isSaving}
-            />
+            {/* iOS bietet bei Datumsfeldern kein Leeren an (Pilot-Feedback 2026-11-15) – deshalb ein eigener Knopf. */}
+            <div className="flex gap-2">
+              <Input
+                id="antragsdatum"
+                type="date"
+                value={antragsdatum ?? ""}
+                onChange={(e) => setAntragsdatum(e.target.value)}
+                disabled={isSaving}
+                className="min-w-0 flex-1"
+              />
+              {antragsdatum && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAntragsdatum("")}
+                  disabled={isSaving}
+                  aria-label="Antragsdatum entfernen"
+                >
+                  Entfernen
+                </Button>
+              )}
+            </div>
           </FormField>
           <FormField label="Genehmigt am" htmlFor="genehmigungsdatum">
-            <Input
-              id="genehmigungsdatum"
-              type="date"
-              value={genehmigungsdatum}
-              onChange={(e) => setGenehmigungsdatum(e.target.value)}
-              disabled={isSaving}
-            />
+            {/* iOS bietet bei Datumsfeldern kein Leeren an (Pilot-Feedback 2026-11-15) – deshalb ein eigener Knopf. */}
+            <div className="flex gap-2">
+              <Input
+                id="genehmigungsdatum"
+                type="date"
+                value={genehmigungsdatum}
+                onChange={(e) => setGenehmigungsdatum(e.target.value)}
+                disabled={isSaving}
+                className="min-w-0 flex-1"
+              />
+              {genehmigungsdatum && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setGenehmigungsdatum("")}
+                  disabled={isSaving}
+                  aria-label="Genehmigungsdatum entfernen"
+                >
+                  Entfernen
+                </Button>
+              )}
+            </div>
           </FormField>
           <FormField label="Beantragte Behandlungsstunden" htmlFor="beantragte-stunden">
             <Input
