@@ -76,13 +76,12 @@ export function lastSettingBySupervisor(sessions: SupervisionSession[]): Record<
 }
 
 // Vorgabe für „Personen in der SV-Gruppe“: die Gruppengröße der letzten Supervision im Setting „gruppe“ bei derselben
-// Supervisor:in; ohne gespeicherte Größe keine Vorgabe (Kosten für die ganze Dauer).
+// Supervisor:in; war sie „Nicht geteilt“ (ohne Größe), 1 – so bleibt diese Wahl die Vorgabe. Ohne SV-Gruppe kein Eintrag.
 export function lastGruppengroesseBySupervisor(sessions: SupervisionSession[]): Record<string, number> {
   const result: Record<string, number> = {};
   const gruppe = sessions.filter((s) => s.kind === "individual" && s.setting === "gruppe");
   for (const sv of gruppe.sort((a, b) => a.date.localeCompare(b.date))) {
-    if (sv.gruppengroesse) result[sv.supervisorId] = sv.gruppengroesse;
-    else delete result[sv.supervisorId];
+    result[sv.supervisorId] = sv.gruppengroesse ?? 1;
   }
   return result;
 }
@@ -260,8 +259,11 @@ export function linkableGroupSessions(
 
 // Financial calculations
 // Bezahlte Minuten einer Supervision: in der SV-Gruppe nur der eigene Anteil (angerechnete Zeit / Gruppengröße),
-// sonst die ganze Dauer. Kosten = SV-Einheiten der bezahlten Minuten × Kosten je SV-Einheit.
-export function bezahlteMinuten(session: Pick<SupervisionSession, "durationMinutes" | "gruppengroesse">): number {
+// sonst die ganze Dauer; kostenlose Supervisionen 0. Kosten = SV-Einheiten der bezahlten Minuten × Kosten je SV-Einheit.
+export function bezahlteMinuten(
+  session: Pick<SupervisionSession, "durationMinutes" | "gruppengroesse" | "kostenlos">
+): number {
+  if (session.kostenlos) return 0;
   return session.gruppengroesse ? session.durationMinutes / session.gruppengroesse : session.durationMinutes;
 }
 

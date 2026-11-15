@@ -212,6 +212,8 @@ Danach den Health-Check aus [Abschnitt 2](#2-installation) aufrufen und den Fehl
 
 **Update mit Personenzahl der SV-Gruppe (Migration 014):** ergänzt `supervision_sessions.gruppengroesse` (NULL); bestehende Supervisionen rechnen weiter mit vollen Kosten. Additiv – eine ältere Version ignoriert die Spalte und rechnet für alle Supervisionen wieder volle Kosten.
 
+**Update mit kostenlosen Supervisionen (Migration 015):** ergänzt `supervision_sessions.kostenlos` (Vorgabe `false`); bestehende Supervisionen bleiben kostenpflichtig. Additiv – eine ältere Version ignoriert die Spalte und rechnet auch markierte Supervisionen wieder mit Kosten.
+
 **Bestehende Datenbank aus dem Entwicklungs-Setup übernehmen.** Wer theraPiA bisher lokal mit dem `docker-compose.yml` aus dem Hauptverzeichnis des Repositorys genutzt hat (vor Admin-Bereich und Einladungslinks), kann diese Datenbank in die neue Instanz umziehen: Auf dem alten Rechner die Datenbank sichern mit `docker exec therapia_postgres pg_dump --no-owner --no-privileges -U therapia_user therapia | gzip > umzug.sql.gz`, die Datei in den Ordner `~/therapia` auf dem Server kopieren (z. B. mit `scp`) und wie in Abschnitt 6 unter „Wiederherstellen“ mit `BACKUP=umzug.sql.gz` einspielen. Danach `umzug.sql.gz` löschen. Beim Start wendet die App die fehlenden Migrationen an; dabei gilt:
 
 - Alle Nutzer:innen müssen sich einmal neu anmelden. Das ist beabsichtigt.

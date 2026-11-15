@@ -13,8 +13,9 @@ import { supervisionCaseOptions } from "@/lib/calculations";
 import type { Ausbildungsregeln } from "@/lib/ausbildungsregeln/model";
 import { DURATION_MAX_MINUTES, DURATION_MIN_MINUTES, durationError } from "@/components/forms/duration";
 import {
-  DEFAULT_SUPERVISION_MINUTES,
   DEFAULT_THERAPY_SESSION_MINUTES,
+  SV_GRUPPENGROESSE_VORGABE,
+  SV_MINUTEN_JE_FALL,
   durationPresetsFor,
 } from "@/lib/constants";
 import { formatWeekdayDateDe } from "@/lib/dates";
@@ -106,8 +107,9 @@ export function NewSessionClient({
   const router = useRouter();
   const [type, setType] = useState<CaptureType>(initialType);
   const [date, setDate] = useState(today);
+  const initialSetting: SupervisionSetting = settingBySupervisor[initialSupervisors[0]?.id ?? ""] ?? "einzel";
   const [duration, setDuration] = useState(
-    initialType === "therapie" ? DEFAULT_THERAPY_SESSION_MINUTES : DEFAULT_SUPERVISION_MINUTES
+    initialType === "therapie" ? DEFAULT_THERAPY_SESSION_MINUTES : SV_MINUTEN_JE_FALL[initialSetting]
   );
   const [customDuration, setCustomDuration] = useState(false);
   // Freie Dauer („Andere“) als Text: ein geleertes Feld bleibt leer und meldet „Bitte eine Dauer angeben“ – als Zahl
@@ -120,11 +122,12 @@ export function NewSessionClient({
   // Die Patient:in aus der Adresse gilt nur bis zum ersten Speichern – „Weitere Stunde erfassen“ wählt sie nicht erneut vor.
   const [casePatientId, setCasePatientId] = useState(initialCasePatientId);
   // SV-Gruppe: Personen, die Fälle vorstellen – teilt die Kosten (angerechnet wird die volle Zeit je Fall).
-  // "1" = keine geteilte Gruppe: Kosten für die ganze Dauer. Vorgabe aus der letzten SV-Gruppe derselben Supervisor:in.
-  const [gruppengroesse, setGruppengroesse] = useState(String(gruppengroesseBySupervisor[initialSupervisors[0]?.id ?? ""] ?? 1));
-  const [setting, setSetting] = useState<SupervisionSetting>(
-    settingBySupervisor[initialSupervisors[0]?.id ?? ""] ?? "einzel"
+  // "1" = keine geteilte Gruppe: Kosten für die ganze Dauer. Vorgabe aus der letzten SV-Gruppe derselben Supervisor:in,
+  // sonst zu zweit.
+  const [gruppengroesse, setGruppengroesse] = useState(
+    String(gruppengroesseBySupervisor[initialSupervisors[0]?.id ?? ""] ?? SV_GRUPPENGROESSE_VORGABE)
   );
+  const [setting, setSetting] = useState<SupervisionSetting>(initialSetting);
   const [category, setCategory] = useState<SessionCategory>(categoryByPatient[initialPatientId] ?? DEFAULT_CATEGORY);
   const [notes, setNotes] = useState("");
   const [showNotes, setShowNotes] = useState(false);
@@ -174,8 +177,16 @@ export function NewSessionClient({
 
   function chooseSupervisor(id: string) {
     setSupervisorId(id);
-    setSetting(settingBySupervisor[id] ?? "einzel");
-    setGruppengroesse(String(gruppengroesseBySupervisor[id] ?? 1));
+    changeSetting(settingBySupervisor[id] ?? "einzel");
+    setGruppengroesse(String(gruppengroesseBySupervisor[id] ?? SV_GRUPPENGROESSE_VORGABE));
+  }
+
+  // Die Dauer je Fall folgt dem Setting (Einzel 25, Gruppe 50), solange sie noch die Vorgabe des bisherigen Settings
+  // ist – ein selbst gewählter Chip oder eine eingetippte Dauer bleibt stehen.
+  function changeSetting(next: SupervisionSetting) {
+    setSetting(next);
+    if (!customDuration && duration === SV_MINUTEN_JE_FALL[setting]) setDuration(SV_MINUTEN_JE_FALL[next]);
+    setTotalMessage(undefined);
   }
 
   // Wechsel in die Gesprächsziffer beginnt bei deren Vorgabe (10 Min) – 50 Min lägen zwar im Raster, sind dort aber
@@ -375,7 +386,7 @@ export function NewSessionClient({
         onValueChange={(value) => {
           if (!value) return; // Radix erlaubt Abwählen – es bleibt immer eine Art gewählt
           setType(value as CaptureType);
-          setDuration(value === "therapie" ? DEFAULT_THERAPY_SESSION_MINUTES : DEFAULT_SUPERVISION_MINUTES);
+          setDuration(value === "therapie" ? DEFAULT_THERAPY_SESSION_MINUTES : SV_MINUTEN_JE_FALL[setting]);
           setCustomDuration(false);
           setDurationMessage(undefined);
           setTotalMessage(undefined);
@@ -538,7 +549,7 @@ export function NewSessionClient({
           <ToggleGroup
             type="single"
             value={setting}
-            onValueChange={(value) => value && setSetting(value as SupervisionSetting)}
+            onValueChange={(value) => value && changeSetting(value as SupervisionSetting)}
             disabled={isSaving}
             spacing={2}
             aria-label="Setting"
@@ -585,6 +596,12 @@ export function NewSessionClient({
 
       <div className="space-y-2">
         <Label>{type === "supervision" ? "Dauer je Patient:in" : "Dauer"}</Label>
+        {type === "supervision" && (
+          <p className="text-xs text-muted-foreground">
+            Minuten, die über diese Patient:in gesprochen wurde – nicht die Dauer der Therapiesitzung. Vorgabe: Einzel
+            25 Min, Gruppe 50 Min je Fall.
+          </p>
+        )}
         <ToggleGroup
           type="single"
           value={customDuration ? "andere" : String(duration)}

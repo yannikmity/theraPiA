@@ -12,7 +12,8 @@ import {
 } from "@/types";
 
 vi.mock("../auth", () => ({ auth: vi.fn() }));
-import { updateSupervisionSession, deleteSupervisionSession } from "../db/supervision-sessions";
+import { updateSupervisionSession, deleteSupervisionSession, insertSupervisionSession } from "../db/supervision-sessions";
+import { loadUserData } from "../db/user-data";
 
 describe.skipIf(!TEST_DATABASE_URL)("Supervisionen ändern und löschen", () => {
   let cleanup: (() => Promise<void>) | undefined;
@@ -80,6 +81,29 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervisionen ändern und löschen", () => 
 
     await updateSupervisionSession(db, f.a.userId, { ...ownSupervision(f, []), setting: "einzel", gruppengroesse: 3 });
     expect(await groesse()).toBeNull();
+  });
+
+  it("speichert kostenlos und liest es zurück; ohne Angabe kostenpflichtig", async () => {
+    const { db, f } = await setup();
+    const kostenlos = async () =>
+      (await db.query("SELECT kostenlos FROM supervision_sessions WHERE id = $1", [f.a.supervisionId])).rows[0].kostenlos;
+    expect(await kostenlos()).toBe(false);
+
+    await updateSupervisionSession(db, f.a.userId, { ...ownSupervision(f, []), kostenlos: true });
+    expect(await kostenlos()).toBe(true);
+
+    await updateSupervisionSession(db, f.a.userId, { ...ownSupervision(f, []) });
+    expect(await kostenlos()).toBe(false);
+  });
+
+  it("legt eine kostenlose Supervision an; der Export liest das Feld zurück", async () => {
+    const { db, f } = await setup();
+    const neu = { ...ownSupervision(f, []), id: newSupervisionSessionId("550e8400-e29b-41d4-a716-446655440f01"), kostenlos: true };
+    await insertSupervisionSession(db, f.a.userId, neu);
+    const geladen = (await loadUserData(db, f.a.userId)).supervisionSessions.find((s) => s.id === neu.id);
+    expect(geladen?.kostenlos).toBe(true);
+    const alt = (await loadUserData(db, f.a.userId)).supervisionSessions.find((s) => s.id === f.a.supervisionId);
+    expect(alt?.kostenlos).toBe(false);
   });
 
   it("ersetzt bei einer Gruppensupervision die Doppelstunden-Verknüpfungen: alte weg, neue da", async () => {

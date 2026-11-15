@@ -9,7 +9,7 @@ export async function getSupervisionSessions(): Promise<SupervisionSession[]> {
 
   // Single query with LEFT JOINs + array_agg to fix N+1
   const result = await query(
-    `SELECT ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.setting, ss.group_id, ss.gruppengroesse,
+    `SELECT ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.setting, ss.group_id, ss.gruppengroesse, ss.kostenlos,
             COALESCE(array_agg(DISTINCT stl.therapy_session_id) FILTER (WHERE stl.therapy_session_id IS NOT NULL), '{}') AS linked_therapy_session_ids,
             COALESCE(array_agg(DISTINCT sgsl.group_session_id) FILTER (WHERE sgsl.group_session_id IS NOT NULL), '{}') AS linked_group_session_ids,
             ${CASE_SHARES_SQL} AS case_shares
@@ -18,7 +18,7 @@ export async function getSupervisionSessions(): Promise<SupervisionSession[]> {
      LEFT JOIN supervision_therapy_links stl ON stl.supervision_id = ss.id
      LEFT JOIN supervision_group_session_links sgsl ON sgsl.supervision_id = ss.id
      WHERE s.user_id = $1
-     GROUP BY ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.setting, ss.group_id, ss.gruppengroesse
+     GROUP BY ss.id, ss.supervisor_id, ss.date, ss.duration_minutes, ss.kind, ss.setting, ss.group_id, ss.gruppengroesse, ss.kostenlos
      ORDER BY ss.date DESC`,
     [userId]
   );
@@ -229,8 +229,8 @@ export async function insertSupervisionSession(db: Db, userId: string, session: 
   await assertSupervisionOwnership(db, userId, session);
   await assertSupervisionGroup(db, userId, session);
   await db.query(
-    `INSERT INTO supervision_sessions (id, user_id, supervisor_id, date, duration_minutes, kind, setting, group_id, gruppengroesse)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    `INSERT INTO supervision_sessions (id, user_id, supervisor_id, date, duration_minutes, kind, setting, group_id, gruppengroesse, kostenlos)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
     [
       session.id,
       userId,
@@ -241,6 +241,7 @@ export async function insertSupervisionSession(db: Db, userId: string, session: 
       session.setting,
       session.groupId ?? null,
       gruppengroesseFuer(session),
+      session.kostenlos ?? false,
     ]
   );
   await insertSupervisionLinks(db, session);
@@ -277,9 +278,9 @@ export async function updateSupervisionSession(db: Db, userId: string, session: 
   const result = await db.query(
     `UPDATE supervision_sessions
      SET supervisor_id = $1, date = $2, duration_minutes = $3, kind = $4, setting = $5,
-         group_id = CASE WHEN $4::varchar = 'group' THEN group_id END, gruppengroesse = $8, updated_at = now()
+         group_id = CASE WHEN $4::varchar = 'group' THEN group_id END, gruppengroesse = $8, kostenlos = $9, updated_at = now()
      WHERE id = $6 AND user_id = $7`,
-    [session.supervisorId, session.date, session.durationMinutes, session.kind, session.setting, session.id, userId, gruppengroesseFuer(session)]
+    [session.supervisorId, session.date, session.durationMinutes, session.kind, session.setting, session.id, userId, gruppengroesseFuer(session), session.kostenlos ?? false]
   );
   if (result.rowCount === 0) throw new NotFoundError("Supervisionssitzung");
   await db.query("DELETE FROM supervision_therapy_links WHERE supervision_id = $1", [session.id]);

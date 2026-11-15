@@ -191,10 +191,10 @@ describe("NewSessionClient", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("1 Sitzung gespeichert, 1 übersprungen (gab es schon).");
   });
 
-  it("Supervision bleibt erreichbar – auch per Adresse vorgewählt, ohne Vorschläge, mit 50 Minuten", () => {
+  it("Supervision bleibt erreichbar – auch per Adresse vorgewählt, ohne Vorschläge, Einzel mit 25 Minuten je Fall", () => {
     render(<NewSessionClient {...props} initialType="supervision" />);
     expect((screen.getByLabelText("Supervisor:in") as HTMLSelectElement).value).toBe(S1);
-    expect(checked("50 Min")).toBe(true);
+    expect(checked("25 Min")).toBe(true);
     expect(screen.getByText("Besprochene Patient:innen")).toBeDefined();
     expect(screen.queryByRole("button", { name: /Wie letzte Woche/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Notiz hinzufügen" })).toBeNull();
@@ -270,7 +270,7 @@ describe("NewSessionClient", () => {
     vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
     render(<NewSessionClient {...props} />);
     fireEvent.click(chip("Supervision"));
-    expect(checked("50 Min")).toBe(true);
+    expect(checked("25 Min")).toBe(true);
     expect(checked("Einzel")).toBe(true);
     fireEvent.click(screen.getByRole("checkbox", { name: /A-1/ }));
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -278,13 +278,13 @@ describe("NewSessionClient", () => {
       expect(addSupervisionSession).toHaveBeenCalledWith({
         supervisorId: S1,
         date: "2026-09-27",
-        durationMinutes: 50,
+        durationMinutes: 25,
         kind: "individual",
         setting: "einzel",
         gruppengroesse: null,
         linkedTherapySessionIds: ["t-9"],
         linkedGroupSessionIds: [],
-        caseShares: [{ patientId: P1, minutes: 50 }],
+        caseShares: [{ patientId: P1, minutes: 25 }],
       })
     );
     expect((await screen.findByRole("status")).textContent).toContain("Gespeichert!");
@@ -310,9 +310,9 @@ describe("NewSessionClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(addSupervisionSession).toHaveBeenCalledTimes(1));
     expect(firstCall()).toMatchObject({
-      durationMinutes: 50,
+      durationMinutes: 25,
       linkedTherapySessionIds: [],
-      caseShares: [{ patientId: P2, minutes: 50 }],
+      caseShares: [{ patientId: P2, minutes: 25 }],
     });
   });
 
@@ -326,7 +326,7 @@ describe("NewSessionClient", () => {
     expect(screen.getByRole("checkbox", { name: /A-1/ }).getAttribute("aria-checked")).toBe("false");
     expect(screen.getByText("SV fällig")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await waitFor(() => expect(firstCall().caseShares).toEqual([{ patientId: P2, minutes: 50 }]));
+    await waitFor(() => expect(firstCall().caseShares).toEqual([{ patientId: P2, minutes: 25 }]));
   });
 
   it("Weitere Stunde erfassen nach einer Supervision von der Detailseite: die Patient:in ist nicht erneut vorausgewählt", async () => {
@@ -374,7 +374,7 @@ describe("NewSessionClient", () => {
     vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
     render(<NewSessionClient {...props} initialType="supervision" />);
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await waitFor(() => expect(firstCall().durationMinutes).toBe(50));
+    await waitFor(() => expect(firstCall().durationMinutes).toBe(25));
     expect(firstCall().linkedTherapySessionIds).toEqual([]);
     expect(firstCall().caseShares).toEqual([]);
   });
@@ -526,6 +526,7 @@ describe("NewSessionClient", () => {
       <NewSessionClient {...props} initialType="supervision" supervisionPatients={many} initialUnsupervisedSessions={sessions} />
     );
     expect(screen.getAllByText("SV fällig")).toHaveLength(10);
+    fireEvent.click(chip("50 Min"));
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     const message = screen.getByText(new RegExp(`Gesamtdauer 500 Min überschreitet das Maximum von ${DURATION_MAX_MINUTES} Min`));
     expect(message.getAttribute("role")).toBe("alert");
@@ -817,5 +818,41 @@ describe("NewSessionClient", () => {
     await waitFor(() =>
       expect(addSupervisionSession).toHaveBeenCalledWith(expect.objectContaining({ setting: "gruppe", gruppengroesse: 3 }))
     );
+  });
+  // Pilot-Feedback 2026-11-15: Einzel 25 Min je Fall, in der SV-Gruppe 50 Min je Fall, zu zweit.
+  it("Supervision: Setting Gruppe setzt 50 Min je Fall und 2 Personen, zurück auf Einzel wieder 25 Min", async () => {
+    vi.mocked(addSupervisionSession).mockResolvedValue({ success: true, data: undefined });
+    render(<NewSessionClient {...props} initialType="supervision" />);
+    expect(checked("25 Min")).toBe(true);
+    fireEvent.click(chip("Gruppe"));
+    expect(checked("50 Min")).toBe(true);
+    expect(screen.getByRole("radio", { name: "2" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(chip("Einzel"));
+    expect(checked("25 Min")).toBe(true);
+    fireEvent.click(chip("Gruppe"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /A-2/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(addSupervisionSession).toHaveBeenCalledTimes(1));
+    expect(firstCall()).toMatchObject({ setting: "gruppe", gruppengroesse: 2, caseShares: [{ patientId: P2, minutes: 50 }] });
+  });
+
+  it("Supervision: ein selbst gewählter Chip bleibt beim Wechsel des Settings stehen", () => {
+    render(<NewSessionClient {...props} initialType="supervision" />);
+    fireEvent.click(chip("75 Min"));
+    fireEvent.click(chip("Gruppe"));
+    expect(checked("75 Min")).toBe(true);
+  });
+
+  it("Supervision: „Nicht geteilt“ der letzten SV-Gruppe bleibt die Vorgabe, nur ohne frühere SV-Gruppe 2 Personen", () => {
+    render(<NewSessionClient {...props} initialType="supervision" settingBySupervisor={{ [S1]: "gruppe" }} gruppengroesseBySupervisor={{ [S1]: 1 }} />);
+    expect(chip("Nicht geteilt").getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("Supervision: eine frei eingetippte Dauer bleibt beim Wechsel des Settings stehen", () => {
+    render(<NewSessionClient {...props} initialType="supervision" />);
+    fireEvent.click(chip("Andere"));
+    fireEvent.change(screen.getByLabelText("Dauer in Minuten"), { target: { value: "35" } });
+    fireEvent.click(chip("Gruppe"));
+    expect((screen.getByLabelText("Dauer in Minuten") as HTMLInputElement).value).toBe("35");
   });
 });

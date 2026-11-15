@@ -83,27 +83,34 @@ describe("CSV-Dateien", () => {
   it("Ausgaben: Kosten je Supervision wie auf der Finanzseite, ohne hinterlegte Kosten 0, Summenzeile (#65)", () => {
     const l = lines(expensesCsv(sampleUserData()));
     expect(l[0]).toBe(
-      `${CSV_BOM}Datum;Quartal;Supervisor:in;Art;Setting;Dauer (Minuten);SV-Einheiten;Kosten je SV-Einheit (EUR);Betrag (EUR);Personen in der SV-Gruppe;SV-Einheiten bezahlt`
+      `${CSV_BOM}Datum;Quartal;Supervisor:in;Art;Setting;Dauer (Minuten);SV-Einheiten;Kosten je SV-Einheit (EUR);Betrag (EUR);Personen in der SV-Gruppe;SV-Einheiten bezahlt;Kostenlos`
     );
-    expect(l[1]).toBe("2026-02-20;2026 Q1;Supervision Eins;Einzeltherapie;Einzel;60;1,20;80,00;96,00;;1,20");
-    expect(l[2]).toBe("2026-03-15;2026 Q1;Supervision Zwei;Einzeltherapie;Gruppe;90;1,80;0,00;0,00;;1,80");
-    expect(l[3]).toBe("2026-04-05;2026 Q2;Supervision Eins;Gruppentherapie;Einzel;60;1,20;80,00;96,00;;1,20");
-    expect(l[4]).toBe("Summe;;;;;;;;192,00;;");
+    expect(l[1]).toBe("2026-02-20;2026 Q1;Supervision Eins;Einzeltherapie;Einzel;60;1,20;80,00;96,00;;1,20;nein");
+    expect(l[2]).toBe("2026-03-15;2026 Q1;Supervision Zwei;Einzeltherapie;Gruppe;90;1,80;0,00;0,00;;1,80;nein");
+    expect(l[3]).toBe("2026-04-05;2026 Q2;Supervision Eins;Gruppentherapie;Einzel;60;1,20;80,00;96,00;;1,20;nein");
+    expect(l[4]).toBe("Summe;;;;;;;;192,00;;;");
     expect(l.at(-1)).toBe("");
+  });
+
+  it("Ausgaben: kostenlose Supervision – Dauer und Einheiten bleiben, Betrag 0", () => {
+    const data = sampleUserData();
+    data.supervisionSessions = [{ ...data.supervisionSessions[0], durationMinutes: 50, kostenlos: true }];
+    expect(lines(expensesCsv(data))[1]).toBe("2026-02-20;2026 Q1;Supervision Eins;Einzeltherapie;Einzel;50;1,00;80,00;0,00;;0,00;ja");
+    expect(financeTotals(data.therapySessions, data.supervisionSessions, [], 0, { [data.supervisors[0].id]: 80 }, []).totalCosts).toBe(0);
   });
 
   it("Ausgaben: in der SV-Gruppe nur der eigene Anteil – angerechnet 50 Min, zu zweit bezahlt 25 Min", () => {
     const data = sampleUserData();
     data.supervisionSessions = [{ ...data.supervisionSessions[0], durationMinutes: 50, setting: "gruppe", gruppengroesse: 2 }];
     // Kosten je SV-Einheit 80 EUR: 25 bezahlte Minuten = 0,5 Einheiten = 40 EUR
-    expect(lines(expensesCsv(data))[1]).toBe("2026-02-20;2026 Q1;Supervision Eins;Einzeltherapie;Gruppe;50;1,00;80,00;40,00;2;0,50");
+    expect(lines(expensesCsv(data))[1]).toBe("2026-02-20;2026 Q1;Supervision Eins;Einzeltherapie;Gruppe;50;1,00;80,00;40,00;2;0,50;nein");
   });
 
   it("Ausgaben: Summe wie die Kachel „Ausgaben“ auf der Finanzseite (financeTotals)", () => {
     const data = sampleUserData();
     const costs = Object.fromEntries(data.supervisors.map((s) => [s.id, s.costPerHour ?? 0]));
     const { totalCosts } = financeTotals(data.therapySessions, data.supervisionSessions, [], 0, costs, []);
-    expect(lines(expensesCsv(data)).at(-2)).toBe(`Summe;;;;;;;;${totalCosts.toFixed(2).replace(".", ",")};;`);
+    expect(lines(expensesCsv(data)).at(-2)).toBe(`Summe;;;;;;;;${totalCosts.toFixed(2).replace(".", ",")};;;`);
   });
 
   it("Ausgaben: Summenzeile addiert die auf Cent gerundeten Beträge", () => {
@@ -112,9 +119,9 @@ describe("CSV-Dateien", () => {
     data.supervisionSessions[0].durationMinutes = 25;
     data.supervisionSessions[2].durationMinutes = 25;
     const l = lines(expensesCsv(data));
-    expect(l[1].endsWith(";0,50;33,33;16,67;;0,50")).toBe(true);
-    expect(l[3].endsWith(";0,50;33,33;16,67;;0,50")).toBe(true);
-    expect(l[4]).toBe("Summe;;;;;;;;33,34;;");
+    expect(l[1].endsWith(";0,50;33,33;16,67;;0,50;nein")).toBe(true);
+    expect(l[3].endsWith(";0,50;33,33;16,67;;0,50;nein")).toBe(true);
+    expect(l[4]).toBe("Summe;;;;;;;;33,34;;;");
   });
 
   it("Ausgaben: mit Jahr nur Supervisionen dieses Kalenderjahrs", () => {
@@ -122,8 +129,8 @@ describe("CSV-Dateien", () => {
     data.supervisionSessions[0].date = "2025-12-31";
     const l = lines(expensesCsv(data, { year: 2026 }));
     expect(l.slice(1, -1).map((line) => line.split(";")[0])).toEqual(["2026-03-15", "2026-04-05", "Summe"]);
-    expect(l.at(-2)).toBe("Summe;;;;;;;;96,00;;");
-    expect(lines(expensesCsv(data, { year: 2024 })).slice(1, -1)).toEqual(["Summe;;;;;;;;0,00;;"]);
+    expect(l.at(-2)).toBe("Summe;;;;;;;;96,00;;;");
+    expect(lines(expensesCsv(data, { year: 2024 })).slice(1, -1)).toEqual(["Summe;;;;;;;;0,00;;;"]);
   });
 
   it("Jahr aus der Adresse: nur vier Ziffern", () => {

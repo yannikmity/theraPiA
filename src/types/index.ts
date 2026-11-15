@@ -81,6 +81,8 @@ export interface SupervisionSession {
   // SV-Gruppe (Setting „gruppe“): Anzahl Personen, die Fälle vorstellen. Angerechnet wird durationMinutes, bezahlt nur
   // der eigene Anteil durationMinutes / gruppengroesse. null/fehlend = Kosten für die ganze Dauer.
   gruppengroesse?: number | null;
+  // Supervision ohne Kosten (z. B. ein kostenloser Termin); die angerechnete Zeit bleibt. Fehlend = false.
+  kostenlos?: boolean;
 }
 
 export interface SupervisionCaseShare {

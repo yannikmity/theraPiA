@@ -9,7 +9,7 @@ import { BookOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { SupervisionSession } from "@/types";
 import { linkableTherapySessions, linkableGroupSessions, totalSupervisionHours } from "@/lib/calculations";
 import { formatDecimal } from "@/lib/csv";
-import { SUPERVISION_KIND_LABELS, SUPERVISION_SETTING_LABELS } from "@/lib/labels";
+import { CATEGORY_LABELS, SUPERVISION_KIND_LABELS, SUPERVISION_SETTING_LABELS } from "@/lib/labels";
 import { ActionError, errorAt, type ScopedActionError } from "@/components/ActionError";
 import { runAction } from "@/lib/run-action";
 import { track, trackFailure } from "@/lib/analytics/track";
@@ -79,7 +79,8 @@ export function SupervisionClient({ initialData, initialEditingId, returnHref }:
       .sort((a, b) => b.date.localeCompare(a.date))
       .map((ts) => ({
         id: ts.id,
-        label: `${caseLabel(ts.patientId)} · ${format(parseISO(ts.date), "dd.MM.yyyy")} · ${ts.durationMinutes} Min`,
+        // Kategorie und Dauer der Therapiesitzung, damit sie nicht wie Supervisionszeit aussieht (Pilot-Feedback 2026-11-15).
+        label: `${caseLabel(ts.patientId)} · ${format(parseISO(ts.date), "dd.MM.yyyy")} · ${CATEGORY_LABELS[ts.category]} (${ts.durationMinutes} Min)`,
         patientId: ts.patientId,
       }));
   }
@@ -96,6 +97,7 @@ export function SupervisionClient({ initialData, initialEditingId, returnHref }:
         kind: sv.kind,
         setting: values.setting,
         gruppengroesse: values.gruppengroesse,
+        kostenlos: values.kostenlos,
         linkedTherapySessionIds: sv.kind === "group" ? [] : values.linkedIds,
         linkedGroupSessionIds: sv.kind === "group" ? values.linkedIds : [],
         caseShares: sv.kind === "group" ? [] : values.caseShares,
@@ -191,6 +193,7 @@ export function SupervisionClient({ initialData, initialEditingId, returnHref }:
                     <span className="ml-2 text-xs text-muted-foreground">{supervisorName(sv.supervisorId)}</span>
                     <p className="text-xs text-muted-foreground">
                       {SUPERVISION_KIND_LABELS[sv.kind]} · {SUPERVISION_SETTING_LABELS[sv.setting]} · {linkCount(sv)} zugeordnet
+                      {sv.kostenlos ? " · kostenlos" : ""}
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground">{sv.durationMinutes} Min</span>

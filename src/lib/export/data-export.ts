@@ -15,7 +15,8 @@ export const DATA_EXPORT_FORMAT = "therapia-datenexport";
 // Version 7 (#47): Supervisionen mit groupId (Gruppe einer Gruppensupervision, sonst null).
 // Version 8: Patient:innen mit beantragteBezugspersonStunden (eigenes Kontingent der Bezugspersonenstunden).
 // Version 9: Sitzungskategorien anamnese und exploration, Supervisionen mit gruppengroesse.
-export const DATA_EXPORT_VERSION = 9;
+// Version 10: Supervisionen mit kostenlos.
+export const DATA_EXPORT_VERSION = 10;
 
 export interface DataExport {
   format: typeof DATA_EXPORT_FORMAT;

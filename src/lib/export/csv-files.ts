@@ -209,9 +209,10 @@ export function expensesCsv(data: UserData, options: CsvExportOptions = {}): str
       euro(cents / 100),
       sv.gruppengroesse ?? null,
       formatDecimal(paidUnits),
+      sv.kostenlos ? "ja" : "nein",
     ];
   });
-  rows.push(["Summe", "", "", "", "", "", "", "", euro(totalCents / 100), "", ""]);
+  rows.push(["Summe", "", "", "", "", "", "", "", euro(totalCents / 100), "", "", ""]);
   return toCsv(
     [
       "Datum",
@@ -225,6 +226,7 @@ export function expensesCsv(data: UserData, options: CsvExportOptions = {}): str
       "Betrag (EUR)",
       "Personen in der SV-Gruppe",
       "SV-Einheiten bezahlt",
+      "Kostenlos",
     ],
     rows
   );
