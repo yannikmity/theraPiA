@@ -24,6 +24,7 @@ function patient(id: typeof P1, chiffre: string, isActive = true): Patient {
     createdAt: "2026-01-05T08:00:00.000Z",
     antragsdatum: null,
     beantragteStunden: null,
+    beantragteBezugspersonStunden: null,
     genehmigungsdatum: null,
     sprechstundenAmbulanz: 0,
   };

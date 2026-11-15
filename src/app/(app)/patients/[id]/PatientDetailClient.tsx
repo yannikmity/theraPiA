@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
@@ -8,6 +9,7 @@ import { Clock, BookOpen, CheckCircle, Pencil, Trash2 } from "lucide-react";
 import {
   calculatePatientRatio,
   remainingContingentForPatient,
+  remainingBezugspersonContingentForPatient,
   bezugspersonenStundenForPatient,
   roundUnits,
 } from "@/lib/calculations";
@@ -25,7 +27,7 @@ import { MELDUNG_CHIFFRE_PFLICHT } from "@/lib/constants";
 import { track, trackFailure } from "@/lib/analytics/track";
 import { SectionHeader, FormField, ConfirmButton, fieldErrorId } from "@/components/ui";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -36,6 +38,7 @@ import {
   updateTherapySession,
   deleteTherapySession,
   deletePatient,
+  deleteSupervisionFromPatient,
   type PatientDetailData,
 } from "./actions";
 import { TherapySessionEditForm, type TherapySessionFormValues } from "./TherapySessionEditForm";
@@ -77,6 +80,9 @@ export function PatientDetailClient({
   const [antragsdatum, setAntragsdatum] = useState(initialPatient?.antragsdatum ?? "");
   const [beantragteStunden, setBeantragteStunden] = useState(
     initialPatient?.beantragteStunden?.toString() ?? ""
+  );
+  const [beantragteBezugspersonStunden, setBeantragteBezugspersonStunden] = useState(
+    initialPatient?.beantragteBezugspersonStunden?.toString() ?? ""
   );
   const [genehmigungsdatum, setGenehmigungsdatum] = useState(initialPatient?.genehmigungsdatum ?? "");
   const [sprechstundenAmbulanz, setSprechstundenAmbulanz] = useState(String(initialPatient?.sprechstundenAmbulanz ?? 0));
@@ -127,7 +133,8 @@ export function PatientDetailClient({
   function savePatient(
     scope: "antrag" | "status",
     changes: Partial<
-      Pick<Patient, "endDate" | "isActive" | "antragsdatum" | "beantragteStunden" | "genehmigungsdatum" | "sprechstundenAmbulanz">
+      Pick<Patient, "endDate" | "isActive" | "antragsdatum" | "beantragteStunden" | "beantragteBezugspersonStunden" | "genehmigungsdatum" | "sprechstundenAmbulanz"
+      >
     >
   ) {
     if (!patient) return;
@@ -140,6 +147,7 @@ export function PatientDetailClient({
         isActive: patient.isActive,
         antragsdatum: patient.antragsdatum,
         beantragteStunden: patient.beantragteStunden,
+        beantragteBezugspersonStunden: patient.beantragteBezugspersonStunden,
         genehmigungsdatum: patient.genehmigungsdatum,
         sprechstundenAmbulanz: patient.sprechstundenAmbulanz,
         ...changes,
@@ -154,6 +162,7 @@ export function PatientDetailClient({
     void savePatient("antrag", {
       antragsdatum: antragsdatum || null,
       beantragteStunden: beantragteStunden ? Number(beantragteStunden) : null,
+      beantragteBezugspersonStunden: beantragteBezugspersonStunden ? Number(beantragteBezugspersonStunden) : null,
       genehmigungsdatum: genehmigungsdatum || null,
       sprechstundenAmbulanz: Number(sprechstundenAmbulanz) || 0,
     });
@@ -200,6 +209,21 @@ export function PatientDetailClient({
     }
   }
 
+  async function handleDeleteSupervision(sv: SupervisionSession) {
+    if (!patient) return;
+    setIsSaving(true);
+    setError(null);
+    const result = await runAction(() => deleteSupervisionFromPatient({ id: sv.id, patientId: patient.id }));
+    setIsSaving(false);
+    if (result.success) {
+      track("entry_deleted", { entity: "supervision" });
+      applyData(result.data);
+    } else {
+      trackFailure("supervision", "delete", result);
+      setError({ scope: `sv:${sv.id}`, result });
+    }
+  }
+
   async function handleDeletePatient() {
     if (!patient) return;
     setIsSaving(true);
@@ -222,6 +246,7 @@ export function PatientDetailClient({
 
   const ratio = calculatePatientRatio(patient, therapySessions, supervisionSessions, regeln);
   const remaining = remainingContingentForPatient(patient, therapySessions);
+  const remainingBezugsperson = remainingBezugspersonContingentForPatient(patient, therapySessions);
   const bezugspersonenStunden = roundUnits(bezugspersonenStundenForPatient(therapySessions, patient.id));
   const patientTherapySessions = therapySessions
     .filter((s) => s.patientId === patient.id)
@@ -283,10 +308,19 @@ export function PatientDetailClient({
 
       <div className="grid grid-cols-2 gap-3">
         <ContingentTile remaining={remaining} />
-        <Card className="text-center">
-          <p className="text-2xl font-bold wrap-anywhere text-foreground">{formatDecimal(bezugspersonenStunden, 1)}</p>
-          <p className="text-xs text-muted-foreground">Bezugspersonenstunden</p>
-        </Card>
+        {/* Mit beantragten Bezugspersonenstunden zeigt die Kachel den Rest dieses Kontingents, sonst die erfassten Stunden. */}
+        {remainingBezugsperson !== null ? (
+          <ContingentTile
+            remaining={remainingBezugsperson}
+            art="Bezugspersonenstunden"
+            hinweis={`${formatDecimal(bezugspersonenStunden, 1)} erfasst`}
+          />
+        ) : (
+          <Card className="text-center">
+            <p className="text-2xl font-bold wrap-anywhere text-foreground">{formatDecimal(bezugspersonenStunden, 1)}</p>
+            <p className="text-xs text-muted-foreground">Bezugspersonenstunden</p>
+          </Card>
+        )}
       </div>
 
       {/* Auf dem Handy untereinander: die Beschriftungen sind für drei Spalten zu lang. */}
@@ -367,9 +401,22 @@ export function PatientDetailClient({
             <Input
               id="beantragte-stunden"
               type="number"
+              inputMode="numeric"
               value={beantragteStunden}
               onChange={(e) => setBeantragteStunden(e.target.value)}
               placeholder="z. B. 60"
+              min={1}
+              disabled={isSaving}
+            />
+          </FormField>
+          <FormField label="Beantragte Bezugspersonenstunden" htmlFor="beantragte-bezugsperson-stunden">
+            <Input
+              id="beantragte-bezugsperson-stunden"
+              type="number"
+              inputMode="numeric"
+              value={beantragteBezugspersonStunden}
+              onChange={(e) => setBeantragteBezugspersonStunden(e.target.value)}
+              placeholder="z. B. 15"
               min={1}
               disabled={isSaving}
             />
@@ -387,8 +434,9 @@ export function PatientDetailClient({
             />
           </FormField>
           <p className="text-xs text-muted-foreground">
-            Von den 10 Sprechstunden je Fall übernimmt die Ambulanzleitung oft einige, meist 2. Das Behandlungsstunden-Kontingent
-            zählt ab „Genehmigt am“, ohne Datum ab dem Antragsdatum.
+            Von den 10 Sprechstunden je Fall übernimmt die Ambulanzleitung oft einige, meist 2. Behandlungs- und
+            Bezugspersonenstunden sind getrennte Kontingente (z. B. KZT 12 + 3, LZT 60 + 15); beide zählen ab „Genehmigt am“,
+            ohne Datum ab dem Antragsdatum.
           </p>
           <ActionError result={errorAt(error, "antrag")} />
           <Button type="submit" variant="outline" loading={isSaving} className="w-full">
@@ -504,17 +552,33 @@ export function PatientDetailClient({
             {linkedSupervisions.map((sv) => {
               const supervisor = initialSupervisors.find((s) => s.id === sv.supervisorId);
               return (
-                <div key={sv.id} className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2">
-                    <BookOpen size={14} className="text-success" aria-hidden="true" />
-                    <div>
-                      <span className="text-sm text-foreground">
-                        {format(parseISO(sv.date), "dd. MMM yyyy", { locale: de })}
-                      </span>
-                      <span className="ml-2 text-xs text-muted-foreground">{supervisor?.name}</span>
-                    </div>
+                <div key={sv.id} className="flex flex-wrap items-center gap-x-2 gap-y-2 py-2">
+                  <BookOpen size={14} className="shrink-0 text-success" aria-hidden="true" />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-sm text-foreground">
+                      {format(parseISO(sv.date), "dd. MMM yyyy", { locale: de })}
+                    </span>
+                    <span className="ml-2 text-xs text-muted-foreground">{supervisor?.name}</span>
                   </div>
                   <span className="text-sm text-muted-foreground">{shareOf(sv) ?? sv.durationMinutes} Min</span>
+                  {/* Bearbeiten im gemeinsamen Formular der Supervisionsseite (alle Fälle der Supervision), danach zurück hierher. */}
+                  <Link
+                    href={`/supervision?bearbeiten=${sv.id}&patient=${patient.id}`}
+                    aria-label={`Supervision vom ${format(parseISO(sv.date), "dd.MM.yyyy")} bearbeiten`}
+                    className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+                  >
+                    <Pencil />
+                  </Link>
+                  <ConfirmButton
+                    ariaLabel={`Supervision vom ${format(parseISO(sv.date), "dd.MM.yyyy")} löschen`}
+                    label={<Trash2 size={16} />}
+                    question={`Supervision vom ${format(parseISO(sv.date), "dd.MM.yyyy")} wirklich löschen?`}
+                    description="Die Supervision wird ganz gelöscht, auch für andere Fälle, die darin besprochen wurden. Die Therapiesitzungen bleiben bestehen."
+                    onConfirm={() => handleDeleteSupervision(sv)}
+                    loading={isSaving}
+                    className="size-8 text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
+                  />
+                  <ActionError result={errorAt(error, `sv:${sv.id}`)} />
                 </div>
               );
             })}

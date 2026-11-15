@@ -23,6 +23,7 @@ describe("mapPatientRow", () => {
       created_at: "2024-01-01T00:00:00Z",
       antragsdatum: null,
       beantragte_stunden: null,
+      beantragte_bezugsperson_stunden: null,
       genehmigungsdatum: null,
       sprechstunden_ambulanz: 0,
     };
@@ -53,6 +54,7 @@ describe("mapPatientRow", () => {
       created_at: "2024-01-01T00:00:00Z",
       antragsdatum: "2024-03-01",
       beantragte_stunden: 60,
+      beantragte_bezugsperson_stunden: null,
       genehmigungsdatum: "2024-04-15",
       sprechstunden_ambulanz: 3,
     };

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { groupSessionCounts, ambulanzzeitRemaining, groupIncomeTotal, getEbmFee, totalSupervisionHours } from "@/lib/calculations";
 import { Group, GroupSession, GroupSessionStatus, SupervisionSession, Supervisor } from "@/types";
 import type { Regelwerk } from "@/lib/ausbildungsregeln/model";
@@ -22,7 +22,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { PageHeader } from "@/components/layout/PageHeader";
 import { cn } from "@/lib/utils";
 import { formatDecimal } from "@/lib/csv";
-import { addGroupSession, updateGroupSession, deleteGroupSession, addGroupSupervisionSession } from "./actions";
+import { addGroupSession, updateGroupSession, deleteGroupSession, addGroupSupervisionSession, updateGroupAction } from "./actions";
 
 interface GroupDetailClientProps {
   initialGroup: Group;
@@ -48,7 +48,13 @@ export function GroupDetailClient({
   initialSupervisors,
   regelwerk,
 }: GroupDetailClientProps) {
-  const [group] = useState(initialGroup);
+  const [group, setGroup] = useState(initialGroup);
+  // Gruppe bearbeiten: Felder als Text, damit ein geleertes Feld leer bleibt statt sofort „0“ zu werden.
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [groupName, setGroupName] = useState(initialGroup.name);
+  const [groupStart, setGroupStart] = useState(initialGroup.startDate);
+  const [groupPlanned, setGroupPlanned] = useState(String(initialGroup.plannedSessionCount));
+  const [groupKids, setGroupKids] = useState(initialGroup.avgKids === null ? "" : String(initialGroup.avgKids));
   const [sessions, setSessions] = useState(initialGroupSessions);
   const [supervisionSessions, setSupervisionSessions] = useState(initialSupervisionSessions);
   const [supervisedIds, setSupervisedIds] = useState(initialSupervisedGroupSessionIds);
@@ -172,6 +178,41 @@ export function GroupDetailClient({
     }
   }
 
+  function openGroupForm() {
+    setGroupName(group.name);
+    setGroupStart(group.startDate);
+    setGroupPlanned(String(group.plannedSessionCount));
+    setGroupKids(group.avgKids === null ? "" : String(group.avgKids));
+    setError((e) => (e?.scope === "group-form" ? null : e));
+    setShowGroupForm(true);
+  }
+
+  async function handleUpdateGroup(e: React.FormEvent) {
+    e.preventDefault();
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
+    setError(null);
+    const result = await runAction(() =>
+      updateGroupAction({
+        id: group.id,
+        name: groupName.trim(),
+        startDate: groupStart,
+        plannedSessionCount: Number(groupPlanned),
+        avgKids: groupKids.trim() === "" ? null : Number(groupKids.replace(",", ".")),
+        isActive: group.isActive,
+      })
+    );
+    savingRef.current = false;
+    setIsSaving(false);
+    if (result.success && result.data.group) {
+      setGroup(result.data.group);
+      setShowGroupForm(false);
+    } else if (!result.success) {
+      setError({ scope: "group-form", result });
+    }
+  }
+
   async function handleDeleteSession(session: GroupSession) {
     setIsSaving(true);
     setError(null);
@@ -191,6 +232,53 @@ export function GroupDetailClient({
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <PageHeader title={group.name} backHref="/groups" />
+
+      {/* Gruppe nachträglich bearbeiten: Name, Startdatum, geplante Doppelstunden, Kinder im Schnitt. */}
+      <Card>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">
+            Seit {format(parseISO(group.startDate), "dd.MM.yyyy")} · {group.plannedSessionCount} Doppelstunden geplant
+          </p>
+          {!showGroupForm && (
+            <Button variant="ghost" size="sm" onClick={openGroupForm} disabled={isSaving}>
+              <Pencil /> Bearbeiten
+            </Button>
+          )}
+        </div>
+        {showGroupForm && (
+          <form noValidate aria-label="Gruppe bearbeiten" onSubmit={handleUpdateGroup} className="space-y-3">
+            <FormField label="Name" htmlFor="group-edit-name">
+              <Input id="group-edit-name" type="text" value={groupName} onChange={(e) => setGroupName(e.target.value)} maxLength={100} disabled={isSaving} />
+            </FormField>
+            <FormField label="Startdatum" htmlFor="group-edit-start">
+              <Input id="group-edit-start" type="date" value={groupStart} onChange={(e) => setGroupStart(e.target.value)} disabled={isSaving} />
+            </FormField>
+            <FormField label="Geplante Doppelstunden" htmlFor="group-edit-planned">
+              <Input id="group-edit-planned" type="number" inputMode="numeric" min={1} value={groupPlanned} onChange={(e) => setGroupPlanned(e.target.value)} disabled={isSaving} />
+            </FormField>
+            <FormField label="Kinder im Schnitt" htmlFor="group-edit-kids">
+              <Input id="group-edit-kids" type="number" inputMode="decimal" min={0} value={groupKids} onChange={(e) => setGroupKids(e.target.value)} disabled={isSaving} />
+            </FormField>
+            <ActionError result={errorAt(error, "group-form")} />
+            <div className="flex gap-2">
+              <Button type="submit" loading={isSaving} className="flex-1">
+                Gruppe speichern
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowGroupForm(false);
+                  setError((e) => (e?.scope === "group-form" ? null : e));
+                }}
+                disabled={isSaving}
+              >
+                Abbrechen
+              </Button>
+            </div>
+          </form>
+        )}
+      </Card>
 
       <Card>
         <ProgressBar current={counts.durchgefuehrt} target={regelwerk.regeln.gruppeDoppelstundenZiel} label="Doppelstunden gesamt" color="blue" />
@@ -248,7 +336,7 @@ export function GroupDetailClient({
             </FormField>
             {status === "durchgefuehrt" && (
               <FormField label="Anwesende Kinder" htmlFor="gs-kids">
-                <Input id="gs-kids" type="number" value={childCount} onChange={(e) => setChildCount(Number(e.target.value))} min={0} disabled={isSaving} />
+                <Input id="gs-kids" type="number" inputMode="numeric" value={childCount} onChange={(e) => setChildCount(Number(e.target.value))} min={0} disabled={isSaving} />
                 {feeVorschau && (
                   <p className="text-xs text-muted-foreground">
                     Honorar-Anteil: {feeVorschau.share.toLocaleString("de-DE")} EUR

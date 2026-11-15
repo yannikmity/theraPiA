@@ -1,9 +1,10 @@
-import { auth } from "../auth";
+import { getSession } from "../require-session";
 import { ForbiddenError, NotAuthenticatedError } from "../errors";
 import type { Role } from "../registration-policy";
 
+// Über die gecachte Sitzung: Eine Seite, die mehrere DB-Helfer parallel aufruft, prüft die Sitzung nur einmal.
 export async function getCurrentUser(): Promise<{ id: string; role: Role }> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new NotAuthenticatedError();
   }

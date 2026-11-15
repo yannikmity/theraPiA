@@ -72,6 +72,7 @@ describe("updatePatientSchema", () => {
       isActive: true,
       antragsdatum: null,
       beantragteStunden: null,
+      beantragteBezugspersonStunden: null,
       genehmigungsdatum: null,
       sprechstundenAmbulanz: 0,
     });
@@ -88,6 +89,7 @@ describe("updatePatientSchema", () => {
       isActive: false,
       antragsdatum: "2024-03-01",
       beantragteStunden: 60,
+      beantragteBezugspersonStunden: null,
       genehmigungsdatum: "2024-04-01",
       sprechstundenAmbulanz: 3,
     });
@@ -104,6 +106,7 @@ describe("updatePatientSchema", () => {
     isActive: true,
     antragsdatum: "2024-03-01",
     beantragteStunden: 60,
+    beantragteBezugspersonStunden: null,
     genehmigungsdatum: null,
     sprechstundenAmbulanz: 0,
   };
@@ -649,5 +652,11 @@ describe("deutsche Meldungen für Dauer und Datum (#57)", () => {
     expect(messages(addGroupSessionSchema.safeParse({ ...group, date: "" }))).toEqual(["Bitte ein Datum angeben"]);
     expect(messages(addPatientSchema.safeParse({ chiffre: "A-1", therapyType: "kurzzeittherapie", startDate: "" }))).toEqual(["Bitte ein Datum angeben"]);
     expect(messages(nachweisFilterSchema.safeParse({ from: "", to: "2026-09-30" }))).toEqual(["Bitte ein Datum angeben"]);
+  });
+
+  it("lehnt Daten ab, die es im Kalender nicht gibt, statt sie an die Datenbank zu geben", () => {
+    expect(messages(addTherapySessionSchema.safeParse({ ...therapy, date: "2026-02-31" }))).toEqual(["Ungültiges Datum"]);
+    expect(messages(addTherapySessionSchema.safeParse({ ...therapy, date: "2026-13-01" }))).toEqual(["Ungültiges Datum"]);
+    expect(addTherapySessionSchema.safeParse({ ...therapy, date: "2028-02-29" }).success).toBe(true);
   });
 });

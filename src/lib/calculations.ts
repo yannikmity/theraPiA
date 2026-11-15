@@ -302,6 +302,23 @@ export function remainingContingentForPatient(
   return patient.beantragteStunden - minutesToUnits(usedMinutes);
 }
 
+// Bezugspersonen-Kontingent des Antrags: beantragte Bezugspersonenstunden minus die Einheiten aller Bezugspersonen-
+// Sitzungen ab Genehmigungsdatum (sonst Antragsdatum), gleiche Regeln wie remainingContingentForPatient. Ohne Antrag
+// oder ohne beantragte Bezugspersonenstunden null.
+export function remainingBezugspersonContingentForPatient(
+  patient: Patient,
+  therapySessions: TherapySession[]
+): number | null {
+  if (!patient.antragsdatum || !patient.beantragteBezugspersonStunden) return null;
+  const ab = patient.genehmigungsdatum ?? patient.antragsdatum;
+
+  const usedMinutes = therapySessions
+    .filter((s) => s.patientId === patient.id && s.category === "bezugsperson" && s.date >= ab)
+    .reduce((sum, s) => sum + s.durationMinutes, 0);
+
+  return patient.beantragteBezugspersonStunden - minutesToUnits(usedMinutes);
+}
+
 export function bezugspersonenStundenForPatient(
   therapySessions: TherapySession[],
   patientId: PatientId

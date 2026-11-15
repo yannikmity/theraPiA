@@ -31,6 +31,7 @@ export interface PatientRow {
   created_at: string | Date;
   antragsdatum: string | null;
   beantragte_stunden: number | null;
+  beantragte_bezugsperson_stunden: number | null;
   genehmigungsdatum: string | null;
   sprechstunden_ambulanz: number;
 }
@@ -104,6 +105,7 @@ export function mapPatientRow(row: PatientRow): Patient {
     createdAt: toISOString(row.created_at),
     antragsdatum: row.antragsdatum,
     beantragteStunden: row.beantragte_stunden,
+    beantragteBezugspersonStunden: row.beantragte_bezugsperson_stunden ?? null,
     genehmigungsdatum: row.genehmigungsdatum,
     sprechstundenAmbulanz: row.sprechstunden_ambulanz,
   };

@@ -1,6 +1,7 @@
 import { query } from "../db";
 import { Supervisor } from "@/types";
 import { mapSupervisorRow, SupervisorRow } from "../db-mappers";
+import { NotFoundError } from "../errors";
 import { getCurrentUserId } from "./get-current-user";
 
 export async function getSupervisors(): Promise<Supervisor[]> {
@@ -27,10 +28,11 @@ export async function addSupervisor(supervisor: Supervisor): Promise<void> {
 
 export async function updateSupervisor(supervisor: Supervisor): Promise<void> {
   const userId = await getCurrentUserId();
-  await query(
+  const result = await query(
     `UPDATE supervisors
      SET name = $1, cost_per_hour = $2, is_active = $3
      WHERE id = $4 AND user_id = $5`,
     [supervisor.name, supervisor.costPerHour, supervisor.isActive, supervisor.id, userId]
   );
+  if (result.rowCount === 0) throw new NotFoundError("Supervisor:in");
 }

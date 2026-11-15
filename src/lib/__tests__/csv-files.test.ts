@@ -61,17 +61,23 @@ describe("CSV-Dateien", () => {
   it("Patient:innen: nur Chiffre und Stammdaten plus Sitzungssumme", () => {
     const l = lines(patientsCsv(sampleUserData()));
     expect(l[0]).toBe(
-      `${CSV_BOM}Chiffre;Therapieart;Beginn;Ende;Aktiv;Antragsdatum;Genehmigungsdatum;Beantragte Behandlungsstunden;Sprechstunden durch Ambulanzleitung;Sitzungen (Anzahl);Sitzungen (Stunden)`
+      `${CSV_BOM}Chiffre;Therapieart;Beginn;Ende;Aktiv;Antragsdatum;Genehmigungsdatum;Beantragte Behandlungsstunden;Sprechstunden durch Ambulanzleitung;Sitzungen (Anzahl);Sitzungen (Stunden);Beantragte Bezugspersonenstunden`
     );
-    expect(l[1]).toBe("A-01;Kurzzeittherapie;2026-01-05;;ja;;;;0;2;1,67");
-    expect(l[2]).toBe("A-02;Langzeittherapie;2026-02-01;;ja;2026-02-10;;60;0;2;1,83");
+    expect(l[1]).toBe("A-01;Kurzzeittherapie;2026-01-05;;ja;;;;0;2;1,67;");
+    expect(l[2]).toBe("A-02;Langzeittherapie;2026-02-01;;ja;2026-02-10;;60;0;2;1,83;");
   });
 
   it("Patient:innen: Genehmigungsdatum und Sprechstunden der Ambulanzleitung (#66)", () => {
     const data = sampleUserData();
     data.patients[1].genehmigungsdatum = "2026-03-01";
     data.patients[1].sprechstundenAmbulanz = 2;
-    expect(lines(patientsCsv(data))[2]).toBe("A-02;Langzeittherapie;2026-02-01;;ja;2026-02-10;2026-03-01;60;2;2;1,83");
+    expect(lines(patientsCsv(data))[2]).toBe("A-02;Langzeittherapie;2026-02-01;;ja;2026-02-10;2026-03-01;60;2;2;1,83;");
+  });
+
+  it("Patient:innen: beantragte Bezugspersonenstunden als eigene Spalte", () => {
+    const data = sampleUserData();
+    data.patients[1].beantragteBezugspersonStunden = 15;
+    expect(lines(patientsCsv(data))[2]).toBe("A-02;Langzeittherapie;2026-02-01;;ja;2026-02-10;;60;0;2;1,83;15");
   });
 
   it("Ausgaben: Kosten je Supervision wie auf der Finanzseite, ohne hinterlegte Kosten 0, Summenzeile (#65)", () => {

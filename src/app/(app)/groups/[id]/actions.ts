@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
 import {
   getGroup,
+  updateGroup as updateGroupDB,
   getGroupSessionsForGroup,
   addGroupSession as addGroupSessionDB,
   updateGroupSession as updateGroupSessionDB,
@@ -29,6 +30,7 @@ import {
   updateGroupSessionSchema,
   deleteGroupSessionSchema,
   addGroupSupervisionSessionSchema,
+  updateGroupSchema,
 } from "@/lib/validation";
 import { ActionResult } from "@/lib/action-result";
 import { z } from "zod";
@@ -136,5 +138,24 @@ export const addGroupSupervisionSession: (
     };
     await addSupervisionSessionDB(session);
     return loadGroupDetailData(input.groupId);
+  },
+});
+
+// Gruppe nachträglich bearbeiten: Name, Startdatum, geplante Doppelstunden, Kinder im Schnitt. Doppelstunden und
+// Supervisionen hängen an der ID und bleiben unverändert.
+export const updateGroupAction: (
+  input: z.infer<typeof updateGroupSchema>
+) => Promise<ActionResult<GroupDetailData>> = createAction({
+  schema: updateGroupSchema,
+  handler: async (input) => {
+    await updateGroupDB({
+      id: input.id as GroupId,
+      name: input.name,
+      startDate: input.startDate,
+      plannedSessionCount: input.plannedSessionCount,
+      avgKids: input.avgKids,
+      isActive: input.isActive,
+    });
+    return loadGroupDetailData(input.id);
   },
 });

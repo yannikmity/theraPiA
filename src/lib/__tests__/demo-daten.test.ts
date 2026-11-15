@@ -39,6 +39,7 @@ function alsDomaene(data: DemoData) {
     createdAt: "2026-01-01T00:00:00.000Z",
     antragsdatum: p.antragsdatum,
     beantragteStunden: p.beantragteStunden,
+    beantragteBezugspersonStunden: null,
     genehmigungsdatum: p.genehmigungsdatum,
     sprechstundenAmbulanz: p.sprechstundenAmbulanz,
   }));

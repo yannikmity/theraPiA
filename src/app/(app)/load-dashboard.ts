@@ -48,7 +48,7 @@ export async function loadDashboard() {
       href: `/patients/${s.patientId}`,
       date: s.date,
       duration: s.durationMinutes,
-      label: patients.find((p) => p.id === s.patientId)?.chiffre || "Unbekannt",
+      patientId: s.patientId as string | null,
     })),
     ...supervisionSessions.map((s) => ({
       key: `s-${s.id}`,
@@ -56,12 +56,17 @@ export async function loadDashboard() {
       href: "/supervision",
       date: s.date,
       duration: s.durationMinutes,
-      label: "Supervision",
+      patientId: null as string | null,
     })),
   ]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, DASHBOARD_RECENT_ENTRIES)
-    .map((entry) => ({ ...entry, dateLabel: format(parseISO(entry.date), "dd. MMM yyyy", { locale: de }) }));
+    // Chiffre erst nach dem Kürzen nachschlagen: nur für die angezeigten Einträge statt für alle Sitzungen.
+    .map(({ patientId, ...entry }) => ({
+      ...entry,
+      label: patientId === null ? "Supervision" : patients.find((p) => p.id === patientId)?.chiffre || "Unbekannt",
+      dateLabel: format(parseISO(entry.date), "dd. MMM yyyy", { locale: de }),
+    }));
 
   const activePatients = patients.filter((p) => p.isActive);
   const due = supervisionDuePatientIds(therapySessions, supervisionSessions, activePatients, regeln);

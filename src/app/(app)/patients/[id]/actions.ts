@@ -5,12 +5,13 @@ import {
   getPatient,
   updatePatient as updatePatientDB,
   renamePatient as renamePatientDB,
-  getTherapySessions,
+  getTherapySessionsForPatient,
   getSupervisionSessions,
   getSupervisors,
   updateTherapySession as updateTherapySessionDB,
   deleteTherapySession as deleteTherapySessionDB,
   deletePatient as deletePatientDB,
+  deleteSupervisionSession as deleteSupervisionSessionDB,
 } from "@/lib/db/index";
 import { Patient, TherapySession, SupervisionSession, Supervisor } from "@/types";
 import { createAction } from "@/lib/safe-action";
@@ -19,6 +20,7 @@ import {
   renamePatientSchema,
   updateTherapySessionSchema,
   deleteTherapySessionSchema,
+  deleteSupervisionFromPatientSchema,
   deleteByIdSchema,
 } from "@/lib/validation";
 import { ActionResult } from "@/lib/action-result";
@@ -34,7 +36,9 @@ export interface PatientDetailData {
 export async function loadPatientDetailData(patientId: string): Promise<PatientDetailData> {
   const [patient, therapySessions, supervisionSessions, supervisors] = await Promise.all([
     getPatient(patientId),
-    getTherapySessions(),
+    // Nur die Sitzungen dieses Falls: Zahlen und Listen der Seite rechnen ausschließlich damit, und Notizen anderer
+    // Fälle gehören nicht in den Browser. Supervisionen kommen vorerst noch vollständig (ohne Notizen).
+    getTherapySessionsForPatient(patientId),
     getSupervisionSessions(),
     getSupervisors(),
   ]);
@@ -99,5 +103,17 @@ export const deletePatient: (
   schema: deleteByIdSchema,
   handler: async (input, userId) => {
     await deletePatientDB(db, userId, input.id);
+  },
+});
+
+// Supervision von der Patient:innen-Seite löschen (Feedback: dort wird sie gesucht). Gleiche DB-Funktion wie auf der
+// Supervisionsseite; die Supervision verschwindet für alle Fälle, ihre Zuordnungen fallen mit, die Sitzungen bleiben.
+export const deleteSupervisionFromPatient: (
+  input: z.infer<typeof deleteSupervisionFromPatientSchema>
+) => Promise<ActionResult<PatientDetailData>> = createAction({
+  schema: deleteSupervisionFromPatientSchema,
+  handler: async (input, userId) => {
+    await deleteSupervisionSessionDB(db, userId, input.id);
+    return loadPatientDetailData(input.patientId);
   },
 });

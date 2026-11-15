@@ -11,6 +11,7 @@ import {
   therapyHoursForPatient,
   supervisionHoursForPatient,
   remainingContingentForPatient,
+  remainingBezugspersonContingentForPatient,
   bezugspersonenStundenForPatient,
   roundUnits,
   getEbmFee,
@@ -101,6 +102,7 @@ function makePatient(overrides: Partial<Patient> = {}): Patient {
     createdAt: "2024-01-01T00:00:00Z",
     antragsdatum: null,
     beantragteStunden: null,
+    beantragteBezugspersonStunden: null,
     genehmigungsdatum: null,
     sprechstundenAmbulanz: 0,
     ...overrides,
@@ -421,6 +423,37 @@ describe("remainingContingentForPatient", () => {
     const antrag = makePatient({ antragsdatum: "2026-02-01", beantragteStunden: 24, genehmigungsdatum: null });
     expect(remainingContingentForPatient(antrag, sessions)).toBe(22);
     expect(remainingContingentForPatient({ ...antrag, genehmigungsdatum: "2026-02-20" }, sessions)).toBe(23);
+  });
+});
+
+describe("remainingBezugspersonContingentForPatient", () => {
+  it("ist null ohne Antrag oder ohne beantragte Bezugspersonenstunden", () => {
+    expect(remainingBezugspersonContingentForPatient(makePatient({ antragsdatum: null, beantragteBezugspersonStunden: 3 }), [])).toBeNull();
+    expect(remainingBezugspersonContingentForPatient(makePatient({ antragsdatum: "2026-02-01", beantragteBezugspersonStunden: null }), [])).toBeNull();
+  });
+
+  it("zieht nur Bezugspersonensitzungen ab Genehmigung ab; Behandlungsstunden bleiben im eigenen Kontingent (KZT 12 + 3)", () => {
+    const patient = makePatient({
+      antragsdatum: "2026-02-01",
+      genehmigungsdatum: "2026-02-10",
+      beantragteStunden: 12,
+      beantragteBezugspersonStunden: 3,
+    });
+    const sessions = [
+      makeTherapySession({ date: "2026-02-05", category: "bezugsperson", durationMinutes: 50 }), // vor Genehmigung
+      makeTherapySession({ id: newTherapySessionId("ts-2"), date: "2026-02-12", category: "bezugsperson", durationMinutes: 50 }),
+      makeTherapySession({ id: newTherapySessionId("ts-3"), date: "2026-02-19", category: "bezugsperson", durationMinutes: 25 }),
+      makeTherapySession({ id: newTherapySessionId("ts-4"), date: "2026-02-20", category: "behandlung", durationMinutes: 50 }),
+      makeTherapySession({
+        id: newTherapySessionId("ts-5"),
+        patientId: newPatientId("p-2"),
+        date: "2026-02-21",
+        category: "bezugsperson",
+        durationMinutes: 50,
+      }), // andere Patient:in
+    ];
+    expect(remainingBezugspersonContingentForPatient(patient, sessions)).toBe(1.5);
+    expect(remainingContingentForPatient(patient, sessions)).toBe(11);
   });
 });
 
