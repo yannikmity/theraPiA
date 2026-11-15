@@ -148,12 +148,12 @@ describe("SupervisionClient", () => {
       within(screen.getByRole("group", { name: "Besprochene Sitzungen" }))
         .getAllByRole("checkbox")
         .map((box) => box.parentElement?.textContent ?? "");
-    expect(labels()).toEqual(["A-1 · 11.09.2026 · 50 Min", "A-1 · 10.09.2026 · 50 Min"]);
+    expect(labels()).toEqual(["A-1 · 11.09.2026 · Behandlung (50 Min)", "A-1 · 10.09.2026 · Behandlung (50 Min)"]);
     const date = screen.getByLabelText("Datum");
     fireEvent.change(date, { target: { value: "2026-09-10" } });
-    expect(labels()).toEqual(["A-1 · 10.09.2026 · 50 Min"]);
+    expect(labels()).toEqual(["A-1 · 10.09.2026 · Behandlung (50 Min)"]);
     fireEvent.change(date, { target: { value: "2026-09-30" } });
-    expect(labels()).toEqual(["A-1 · 25.09.2026 · 50 Min", "A-1 · 11.09.2026 · 50 Min", "A-1 · 10.09.2026 · 50 Min"]);
+    expect(labels()).toEqual(["A-1 · 25.09.2026 · Behandlung (50 Min)", "A-1 · 11.09.2026 · Behandlung (50 Min)", "A-1 · 10.09.2026 · Behandlung (50 Min)"]);
   });
 
   it("nennt in der Liste neben der Art das Setting", () => {

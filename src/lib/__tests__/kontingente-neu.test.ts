@@ -44,4 +44,10 @@ describe("bezahlteMinuten", () => {
     expect(bezahlteMinuten({ durationMinutes: 50, gruppengroesse: null })).toBe(50);
     expect(bezahlteMinuten({ durationMinutes: 50 })).toBe(50);
   });
+
+  it("kostenlose Supervision: nichts bezahlt, auch in der SV-Gruppe", () => {
+    expect(bezahlteMinuten({ durationMinutes: 50, kostenlos: true })).toBe(0);
+    expect(bezahlteMinuten({ durationMinutes: 50, gruppengroesse: 2, kostenlos: true })).toBe(0);
+    expect(bezahlteMinuten({ durationMinutes: 50, kostenlos: false })).toBe(50);
+  });
 });

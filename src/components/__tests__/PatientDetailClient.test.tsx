@@ -104,6 +104,28 @@ describe("PatientDetailClient", () => {
     );
   });
 
+  // Pilot-Feedback 2026-11-15: nie die Gesamtdauer der Supervision als Anteil dieser Patient:in zeigen.
+  it("Zugeordnete Supervision: zeigt den Anteil dieser Patient:in, ohne Anteil nicht die Gesamtdauer", () => {
+    const base: SupervisionSession = {
+      id: newSupervisionSessionId("550e8400-e29b-41d4-a716-4466554400b1"),
+      supervisorId: newSupervisorId("s-1"),
+      date: "2026-09-22",
+      durationMinutes: 100,
+      kind: "individual",
+      setting: "gruppe",
+      linkedTherapySessionIds: [newTherapySessionId("t-1")],
+      linkedGroupSessionIds: [],
+      groupId: null,
+      caseShares: [{ patientId: newPatientId(P1), minutes: 50 }],
+    };
+    const ohne = { ...base, id: newSupervisionSessionId("550e8400-e29b-41d4-a716-4466554400b2"), date: "2026-09-21", caseShares: [] };
+    render(<PatientDetailClient {...props} initialSupervisionSessions={[base, ohne]} />);
+    const svCard = card("Zugeordnete Supervisionen (2)");
+    expect(svCard.textContent).toContain("50 Min");
+    expect(svCard.textContent).toContain("ohne Anteil");
+    expect(svCard.textContent).not.toContain("100 Min");
+  });
+
   it("Zugeordnete Supervision: Bearbeiten führt in das Formular der Supervisionsseite, Löschen geht direkt hier", async () => {
     const sv: SupervisionSession = {
       id: newSupervisionSessionId("550e8400-e29b-41d4-a716-4466554400a1"),

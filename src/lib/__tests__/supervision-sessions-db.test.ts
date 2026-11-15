@@ -82,6 +82,19 @@ describe.skipIf(!TEST_DATABASE_URL)("Supervisionen ändern und löschen", () => 
     expect(await groesse()).toBeNull();
   });
 
+  it("speichert kostenlos und liest es zurück; ohne Angabe kostenpflichtig", async () => {
+    const { db, f } = await setup();
+    const kostenlos = async () =>
+      (await db.query("SELECT kostenlos FROM supervision_sessions WHERE id = $1", [f.a.supervisionId])).rows[0].kostenlos;
+    expect(await kostenlos()).toBe(false);
+
+    await updateSupervisionSession(db, f.a.userId, { ...ownSupervision(f, []), kostenlos: true });
+    expect(await kostenlos()).toBe(true);
+
+    await updateSupervisionSession(db, f.a.userId, { ...ownSupervision(f, []) });
+    expect(await kostenlos()).toBe(false);
+  });
+
   it("ersetzt bei einer Gruppensupervision die Doppelstunden-Verknüpfungen: alte weg, neue da", async () => {
     const { db, f } = await setup();
     const one = async (sql: string, params: unknown[]) => (await db.query(sql, params)).rows[0];

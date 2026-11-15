@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { dateError } from "@/components/forms/date";
 import { DURATION_MAX_MINUTES, DURATION_MIN_MINUTES, durationError } from "@/components/forms/duration";
+import { SV_MINUTEN_JE_FALL } from "@/lib/constants";
 import { compareNatural } from "@/lib/collation";
 import { SUPERVISION_SETTING_LABELS, SUPERVISION_SETTING_ORDER } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ export interface SupervisionFormValues {
   durationMinutes: number;
   setting: SupervisionSetting;
   gruppengroesse: number | null;
+  kostenlos: boolean;
   linkedIds: string[];
   caseShares: { patientId: string; minutes: number }[];
 }
@@ -64,6 +66,7 @@ export function SupervisionSessionEditForm({
   const [gruppengroesse, setGruppengroesse] = useState(session.gruppengroesse ? String(session.gruppengroesse) : "");
   // Nur bei Supervisionen von Einzeltherapien im Setting „gruppe“; leer = Kosten für die ganze Dauer.
   const groesse = session.kind === "individual" && setting === "gruppe" && gruppengroesse !== "" ? Number(gruppengroesse) : null;
+  const [kostenlos, setKostenlos] = useState(session.kostenlos ?? false);
   const [date, setDate] = useState(session.date);
   const [duration, setDuration] = useState(String(session.durationMinutes));
   const [linkedIdsAll, setLinkedIds] = useState<string[]>(
@@ -102,7 +105,13 @@ export function SupervisionSessionEditForm({
   const dateMessage = submitted ? dateError(date) : undefined;
 
   function toggle(id: string) {
+    const adding = !linkedIdsAll.includes(id);
     setLinkedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    // Ein neu hinzukommender Fall startet mit der Vorgabe je Setting statt mit einem leeren Pflichtfeld.
+    const patientId = patientOf.get(id);
+    if (adding && session.kind !== "group" && patientId !== undefined && !caseMinutes[patientId]) {
+      setCaseMinutes((prev) => ({ ...prev, [patientId]: String(SV_MINUTEN_JE_FALL[setting]) }));
+    }
   }
 
   function submit(e: React.FormEvent) {
@@ -122,7 +131,7 @@ export function SupervisionSessionEditForm({
         durationRef.current?.focus();
         return;
       }
-      void onSave({ supervisorId, date, durationMinutes: Number(duration), setting, gruppengroesse: groesse, linkedIds, caseShares: [] });
+      void onSave({ supervisorId, date, durationMinutes: Number(duration), setting, gruppengroesse: groesse, kostenlos, linkedIds, caseShares: [] });
       return;
     }
     const invalid = caseIds.find((id) => durationError(caseMinutes[id] ?? ""));
@@ -133,7 +142,7 @@ export function SupervisionSessionEditForm({
     if (caseTotal > DURATION_MAX_MINUTES) return;
     const caseShares = caseIds.map((id) => ({ patientId: id, minutes: Number(caseMinutes[id]) }));
     // caseTotal enthält die Zeit ohne Fall – sie bleibt beim Speichern erhalten.
-    void onSave({ supervisorId, date, durationMinutes: caseTotal, setting, gruppengroesse: groesse, linkedIds, caseShares });
+    void onSave({ supervisorId, date, durationMinutes: caseTotal, setting, gruppengroesse: groesse, kostenlos, linkedIds, caseShares });
   }
 
   return (
@@ -187,6 +196,18 @@ export function SupervisionSessionEditForm({
           </NativeSelect>
         </FormField>
       )}
+      <label className="flex cursor-pointer items-center gap-3 text-sm text-foreground">
+        <Checkbox
+          checked={kostenlos}
+          onCheckedChange={(v) => setKostenlos(v === true)}
+          disabled={saving}
+          aria-describedby={idFor("kostenlos-hinweis")}
+        />
+        Kostenlos
+      </label>
+      <p id={idFor("kostenlos-hinweis")} className="-mt-2 text-xs text-muted-foreground">
+        Zählt weiter als Supervision, kostet aber nichts.
+      </p>
       <FormField label="Datum" htmlFor={idFor("date")} error={dateMessage}>
         <Input
           ref={dateRef}
@@ -222,6 +243,11 @@ export function SupervisionSessionEditForm({
         <legend className="mb-2 text-sm leading-none font-medium">
           {session.kind === "group" ? "Besprochene Doppelstunden" : "Besprochene Sitzungen"}
         </legend>
+        {session.kind !== "group" && (
+          <p className="mb-2 text-xs text-muted-foreground">
+            Therapiesitzungen mit ihrer eigenen Dauer. Die Supervisionszeit je Fall steht darunter.
+          </p>
+        )}
         {linkOptions.length === 0 ? (
           <p className="text-xs text-muted-foreground">Keine zuordenbaren Sitzungen vorhanden.</p>
         ) : (
@@ -246,7 +272,11 @@ export function SupervisionSessionEditForm({
       </fieldset>
       {caseIds.length > 0 && (
         <fieldset className="min-w-0 space-y-2">
-          <legend className="mb-2 text-sm leading-none font-medium">Dauer je Patient:in (Minuten)</legend>
+          <legend className="mb-2 text-sm leading-none font-medium">Supervisionszeit je Patient:in (Minuten)</legend>
+          <p className="text-xs text-muted-foreground">
+            Minuten, die über diese Patient:in gesprochen wurde. Vorgabe: Einzel 25, Gruppe 50. Die Gesamtdauer ergibt
+            sich aus der Summe.
+          </p>
           {caseIds.map((id) => {
             const fieldId = idFor(`case-${id}`);
             const message = submitted ? durationError(caseMinutes[id] ?? "") : undefined;

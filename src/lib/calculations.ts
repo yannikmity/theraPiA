@@ -260,8 +260,11 @@ export function linkableGroupSessions(
 
 // Financial calculations
 // Bezahlte Minuten einer Supervision: in der SV-Gruppe nur der eigene Anteil (angerechnete Zeit / Gruppengröße),
-// sonst die ganze Dauer. Kosten = SV-Einheiten der bezahlten Minuten × Kosten je SV-Einheit.
-export function bezahlteMinuten(session: Pick<SupervisionSession, "durationMinutes" | "gruppengroesse">): number {
+// sonst die ganze Dauer; kostenlose Supervisionen 0. Kosten = SV-Einheiten der bezahlten Minuten × Kosten je SV-Einheit.
+export function bezahlteMinuten(
+  session: Pick<SupervisionSession, "durationMinutes" | "gruppengroesse" | "kostenlos">
+): number {
+  if (session.kostenlos) return 0;
   return session.gruppengroesse ? session.durationMinutes / session.gruppengroesse : session.durationMinutes;
 }
 

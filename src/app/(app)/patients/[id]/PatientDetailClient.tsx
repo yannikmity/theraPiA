@@ -568,7 +568,10 @@ export function PatientDetailClient({
                     </span>
                     <span className="ml-2 text-xs text-muted-foreground">{supervisor?.name}</span>
                   </div>
-                  <span className="text-sm text-muted-foreground">{shareOf(sv) ?? sv.durationMinutes} Min</span>
+                  {/* Nur der Anteil dieser Patient:in zählt; ohne Anteil nie die Gesamtdauer der Supervision zeigen. */}
+                  <span className="text-sm text-muted-foreground">
+                    {shareOf(sv) !== undefined ? `${shareOf(sv)} Min` : "ohne Anteil"}
+                  </span>
                   {/* Bearbeiten im gemeinsamen Formular der Supervisionsseite (alle Fälle der Supervision), danach zurück hierher. */}
                   <Link
                     href={`/supervision?bearbeiten=${sv.id}&patient=${patient.id}`}

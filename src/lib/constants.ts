@@ -51,6 +51,11 @@ export const DASHBOARD_RECENT_ENTRIES = 5;
 // (#64); andere Werte bleiben über „Andere“ möglich.
 export const DEFAULT_THERAPY_SESSION_MINUTES = 50;
 export const DEFAULT_SUPERVISION_MINUTES = 50;
+// Supervision von Einzeltherapien: Vorgabe je Fall nach Setting. Allein mit der Supervisor:in meist 25 Min je Fall,
+// in der SV-Gruppe 50 Min je Fall (Pilot-Feedback 2026-11-15). Andere Werte bleiben über die Chips möglich.
+export const SV_MINUTEN_JE_FALL: Record<"einzel" | "gruppe", number> = { einzel: 25, gruppe: 50 };
+// Ohne frühere SV-Gruppe bei derselben Supervisor:in: zu zweit.
+export const SV_GRUPPENGROESSE_VORGABE = 2;
 export const DURATION_PRESETS_MINUTES = [25, 50, 75, 100];
 // Gesprächsziffern werden in 10-Minuten-Schritten abgerechnet (#66); alle anderen Kategorien im 25er-Raster (#64).
 export const GESPRAECHSZIFFER_PRESETS_MINUTES = [10, 20, 30, 40, 50];

@@ -47,6 +47,7 @@ describe("SupervisionSessionEditForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(onSave).toHaveBeenCalledWith({
       gruppengroesse: null,
+      kostenlos: false,
       supervisorId: "s-1",
       date: "2026-09-20",
       durationMinutes: 90,
@@ -67,10 +68,32 @@ describe("SupervisionSessionEditForm", () => {
     expect(screen.getByText("Gesamt: 60 Min")).toBeDefined();
   });
 
-  it("verlangt eine Dauer für eine neu gewählte Patient:in", () => {
+  // Pilot-Feedback 2026-11-15: ein neu angehakter Fall startet mit der Vorgabe je Setting statt leer.
+  it("belegt eine neu gewählte Patient:in mit der Vorgabe je Setting vor (Einzel 25, Gruppe 50)", () => {
+    renderForm();
+    fireEvent.click(within(screen.getByRole("group", { name: "Besprochene Sitzungen" })).getAllByRole("checkbox")[1]);
+    expect((screen.getByLabelText("A-2") as HTMLInputElement).value).toBe("25");
+  });
+
+  it("belegt im Setting Gruppe eine neu gewählte Patient:in mit 50 Min vor", () => {
+    renderForm(undefined, { setting: "gruppe" });
+    fireEvent.click(within(screen.getByRole("group", { name: "Besprochene Sitzungen" })).getAllByRole("checkbox")[1]);
+    expect((screen.getByLabelText("A-2") as HTMLInputElement).value).toBe("50");
+  });
+
+  it("speichert kostenlos, die angerechnete Dauer bleibt", () => {
+    const onSave = vi.fn(async () => {});
+    renderForm(onSave);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Kostenlos" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ kostenlos: true, durationMinutes: 60 }));
+  });
+
+  it("verlangt eine Dauer für eine neu gewählte Patient:in, wenn das Feld geleert wird", () => {
     const onSave = vi.fn(async () => {});
     renderForm(onSave);
     fireEvent.click(within(screen.getByRole("group", { name: "Besprochene Sitzungen" })).getAllByRole("checkbox")[1]);
+    fireEvent.change(screen.getByLabelText("A-2"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(onSave).not.toHaveBeenCalled();
     const field = screen.getByLabelText("A-2");
@@ -222,6 +245,7 @@ describe("SupervisionSessionEditForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(onSave).toHaveBeenCalledWith({
       gruppengroesse: null,
+      kostenlos: false,
       supervisorId: "s-1",
       date: "2026-09-20",
       durationMinutes: 60,
