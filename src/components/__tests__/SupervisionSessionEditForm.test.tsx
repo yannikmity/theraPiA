@@ -81,6 +81,15 @@ describe("SupervisionSessionEditForm", () => {
     expect((screen.getByLabelText("A-2") as HTMLInputElement).value).toBe("50");
   });
 
+  it("übernimmt bei einer Supervision ohne Fälle die Gesamtdauer für den ersten Fall", () => {
+    const onSave = vi.fn(async () => {});
+    renderForm(onSave, { durationMinutes: 50, linkedTherapySessionIds: [], caseShares: [] });
+    fireEvent.click(within(screen.getByRole("group", { name: "Besprochene Sitzungen" })).getAllByRole("checkbox")[0]);
+    expect((screen.getByLabelText("A-1") as HTMLInputElement).value).toBe("50");
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ durationMinutes: 50 }));
+  });
+
   it("speichert kostenlos, die angerechnete Dauer bleibt", () => {
     const onSave = vi.fn(async () => {});
     renderForm(onSave);

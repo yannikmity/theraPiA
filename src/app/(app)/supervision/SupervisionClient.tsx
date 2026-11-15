@@ -193,6 +193,7 @@ export function SupervisionClient({ initialData, initialEditingId, returnHref }:
                     <span className="ml-2 text-xs text-muted-foreground">{supervisorName(sv.supervisorId)}</span>
                     <p className="text-xs text-muted-foreground">
                       {SUPERVISION_KIND_LABELS[sv.kind]} · {SUPERVISION_SETTING_LABELS[sv.setting]} · {linkCount(sv)} zugeordnet
+                      {sv.kostenlos ? " · kostenlos" : ""}
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground">{sv.durationMinutes} Min</span>

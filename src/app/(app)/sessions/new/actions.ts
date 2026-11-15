@@ -176,6 +176,7 @@ export const addSupervisionSession: (
       kind: input.kind,
       setting: input.setting,
       gruppengroesse: input.gruppengroesse ?? null,
+      kostenlos: input.kostenlos ?? false,
       linkedTherapySessionIds: input.linkedTherapySessionIds as TherapySessionId[],
       linkedGroupSessionIds: input.linkedGroupSessionIds as GroupSessionId[],
       caseShares: input.caseShares.map((c) => ({ patientId: c.patientId as PatientId, minutes: c.minutes })),

@@ -108,9 +108,13 @@ export function SupervisionSessionEditForm({
     const adding = !linkedIdsAll.includes(id);
     setLinkedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     // Ein neu hinzukommender Fall startet mit der Vorgabe je Setting statt mit einem leeren Pflichtfeld.
+    // Der erste Fall einer Supervision ohne Fälle übernimmt die bisherige Gesamtdauer, damit die angerechnete Zeit
+    // nicht unbemerkt schrumpft.
     const patientId = patientOf.get(id);
     if (adding && session.kind !== "group" && patientId !== undefined && !caseMinutes[patientId]) {
-      setCaseMinutes((prev) => ({ ...prev, [patientId]: String(SV_MINUTEN_JE_FALL[setting]) }));
+      const ersterFall = caseIds.length === 0 && !durationError(duration);
+      const vorgabe = ersterFall ? duration : String(SV_MINUTEN_JE_FALL[setting]);
+      setCaseMinutes((prev) => ({ ...prev, [patientId]: vorgabe }));
     }
   }
 

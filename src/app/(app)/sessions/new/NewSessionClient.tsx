@@ -181,10 +181,11 @@ export function NewSessionClient({
     setGruppengroesse(String(gruppengroesseBySupervisor[id] ?? SV_GRUPPENGROESSE_VORGABE));
   }
 
-  // Die Dauer je Fall folgt dem Setting (Einzel 25, Gruppe 50), solange keine freie Dauer eingetippt ist.
+  // Die Dauer je Fall folgt dem Setting (Einzel 25, Gruppe 50), solange sie noch die Vorgabe des bisherigen Settings
+  // ist – ein selbst gewählter Chip oder eine eingetippte Dauer bleibt stehen.
   function changeSetting(next: SupervisionSetting) {
     setSetting(next);
-    if (!customDuration) setDuration(SV_MINUTEN_JE_FALL[next]);
+    if (!customDuration && duration === SV_MINUTEN_JE_FALL[setting]) setDuration(SV_MINUTEN_JE_FALL[next]);
     setTotalMessage(undefined);
   }
 

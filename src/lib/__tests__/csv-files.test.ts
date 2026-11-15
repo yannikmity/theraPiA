@@ -92,6 +92,13 @@ describe("CSV-Dateien", () => {
     expect(l.at(-1)).toBe("");
   });
 
+  it("Ausgaben: kostenlose Supervision – Dauer und Einheiten bleiben, Betrag 0", () => {
+    const data = sampleUserData();
+    data.supervisionSessions = [{ ...data.supervisionSessions[0], durationMinutes: 50, kostenlos: true }];
+    expect(lines(expensesCsv(data))[1]).toBe("2026-02-20;2026 Q1;Supervision Eins;Einzeltherapie;Einzel;50;1,00;80,00;0,00;;0,00;ja");
+    expect(financeTotals(data.therapySessions, data.supervisionSessions, [], 0, { [data.supervisors[0].id]: 80 }, []).totalCosts).toBe(0);
+  });
+
   it("Ausgaben: in der SV-Gruppe nur der eigene Anteil – angerechnet 50 Min, zu zweit bezahlt 25 Min", () => {
     const data = sampleUserData();
     data.supervisionSessions = [{ ...data.supervisionSessions[0], durationMinutes: 50, setting: "gruppe", gruppengroesse: 2 }];

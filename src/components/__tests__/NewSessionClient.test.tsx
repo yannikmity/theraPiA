@@ -836,6 +836,18 @@ describe("NewSessionClient", () => {
     expect(firstCall()).toMatchObject({ setting: "gruppe", gruppengroesse: 2, caseShares: [{ patientId: P2, minutes: 50 }] });
   });
 
+  it("Supervision: ein selbst gewählter Chip bleibt beim Wechsel des Settings stehen", () => {
+    render(<NewSessionClient {...props} initialType="supervision" />);
+    fireEvent.click(chip("75 Min"));
+    fireEvent.click(chip("Gruppe"));
+    expect(checked("75 Min")).toBe(true);
+  });
+
+  it("Supervision: „Nicht geteilt“ der letzten SV-Gruppe bleibt die Vorgabe, nur ohne frühere SV-Gruppe 2 Personen", () => {
+    render(<NewSessionClient {...props} initialType="supervision" settingBySupervisor={{ [S1]: "gruppe" }} gruppengroesseBySupervisor={{ [S1]: 1 }} />);
+    expect(chip("Nicht geteilt").getAttribute("aria-checked")).toBe("true");
+  });
+
   it("Supervision: eine frei eingetippte Dauer bleibt beim Wechsel des Settings stehen", () => {
     render(<NewSessionClient {...props} initialType="supervision" />);
     fireEvent.click(chip("Andere"));
